@@ -64,14 +64,36 @@ void	ConfigParser::tokenize(std::string& content)
 	std::cout << "Tokenizer finished" << std::endl;
 }
 
+std::string	ConfigParser::peekToken( void )
+{
+	if (_token_index >= _tokens.size())
+		return "";
+	return _tokens[_token_index];
+}
+
+std::string	ConfigParser::consumeToken( void )
+{
+	if (_token_index >= _tokens.size())
+		throw std::runtime_error("Unexpected end of file. Expected more tokens.");
+
+	return _tokens[_token_index++];
+}
+
 void	ConfigParser::parse( void )
 {
 	std::cout << "Start parsing tokens" << std::endl;
 
+	
 	while (_token_index < _tokens.size())
 	{
 
+		if (peekToken() != "http")
+		{
+				if (peekToken() == "") throw std::runtime_error("Error: Config file is empty.");
+			throw std::runtime_error("Error: Expected 'http' block, but found: " + peekToken());
+		}
 	}
+
 
 	std::cout << "Parsing complete. Found " << _server_configs.size() << " server blocks." << std::endl;
 }

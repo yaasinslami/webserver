@@ -15,7 +15,7 @@ int main(int ac, char **av)
 
 	try {
 		ConfigParser	parser(config_filename);
-		// parser.parse();
+		parser.parse();
 
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 	}

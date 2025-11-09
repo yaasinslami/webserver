@@ -20,7 +20,7 @@ struct LocationConfig
 	LocationConfig() : autoindex(false) {} // Default values
 };
 
-struct	ServerConfig
+struct ServerConfig
 {
 	int							port;
 	std::string					host;
@@ -31,6 +31,18 @@ struct	ServerConfig
 	/***/
 };
 
+struct HttpConfig
+{
+	std::vector<ServerConfig> server_configs; // All servers live inside http
+	std::string               root; // Global default root
+	std::string               index; // Global default index
+	long                      client_max_body_size;
+	// ... add other http-level directives ...
+
+	// Set global defaults
+	HttpConfig() : root("/var/www/html"), client_max_body_size(1048576) {} // 1M default
+};
+
 class	ConfigParser
 {
 	public:
@@ -39,17 +51,26 @@ class	ConfigParser
 
 		void	parse( void );
 
-		const std::vector<ServerConfig>& getServerConfigs() const;
+		const HttpConfig& getHttpConfig() const;
 
 	private:
 		std::string					_filename;
 		std::ifstream				_file;
 		std::vector<std::string>	_tokens;
-		std::vector<ServerConfig>	_server_configs;
+		size_t						_token_index;
 
+		HttpConfig                  _http_config;
+
+		 // --- Helper Methods ---
 		void tokenize(std::string& content);
-
+		
+		void parseHttpBlock();
+		
 		void parseServerBlock();
 		void parseLocationBlock(ServerConfig& server);
+
+		// --- Token Utilities
+		std::string peekToken();
+		std::string consumeToken();
 };
 
