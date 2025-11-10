@@ -1,6 +1,7 @@
 #include "../../inc/ConfigParser.hpp"
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 ConfigParser::ConfigParser(const std::string& filename) : _filename(filename)
 {
@@ -83,38 +84,58 @@ void	ConfigParser::parse( void )
 {
 	std::cout << "Start parsing tokens" << std::endl;
 
-	
-	while (_token_index < _tokens.size())
+	if (consumeToken() != "http")
 	{
-
-		if (peekToken() != "http")
-		{
-				if (peekToken() == "") throw std::runtime_error("Error: Config file is empty.");
-			throw std::runtime_error("Error: Expected 'http' block, but found: " + peekToken());
-		}
+		throw std::runtime_error("Expected 'http' block, but found: " + _tokens[_token_index - 1]);
+	}
+	// 3. Expect "{" right after "http"
+	if (peekToken() == "") { // Check for "http" with no "{"
+		throw std::runtime_error("Error: Expected '{' after 'http', but found end of file.");
+	}
+	if (consumeToken() != "{") {
+		throw std::runtime_error("Error: Expected '{' after 'http', but found: " + _tokens[_token_index - 1]);
 	}
 
+	parseHttpBlock();
+
+	// 5. Check for any "junk" tokens *after* the http block's closing '}'
+	if (_token_index < _tokens.size()) {
+		throw std::runtime_error("Error: Unexpected token after closing '}' of http block: " + peekToken());
+	}
 
 	std::cout << "Parsing complete. Found " << _server_configs.size() << " server blocks." << std::endl;
 }
 
-/*
- *
- * void ConfigParser::parse() {
-    std::cout << "Starting parser..." << std::endl;
+ConfigParser::parseHttpBlock( void )
+{
+	while (peekToken() != "}")
+	{
+		if (peekToken() == "")
+			throw std::runtime_error("Unterminated http block. Expected '}'.");
 
-    // Loop while there are tokens left
-    while (_token_index < _tokens.size()) {
-        
-        std::string token = peekToken();
+		std::string	directive = peekToken();
+		consumeToken();
 
-        if (token == "server") {
-            consumeToken(); // Consume "server" token
-            parseServerBlock();
-        } else {
-            throw std::runtime_error("Error: Unexpected token in global scope: " + token);
-        }
-    }
-    std::cout << "Parsing complete. Found " << _server_configs.size() << " server blocks." << std::endl;
+		if (directive == "server")
+			parseServerBlock();
+		else if (directive == "root")
+		{
+			_http_config.root = consumeToken();
+			if (consumeToken() != ";")
+				throw std::runtime_error("Expected ';' after 'root' directive in http block.");
+		}
+		else if (directive == "index")
+		{
+			_http_config.index = consumeToken();
+			if (consumeToken() != ";")
+				throw std::runtime_error("Expected ';' after 'root' directive in http block.");
+		}
+		else if (directive == "client_max_body_size")
+		{
+			_http_config.client_max_body_size = std::atol(consumeToken().c_str());
+			if (consumeToken() != ";") {
+				throw std::runtime_error("Expected ';' after 'client_max_body_size' directive.");
+			}
+		}
+	}
 }
- */
