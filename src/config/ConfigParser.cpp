@@ -140,139 +140,86 @@ void	ConfigParser::parse( void )
 			throw std::runtime_error("Error: Unknown or unexpected directive in global scope: " + directive);
 	}
 
-	std::cout << "Parsing complete. Found " << _server_configs.size() << " server blocks." << std::endl;
+	std::cout << "Parsing complete. Found " << _http_config.server_configs.size() << " server blocks." << std::endl;
 }
 
-/*
- *} else if (directive == "error_page") {
-            
-            std::vector<int> codes;
-            std::string path;
-            
-            // 1. Keep consuming tokens as long as they are numbers
-            while (_token_index < _tokens.size() && isdigit(peekToken()[0])) {
-                codes.push_back(std::atoi(consumeToken().c_str()));
-            }
-            
-            // 2. The next token MUST be the path
-            if (codes.empty()) {
-                throw std::runtime_error("Error: No error code specified for 'error_page'.");
-            }
-            if (peekToken() == ";" || peekToken() == "") {
-                 throw std::runtime_error("Error: No path specified for 'error_page'.");
-            }
-            path = consumeToken();
-
-            // 3. The next token MUST be the semicolon
-            if (consumeToken() != ";") {
-                throw std::runtime_error("Error: Expected ';' after 'error_page' directive.");
-            }
-
-            // 4. Now, add all codes to the map
-            for (size_t i = 0; i < codes.size(); ++i) {
-                _http_config.error_pages[codes[i]] = path;
-            }
-        }
- *
- * #include <cstdlib> // For std::atoi, std::atol
-
-void ConfigParser::parse(void)
+void	ConfigParser::parseServerBlock( void )
 {
-    std::cout << "Start parsing tokens" << std::endl;
-    
-    // Loop until we have consumed all tokens in the file
-    while (_token_index < _tokens.size()) {
-        
-        std::string directive = peekToken();
-        consumeToken(); // Consume the directive (e.g., "server", "root")
+	ServerConfig	server;
 
-        // --- Handle Server Blocks ---
-        if (directive == "server") {
-            // Delegate to the server block parser
-            parseServerBlock();
-        
-        // --- Handle Global Directives ---
-        } else if (directive == "root") {
-            _http_config.root = consumeToken();
-            if (consumeToken() != ";") {
-                throw std::runtime_error("Error: Expected ';' after 'root' directive.");
-            }
-        
-        } else if (directive == "index") {
-            _http_config.index = consumeToken(); // Store the first value
-            
-            // Consume and ignore other values
-            while (peekToken() != ";") {
-                if (peekToken() == "" || peekToken() == "}") { // Check for bad syntax
-                     throw std::runtime_error("Error: Missing ';' after 'index' directive.");
-                }
-                consumeToken(); // Ignore "index.htm", etc.
-            }
-            consumeToken(); // Consume the ";"
-        
-        } else if (directive == "client_max_body_size") {
-            _http_config.client_max_body_size = std::atol(consumeToken().c_str());
-            if (consumeToken() != ";") {
-                throw std::runtime_error("Error: Expected ';' after 'client_max_body_size' directive.");
-            }
-        
-        } else if (directive == "error_page") {
-            int         error_code = std::atoi(consumeToken().c_str());
-            std::string error_path = consumeToken();
-            
-            _http_config.error_pages[error_code] = error_path;
-            
-            if (consumeToken() != ";") {
-                throw std::runtime_error("Error: Expected ';' after 'error_page' directive.");
-            }
+	if (consumeToken() != "{")
+		throw std::runtime_error("Expected '{' after 'server' directive.");
 
-        // --- Handle Unknown Directives ---
-        } else {
-            throw std::runtime_error("Error: Unknown or unexpected directive in global scope: " + directive);
-        }
-    }
+	while (peekToken() != "}")
+	{
+		std::string	directive = consumeToken();
 
-    // We've reached the end of the file.
-    std::cout << "Parsing complete. Found " 
-              << _http_config.server_configs.size() 
-              << " server blocks." << std::endl;
+		if (directive == "location")
+			parseLocationBlock(server);
+		else if (directive == "listen")
+		{
+			server.port = std::atoi(consumeToken().c_str());
+			if (consumeToken() != ";")
+				throw std::runtime_error("Missing ';' after 'listen' directive.");
+		}
+		else if (directive == "server_name")
+		{
+			server.server_name = consumeToken();
+			if (consumeToken() != ";")
+				throw std::runtime_error("Missing ';' after 'server_name' directive.");
+		}
+		else if (directive == "root")
+		{
+			server.root = consumeToken();
+			if (consumeToken() != ";")
+				throw std::runtime_error("Missing ';' after 'root' directive.");
+		}
+		else
+			throw std::runtime_error("Unknown or unexpected directive in server block: " + directive);
+
+		consumeToken();
+
+		_http_config.server_configs.push_back(server);
+	}
 }
- */
 
-// ConfigParser::parseHttpBlock( void )
-// {
-// 	while (peekToken() != "}")
-// 	{
-// 		if (peekToken() == "")
-// 			throw std::runtime_error("Unterminated http block. Expected '}'.");
-//
-// 		std::string	directive = peekToken();
-// 		consumeToken();
-//
-// 		if (directive == "server")
-// 			parseServerBlock();
-// 		else if (directive == "root")
-// 		{
-// 			_http_config.root = consumeToken();
-// 			if (consumeToken() != ";")
-// 				throw std::runtime_error("Expected ';' after 'root' directive in http block.");
-// 		}
-// 		else if (directive == "index")
-// 		{
-// 			_http_config.index = consumeToken();
-// 			if (consumeToken() != ";")
-// 				throw std::runtime_error("Expected ';' after 'root' directive in http block.");
-// 		}
-// 		else if (directive == "client_max_body_size")
-// 		{
-// 			_http_config.client_max_body_size = std::atol(consumeToken().c_str());
-// 			if (consumeToken() != ";") {
-// 				throw std::runtime_error("Expected ';' after 'client_max_body_size' directive.");
-// 			}
-// 		}
-// 		else if (directive == "error_pages")
-// 		{
-// 			_http_config.error_pages.first = first.first();
-// 		}
-// 	}
-// }
+void	ConfigParser::parseLocationBloc(ServerConfig& server)
+{
+	LocationConfig	location;
+
+	if (consumeToken() != "{")
+		throw std::runtime_error("Expected '{' after 'server' directive.");
+
+	while (peekToken() != "}")
+	{
+		std::string	directive = consumeToken();
+
+		if (directive == "root")
+		{
+			location.root = consumeToken();
+			if (consumeToken() != ";")
+				throw std::runtime_error("Missing ';' after 'root' directive.");
+		}
+		else if (directive == "index")
+		{
+			location.index = consumeToken();
+			if (consumeToken() != ";")
+				throw std::runtime_error("Missing ';' after 'index' directive.");
+		}
+		else if (directive == "allowed_methods")
+		{
+			while (peekToken() != ";")
+			{
+				std::string	method = consumeToken();
+				if (method != "GET" && method != "POST" && method != "DELETE")
+					throw std::runtime_error("Unknown or Unexpected Method in 'allowed_methods' directive");
+				location.allowed_methods.push_back(peekToken());
+			}
+		}
+		else
+			throw std::runtime_error("Unknown or unexpected directive in 'Location' block: " + directive);
+
+	}
+
+	server.locations.push_back(location);
+}
