@@ -20,7 +20,7 @@ struct LocationConfig
 	LocationConfig() : autoindex(false) {} // Default values
 };
 
-struct ServerConfig
+struct	ServerConfig
 {
 	int							port;
 	std::string					host;
@@ -37,6 +37,7 @@ struct HttpConfig
 	std::string               root; // Global default root
 	std::string               index; // Global default index
 	long                      client_max_body_size;
+	std::map<int, std::string>	error_pages;
 	// ... add other http-level directives ...
 
 	// Set global defaults
@@ -59,7 +60,7 @@ class	ConfigParser
 		std::vector<std::string>	_tokens;
 		size_t						_token_index;
 
-		HttpConfig                  _http_config;
+		HttpConfig                  _http_config;// it will hold servers and global directives
 
 		 // --- Helper Methods ---
 		void tokenize(std::string& content);
