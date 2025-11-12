@@ -7,41 +7,39 @@
 #include <map>
 #include <sstream>
 
-// Data structure for a "location" block
 struct LocationConfig
 {
 	std::string					path;
 	std::string					root;
+	std::string					alias;
 	std::string					index;
 	bool						autoindex;
+	long						client_max_body_size;
 	std::vector<std::string>	allowed_methods; // e.g., "GET", "POST"
-	/***/
 
 	LocationConfig() : autoindex(false) {} // Default values
 };
 
 struct	ServerConfig
 {
+	std::string					interface;
 	int							port;
-	std::string					host;
 	std::string					server_name;
 	std::string					root;
+	long						client_max_body_size;
 	std::map<int, std::string>	error_pages;
 	std::vector<LocationConfig>	locations;
-	/***/
 };
 
 struct HttpConfig
 {
-	std::vector<ServerConfig> server_configs; // All servers live inside http
-	std::string               root; // Global default root
-	std::string               index; // Global default index
-	long                      client_max_body_size;
+	std::vector<ServerConfig>	server_configs;
+	std::string					root;
+	std::string					index;
+	long						client_max_body_size;
 	std::map<int, std::string>	error_pages;
-	// ... add other http-level directives ...
 
-	// Set global defaults
-	HttpConfig() : root("/var/www/html"), client_max_body_size(1048576) {} // 1M default
+	HttpConfig() : root("/var/www/html"), client_max_body_size(1048576) {}
 };
 
 class	ConfigParser
@@ -51,6 +49,8 @@ class	ConfigParser
 		~ConfigParser();
 
 		void	parse( void );
+
+		void	debug(void);
 
 		const HttpConfig& getHttpConfig() const;
 

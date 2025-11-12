@@ -17,6 +17,8 @@ int main(int ac, char **av)
 		ConfigParser	parser(config_filename);
 		parser.parse();
 
+		parser.debug();
+
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 	}
 	catch (const std::exception& e)
