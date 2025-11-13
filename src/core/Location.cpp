@@ -1,8 +1,16 @@
-#include "Location.hpp"
+#include "../../inc/Location.hpp"
+#include <string>
 
-/*
-** ------------------------------- GETTERS --------------------------------
-*/
+LocationConfig::LocationConfig() :
+	_alias(""),
+	_autoindex(false)
+{
+	addMethod("GET");
+	addMethod("POST");
+	addMethod("DELETE");
+}
+
+LocationConfig::~LocationConfig() {}
 
 std::string LocationConfig::getPath() const
 {
@@ -44,10 +52,6 @@ unsigned long LocationConfig::getMaxBodySize() const
 	return this->_client_max_body_size;
 }
 
-/*
-** ------------------------------- SETTERS --------------------------------
-*/
-
 void LocationConfig::setPath(const std::string &path)
 {
 	this->_path = path;
@@ -78,6 +82,11 @@ void LocationConfig::setMethods(const std::vector<std::string> &allowed_methods)
 	this->_allowed_methods = allowed_methods;
 }
 
+void	LocationConfig::addMethod(const std::string& method)
+{
+	this->_allowed_methods.push_back(method);
+}
+
 void LocationConfig::setAutoIndex(const bool &autoindex)
 {
 	this->_autoindex = autoindex;
@@ -87,7 +96,3 @@ void LocationConfig::setClientMaxBody(const unsigned long &client_max_body_size)
 {
 	this->_client_max_body_size = client_max_body_size;
 }
-
-LocationConfig::LocationConfig() {}
-
-LocationConfig::~LocationConfig() {}

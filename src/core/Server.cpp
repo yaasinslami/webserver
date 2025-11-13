@@ -1,6 +1,9 @@
-#include "Server.hpp"
+#include "../../inc/Server.hpp"
 
-Server::Server() {}
+Server::Server() :
+	_port(-1),
+	_server_name("")
+{}
 
 Server::~Server() {}
 

@@ -9,7 +9,7 @@ class	ConfigParser
 		ConfigParser(const std::string& filename);
 		~ConfigParser();
 
-		Http&	parse( void );
+		void	parse( void );
 		void	debug(void);
 
 		/* Getters */

@@ -1,20 +1,24 @@
-#include "Http.hpp"
+#include "../../inc/Http.hpp"
 
-Http::Http(){}
+Http::Http() :
+	_root("/www/html"),
+	_index("index.html"),
+	_client_max_body_size(1048576)
+{}
 
 Http::~Http() {}
 
-std::string					Http::getRoot() const
+std::string	Http::getRoot() const
 {
 	return this->_root;
 }
 
-std::string					Http::getIndex() const
+std::string	Http::getIndex() const
 {
 	return this->_index;
 }
 
-unsigned long				Http::getMaxBodySize() const
+unsigned long	Http::getMaxBodySize() const
 {
 	return this->_client_max_body_size;
 }
@@ -24,7 +28,7 @@ std::map<int, std::string>	Http::getErrorPages() const
 	return this->_error_pages;
 }
 
-std::vector<Server>			Http::getServers() const
+std::vector<Server>	Http::getServers() const
 {
 	return this->_servers;
 }

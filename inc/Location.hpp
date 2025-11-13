@@ -25,6 +25,7 @@ class	LocationConfig
 		void						setIndex(const std::string& index);
 		void						setErrorPages(const std::map<int, std::string>& error_pages);
 		void						setMethods(const std::vector<std::string>& allowed_methods);
+		void						addMethod(const std::string& method);
 		void						setAutoIndex(const bool& autoindex);
 		void						setClientMaxBody(const unsigned long& client_max_body_size);
 

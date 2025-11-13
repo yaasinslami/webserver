@@ -1,4 +1,7 @@
 #include "../../inc/ConfigParser.hpp"
+#include "../../inc/Server.hpp"
+#include "../../inc/Location.hpp"
+#include <stdexcept>
 
 ConfigParser::ConfigParser(const std::string& filename) : _filename(filename), _token_index(0)
 {
@@ -79,7 +82,7 @@ std::string	ConfigParser::consumeToken( void )
 	return _tokens[_token_index++];
 }
 
-Http&	ConfigParser::parse( void )
+void	ConfigParser::parse( void )
 {
 	std::cout << "Start parsing tokens" << std::endl;
 
@@ -139,9 +142,9 @@ Http&	ConfigParser::parse( void )
 		else
 			throw std::runtime_error("Unknown or unexpected directive in global scope: " + directive);
 	}
+	if (_http.getServers().empty())
+		throw std::runtime_error("Configuration error: No 'server' blocks defined.");
 	std::cout << "Parsing complete. Found " << _http.getServers().size() << " server blocks." << std::endl;
-
-	return ;
 }
 
 void	ConfigParser::parseServerBlock( void )
@@ -149,12 +152,9 @@ void	ConfigParser::parseServerBlock( void )
 	Server	server;
 
 	server.setRoot(_http.getRoot());
-	server.
-	server.root = _http_config.root;
-	server.client_max_body_size = _http_config.client_max_body_size;
-	server.error_pages = _http_config.error_pages;
-	server.index = _http_config.index;
-
+	server.setIndex(_http.getIndex());
+	server.setMaxBodySize(_http.getMaxBodySize());
+	server.setErrorPages(_http.getErrorPages());
 
 	if (consumeToken() != "{") {
 		throw std::runtime_error("Expected '{' after 'server' directive.");
@@ -174,22 +174,16 @@ void	ConfigParser::parseServerBlock( void )
 
 			if (colonPos != std::string::npos)
 			{
-				server.interface = listenStr.substr(0, colonPos);
+				server.setInterface(listenStr.substr(0, colonPos));
 				std::string	portStr = listenStr.substr(colonPos + 1);
-				server.port = std::atoi(portStr.c_str());
+				server.setPort(std::atoi(portStr.c_str()));
 			}
 			else//we didnt find ":" => interfce or port ?
 			{
 				if (listenStr.find('.') != std::string::npos)// we found an IP
-				{
-					server.interface = listenStr;
-					server.port = 80;
-				}
+					server.setInterface(listenStr);
 				else// we have a port
-				{
-					server.interface = "0.0.0.0";
-					server.port = std::atoi(listenStr.c_str());
-				}
+					server.setPort(std::atoi(listenStr.c_str()));
 			}
 
 			if (consumeToken() != ";")
@@ -197,13 +191,13 @@ void	ConfigParser::parseServerBlock( void )
 		}
 		else if (directive == "server_name")
 		{
-			server.server_name = consumeToken();
+			server.setServerName(consumeToken());
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'server_name' directive.");
 		}
 		else if (directive == "root")
 		{
-			server.root = consumeToken();
+			server.setRoot(consumeToken());
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'root' directive.");
 		}
@@ -212,12 +206,12 @@ void	ConfigParser::parseServerBlock( void )
 	}
 
 	consumeToken();
-	_http_config.server_configs.push_back(server);
+	_http.addServer(server);
 }
 
 void	ConfigParser::parseLocationBlock(ServerConfig& server)
 {
-	LocationConfig	location;
+	Location	location;
 
 	// location inherite from server
 	location.root = server.root;
@@ -235,12 +229,16 @@ void	ConfigParser::parseLocationBlock(ServerConfig& server)
 
 		if (directive == "root")
 		{
+			if (!location.getAlias().empty())
+				throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");	
 			location.root = consumeToken();
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'root' directive.");
 		}
 		else if (directive == "alias")
 		{
+			if (!location.getRoot().empty())
+				throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");
 			location.alias = consumeToken();
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'alias' directive.");

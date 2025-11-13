@@ -2,7 +2,7 @@
 NAME        := webserv
 CXX         := c++
 # change the std if you prefer c++98 / c++11 / c++20
-CXXFLAGS    := -Wall -Wextra -Werror -std=c++17
+CXXFLAGS    := -Wall -Wextra -Werror -std=c++11
 INCLUDES    := -Iinc
 
 SRC_DIR     := src
