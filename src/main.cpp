@@ -1,6 +1,8 @@
 #include <exception>
 #include <iostream>
 #include "../inc/ConfigParser.hpp"
+#include "../inc/Http.hpp"
+
 
 int main(int ac, char **av) 
 {
@@ -15,11 +17,12 @@ int main(int ac, char **av)
 
 	try {
 		ConfigParser	parser(config_filename);
+		
 		parser.parse();
-
 		parser.debug();
-
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
+	
+		Http = parser.getHttp();
 	}
 	catch (const std::exception& e)
 	{
@@ -28,3 +31,6 @@ int main(int ac, char **av)
 	}
 }
 
+// now here we should start our servers
+// we should create our
+// std::vector<int> _listening_fds;

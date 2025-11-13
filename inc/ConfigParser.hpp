@@ -1,46 +1,7 @@
 #pragma once
 
-#include <iostream>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <map>
-#include <sstream>
-
-struct LocationConfig
-{
-	std::string					path;
-	std::string					root;
-	std::string					alias;
-	std::string					index;
-	bool						autoindex;
-	long						client_max_body_size;
-	std::vector<std::string>	allowed_methods; // e.g., "GET", "POST"
-
-	LocationConfig() : autoindex(false) {} // Default values
-};
-
-struct	ServerConfig
-{
-	std::string					interface;
-	int							port;
-	std::string					server_name;
-	std::string					root;
-	long						client_max_body_size;
-	std::map<int, std::string>	error_pages;
-	std::vector<LocationConfig>	locations;
-};
-
-struct HttpConfig
-{
-	std::vector<ServerConfig>	server_configs;
-	std::string					root;
-	std::string					index;
-	long						client_max_body_size;
-	std::map<int, std::string>	error_pages;
-
-	HttpConfig() : root("/var/www/html"), client_max_body_size(1048576) {}
-};
+#include "WebServer.hpp"
+#include "Http.hpp"
 
 class	ConfigParser
 {
@@ -48,21 +9,28 @@ class	ConfigParser
 		ConfigParser(const std::string& filename);
 		~ConfigParser();
 
-		void	parse( void );
-
+		Http&	parse( void );
 		void	debug(void);
 
-		const HttpConfig& getHttpConfig() const;
+		/* Getters */
+		std::string						getFileName() const;
+		const std::vector<std::string>&	getTokens() const;
+		size_t							getTokensIndex() const;
+		Http							getHttp() const;
+
+		/* Setters */
+		void	setFileName(const std::string& filename);
+		void	setTokens(const std::vector<std::string> tokens);
+		void	setTokensIndex(const size_t& tokens_size);
 
 	private:
 		std::string					_filename;
 		std::ifstream				_file;
 		std::vector<std::string>	_tokens;
 		size_t						_token_index;
+		Http						_http;
 
-		HttpConfig                  _http_config;// it will hold servers and global directives
-
-		 // --- Helper Methods ---
+		// --- Helper Methods ---
 		void tokenize(std::string& content);
 		
 		void parseHttpBlock();

@@ -1,10 +1,4 @@
 #include "../../inc/ConfigParser.hpp"
-#include <algorithm>
-#include <cstddef>
-#include <iterator>
-#include <sstream>
-#include <stdexcept>
-#include <string>
 
 ConfigParser::ConfigParser(const std::string& filename) : _filename(filename), _token_index(0)
 {
@@ -64,9 +58,9 @@ void	ConfigParser::tokenize(std::string& content)
 	if (_tokens.size() < 1)
 		throw std::runtime_error("Config file is empty");
 	// a debug line
-	for (size_t i = 0; i < _tokens.size(); ++i) {
-	    std::cout << "Token " << i << ": " << _tokens[i] << std::endl;
-	}
+	// for (size_t i = 0; i < _tokens.size(); ++i) {
+	//     std::cout << "Token " << i << ": " << _tokens[i] << std::endl;
+	// }
 	// std::cout << "Tokenizer finished" << std::endl;
 }
 
@@ -85,11 +79,11 @@ std::string	ConfigParser::consumeToken( void )
 	return _tokens[_token_index++];
 }
 
-void	ConfigParser::parse( void )
+Http&	ConfigParser::parse( void )
 {
 	std::cout << "Start parsing tokens" << std::endl;
 
-	while (_token_index < _tokens.size())
+	while (getTokensIndex() < getTokens().size())
 	{
 		std::string	directive = peekToken();
 		consumeToken();
@@ -99,27 +93,28 @@ void	ConfigParser::parse( void )
 		}
 		else if (directive == "root")
 		{
-			_http_config.root = consumeToken();
+			_http.setRoot(consumeToken());
 			if (consumeToken() != ";")
 				throw std::runtime_error("Expected ';' after 'root' directive.");
 		}
 		else if (directive == "index")
 		{
-			_http_config.index = consumeToken();
+			_http.setIndex(consumeToken());
 
 			if (consumeToken() != ";")
 				throw std::runtime_error("Expected ';' after 'index' directive.");
 		}
 		else if (directive == "client_max_body_size")
 		{
-			_http_config.client_max_body_size = std::atol(consumeToken().c_str());
+			_http.setMaxBodySize(std::atol(consumeToken().c_str()));
 			if (consumeToken() != ";")
 				throw std::runtime_error("Expected ';' after 'client_max_body_size' directive.");
 		}
 		else if (directive == "error_pages")
 		{
-			std::vector<int>	codes;
-			std::string			path;
+			std::vector<int>			codes;
+			std::string					path;
+			std::map<int, std::string>	mp;
 
 			while (_token_index < _tokens.size() && isdigit(peekToken()[0])) {
 				codes.push_back(std::atoi(consumeToken().c_str()));
@@ -137,21 +132,29 @@ void	ConfigParser::parse( void )
 				throw std::runtime_error("Expected ';' after 'error_page' directive.");
 
 			for (size_t i = 0; i < codes.size(); ++i) {
-				_http_config.error_pages[codes[i]] = path;
+				mp[codes[i]] = path;
 			}
+			_http.setErrorPages(mp);
 		}
 		else
 			throw std::runtime_error("Unknown or unexpected directive in global scope: " + directive);
 	}
+	std::cout << "Parsing complete. Found " << _http.getServers().size() << " server blocks." << std::endl;
 
-	std::cout << "Parsing complete. Found " << _http_config.server_configs.size() << " server blocks." << std::endl;
+	return ;
 }
 
 void	ConfigParser::parseServerBlock( void )
 {
-	ServerConfig	server;
+	Server	server;
 
-	server.root = this->_http_config.root;
+	server.setRoot(_http.getRoot());
+	server.
+	server.root = _http_config.root;
+	server.client_max_body_size = _http_config.client_max_body_size;
+	server.error_pages = _http_config.error_pages;
+	server.index = _http_config.index;
+
 
 	if (consumeToken() != "{") {
 		throw std::runtime_error("Expected '{' after 'server' directive.");
@@ -216,7 +219,11 @@ void	ConfigParser::parseLocationBlock(ServerConfig& server)
 {
 	LocationConfig	location;
 
+	// location inherite from server
 	location.root = server.root;
+	location.index = server.index;
+	location.error_pages = server.error_pages;
+
 	location.path = consumeToken();
 
 	if (consumeToken() != "{")
@@ -310,4 +317,30 @@ void	ConfigParser::debug( void )
 		}
 	}
 	std::cout << "----------------------------------------\n";
+}
+
+
+std::string	ConfigParser::getFileName() const
+{
+	return this->_filename;
+}
+
+const std::vector<std::string>&	ConfigParser::getTokens() const
+{
+	return this->_tokens;
+}
+
+size_t	ConfigParser::getTokensIndex() const
+{
+	return this->_token_index;
+}
+
+void	ConfigParser::setFileName(const std::string& filename)
+{
+	this->_filename = filename;
+}
+
+void	ConfigParser::setTokens(const std::vector<std::string> tokens)
+{
+	this->_tokens = tokens;
 }
