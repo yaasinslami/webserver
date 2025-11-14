@@ -1,9 +1,6 @@
 #include "../../inc/Http.hpp"
 
 Http::Http() :
-	// _root("/www/html"),
-	// _index("index.html"),
-	// _client_max_body_size(1048576)
 	_directives()
 {}
 
@@ -14,6 +11,10 @@ Http::Http(const Http& other)
 	setServers(other.getServers());
 }
 
+Directives&	Http::getDirectives()
+{
+	return this->_directives;
+}
 
 const std::vector<Server>&	Http::getServers() const
 {

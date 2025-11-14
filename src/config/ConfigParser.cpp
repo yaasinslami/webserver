@@ -3,7 +3,21 @@
 #include "../../inc/Location.hpp"
 #include <stdexcept>
 
-ConfigParser::ConfigParser(const std::string& filename) : _filename(filename), _token_index(0)
+static bool reg_directive(const enum e_directive_type directive_type)
+{
+	if (directive_type == DIR_ROOT || \
+		directive_type == DIR_INDEX || \
+		directive_type == DIR_AUTO_INDEX || \
+		directive_type == DIR_ALLOWED_METHODS || \
+		directive_type == DIR_MAX_BODY_SIZE || \
+		directive_type == DIR_ERROR_PAGES)
+		return true;
+	return false;
+}
+
+ConfigParser::ConfigParser(const std::string& filename) :
+	_filename(filename),
+	_token_index(0)
 {
 	this->_file.open(_filename.c_str());
     if (!this->_file.is_open())
@@ -58,25 +72,20 @@ void	ConfigParser::tokenize(std::string& content)
 	while (ss_tokens >> tokens)
 		_tokens.push_back(tokens);
 
-	if (_tokens.size() < 1)
+	if (getTokens().size() < 1)
 		throw std::runtime_error("Config file is empty");
-	// a debug line
-	// for (size_t i = 0; i < _tokens.size(); ++i) {
-	//     std::cout << "Token " << i << ": " << _tokens[i] << std::endl;
-	// }
-	// std::cout << "Tokenizer finished" << std::endl;
 }
 
 std::string	ConfigParser::peekToken( void )
 {
-	if (_token_index >= _tokens.size())
+	if (getTokensIndex() >= getTokens().size())
 		return "";
 	return _tokens[_token_index];
 }
 
 std::string	ConfigParser::consumeToken( void )
 {
-	if (_token_index >= _tokens.size())
+	if (getTokensIndex() >= getTokens().size())
 		throw std::runtime_error("Unexpected end of file. Expected more tokens.");
 
 	return _tokens[_token_index++];
@@ -88,73 +97,25 @@ void	ConfigParser::parse( void )
 
 	while (getTokensIndex() < getTokens().size())
 	{
-		std::string	directive = peekToken();
-		consumeToken();
+		e_directive_type directive_type = getDirectiveType(consumeToken());
 		
-		if (directive == "server") {
+		if (directive_type == DIR_SERVER) {
 			parseServerBlock();
 		}
-		else if (directive == "root")
-		{
-			_http.setRoot(consumeToken());
-			if (consumeToken() != ";")
-				throw std::runtime_error("Expected ';' after 'root' directive.");
+		else if (reg_directive(directive_type)) {
+			_http.getDirectives().setDirective(directive_type, *this);
 		}
-		else if (directive == "index")
-		{
-			_http.setIndex(consumeToken());
-
-			if (consumeToken() != ";")
-				throw std::runtime_error("Expected ';' after 'index' directive.");
-		}
-		else if (directive == "client_max_body_size")
-		{
-			_http.setMaxBodySize(std::atol(consumeToken().c_str()));
-			if (consumeToken() != ";")
-				throw std::runtime_error("Expected ';' after 'client_max_body_size' directive.");
-		}
-		else if (directive == "error_pages")
-		{
-			std::vector<int>			codes;
-			std::string					path;
-			std::map<int, std::string>	mp;
-
-			while (_token_index < _tokens.size() && isdigit(peekToken()[0])) {
-				codes.push_back(std::atoi(consumeToken().c_str()));
-			}
-
-			if (codes.empty())
-				throw std::runtime_error("No error code specified for 'error_page'.");
-
-			if (peekToken() == ";" || peekToken() == "")
-				throw std::runtime_error("No path specified for 'error_page'.");
-
-			path = consumeToken();
-
-			if (consumeToken() != ";")
-				throw std::runtime_error("Expected ';' after 'error_page' directive.");
-
-			for (size_t i = 0; i < codes.size(); ++i) {
-				mp[codes[i]] = path;
-			}
-			_http.setErrorPages(mp);
-		}
-		else
-			throw std::runtime_error("Unknown or unexpected directive in global scope: " + directive);
+		else if (directive_type == DIR_UNKNOWN)
+			throw std::runtime_error("Unknown or unexpected directive in global scope");
 	}
-	if (_http.getServers().empty())
+	if (getHttp().getServers().empty())
 		throw std::runtime_error("Configuration error: No 'server' blocks defined.");
 	std::cout << "Parsing complete. Found " << _http.getServers().size() << " server blocks." << std::endl;
 }
 
 void	ConfigParser::parseServerBlock( void )
 {
-	Server	server;
-
-	server.setRoot(_http.getRoot());
-	server.setIndex(_http.getIndex());
-	server.setMaxBodySize(_http.getMaxBodySize());
-	server.setErrorPages(_http.getErrorPages());
+	Server	server(getHttp().getDirectives());
 
 	if (consumeToken() != "{") {
 		throw std::runtime_error("Expected '{' after 'server' directive.");
@@ -162,10 +123,11 @@ void	ConfigParser::parseServerBlock( void )
 
 	while (peekToken() != "}")
 	{
-		std::string	directive = consumeToken();
+		e_directive_type directive_type = getDirectiveType(consumeToken());
 
-		if (directive == "location")
-			parseLocationBlock(server);
+
+		if (directive_type == DIR_LOCATION)
+			parseLocationBlock(server.getDirectives());
 		else if (directive == "listen")
 		{
 			std::string	listenStr = consumeToken();
@@ -209,9 +171,9 @@ void	ConfigParser::parseServerBlock( void )
 	_http.addServer(server);
 }
 
-void	ConfigParser::parseLocationBlock(Server& server)
+void	ConfigParser::parseLocationBlock(const Directives& s_directives)
 {
-	Location	location(server);
+	Location	location(s_directives);
 
 	location.setPath(consumeToken());
 
@@ -304,4 +266,9 @@ void	ConfigParser::setFileName(const std::string& filename)
 void	ConfigParser::setTokens(const std::vector<std::string> tokens)
 {
 	this->_tokens = tokens;
+}
+
+void	ConfigParser::setTokensIndex(const size_t& tokens_size)
+{
+	this->_token_index = tokens_size;
 }

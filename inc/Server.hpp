@@ -5,6 +5,7 @@
 #include <vector>
 #include "Location.hpp"
 #include "Directives.hpp"
+#include "Http.hpp"
 
 class	Location;
 
@@ -12,7 +13,7 @@ class	Location;
 class	Server
 {
 	public:
-		Server();
+		Server(const Directives& http);
 		~Server();
 
 		/* Getters */

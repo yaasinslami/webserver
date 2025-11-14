@@ -1,22 +1,19 @@
 #include "../../inc/Location.hpp"
 #include <string>
 
-Location::Location() :
-	_alias(""),
-{}
 
 Location::~Location() {}
 
-Location::Location(const Server& server)
-{
-	_directives = server.getDirectives();
-}
+Location::Location(const Directives& s_directives) :
+	_directives(s_directives),
+	_path(""),
+	_alias("")
+{}
 
 std::string Location::getPath() const
 {
 	return this->_path;
 }
-
 
 std::string Location::getAlias() const
 {
@@ -32,4 +29,3 @@ void Location::setAlias(const std::string &alias)
 {
 	this->_alias = alias;
 }
-

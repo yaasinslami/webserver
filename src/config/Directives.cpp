@@ -4,6 +4,11 @@ Directives::Directives() {}
 
 Directives::~Directives() {}
 
+Directives::Directives(const Directives& dir)
+{
+	*this = dir;
+}
+
 Directives& Directives::operator=(const Directives& dir)
 {
 	if (this != &dir)
@@ -80,4 +85,91 @@ void	Directives::setMaxBodySize(const unsigned long& client_max_body_size)
 void	Directives::setErrorPages(const std::map<int, std::string>& error_pages)
 {
 	this->_error_pages = error_pages;
+}
+
+void	Directives::setDirective(const enum e_directive_type directve_type, ConfigParser& conf)
+{
+	if (directve_type == DIR_ROOT) {
+		setRoot(conf.consumeToken());
+	}
+	else if (directve_type == DIR_INDEX) {
+		setIndex(conf.consumeToken());
+	}
+	else if (directve_type == DIR_AUTO_INDEX)
+	{
+		std::string	autoindex = conf.consumeToken();
+		if (autoindex == "on")
+			setAutoIndex(true);
+		else if (autoindex == "off")
+			setAutoIndex(false);
+		else
+			throw std::runtime_error("Unknown or unexpected in 'autoindex' directive.");
+	}
+	else if (directve_type == DIR_ALLOWED_METHODS)
+	{
+		while (conf.peekToken() != ";")
+		{
+			std::string	method = conf.consumeToken();
+			if (method != "GET" && method != "POST" && method != "DELETE")
+				throw std::runtime_error("Unknown or Unexpected Method in 'allowed_methods' directive.");
+			addMethod(method);
+		}
+	}
+	else if (directve_type == DIR_MAX_BODY_SIZE) {
+		setMaxBodySize(std::atol(conf.consumeToken().c_str()));
+	}
+	else if (directve_type == DIR_ERROR_PAGES) {
+		std::vector<int> codes;
+		std::string path;
+		std::map<int, std::string> mp;
+
+		while (conf.getTokensIndex() < conf.getTokens().size() && isdigit(conf.peekToken()[0]))
+		{
+			codes.push_back(std::atoi(conf.consumeToken().c_str()));
+		}
+
+		if (codes.empty())
+			throw std::runtime_error("No error code specified for 'error_page'.");
+
+		if (conf.peekToken() == ";" || conf.peekToken() == "")
+			throw std::runtime_error("No path specified for 'error_page'.");
+
+		path = conf.consumeToken();
+
+		if (conf.consumeToken() != ";")
+			throw std::runtime_error("Expected ';' after 'error_page' directive.");
+
+		for (size_t i = 0; i < codes.size(); ++i)
+		{
+			mp[codes[i]] = path;
+		}
+		setErrorPages(mp);
+	}
+}
+
+e_directive_type	getDirectiveType(const std::string &directive_str)
+{
+	static std::map<std::string, e_directive_type> directive_map;
+
+	if (directive_map.empty())
+	{
+		directive_map["server"] = DIR_SERVER;
+		directive_map["location"] = DIR_LOCATION;
+		directive_map["root"] = DIR_ROOT;
+		directive_map["listen"] = DIR_LISTEN;
+		directive_map["index"] = DIR_INDEX;
+		directive_map["autoindex"] = DIR_AUTO_INDEX;
+		directive_map["alias"] = DIR_ALIAS;
+		directive_map["client_max_body_size"] = DIR_MAX_BODY_SIZE;
+		directive_map["allowed_methods"] = DIR_ALLOWED_METHODS;
+		directive_map["server_name"] = DIR_SERVER_NAME;
+		directive_map["error_pages"] = DIR_ERROR_PAGES;
+	}
+
+	std::map<std::string, e_directive_type>::iterator it = directive_map.find(directive_str);
+
+	if (it != directive_map.end())
+		return it->second;
+
+	return DIR_UNKNOWN;
 }

@@ -11,10 +11,12 @@ class	Http
 		Http(const Http& other);
 		~Http();
 	
+		Directives& getDirectives();
 		const std::vector<Server>&			getServers() const;
 
 		void	setServers(const std::vector<Server>& servers);
 		void	addServer(const Server& server);
+
 	
 	private:
 		Directives					_directives;

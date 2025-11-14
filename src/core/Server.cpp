@@ -1,6 +1,7 @@
 #include "../../inc/Server.hpp"
 
-Server::Server() :
+Server::Server(const Directives& g_directives) :
+	_directives(g_directives),
 	_port(-1),
 	_server_name("")
 {}

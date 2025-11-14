@@ -22,7 +22,11 @@ class	ConfigParser
 		void	setTokens(const std::vector<std::string> tokens);
 		void	setTokensIndex(const size_t& tokens_size);
 
-	private:
+		// --- Token Utilities
+		std::string peekToken();
+		std::string consumeToken();
+	
+		private:
 		std::string					_filename;
 		std::ifstream				_file;
 		std::vector<std::string>	_tokens;
@@ -33,10 +37,5 @@ class	ConfigParser
 		void tokenize(std::string& content);
 		
 		void parseServerBlock();
-		void parseLocationBlock(Server& server);
-
-		// --- Token Utilities
-		std::string peekToken();
-		std::string consumeToken();
+		void parseLocationBlock(const Directives& s_directives);
 };
-

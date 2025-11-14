@@ -9,10 +9,9 @@ class	Server;
 class	Location
 {
 	public:
-		Location();
+		Location(const Directives& server_directives);
 		~Location();
 
-		Location(const Server& server);
 
 		/* Getters */
 		std::string					getPath() const;

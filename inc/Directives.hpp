@@ -1,13 +1,31 @@
 #pragma once
 
 #include "WebServer.hpp"
+#include "ConfigParser.hpp"
+
+enum e_directive_type
+{
+	DIR_SERVER,
+	DIR_LOCATION,
+	DIR_ROOT,
+	DIR_LISTEN,
+	DIR_INDEX,
+	DIR_AUTO_INDEX,
+	DIR_ALIAS,
+	DIR_MAX_BODY_SIZE,
+	DIR_ALLOWED_METHODS,
+	DIR_SERVER_NAME,
+	DIR_ERROR_PAGES,
+	DIR_UNKNOWN
+};
 
 struct	Directives
 {
 	public:
 		Directives();
+		Directives(const Directives& dir);
 		~Directives();
-
+		
 		Directives& operator=(const Directives& dir);
 
 		/* Getters */
@@ -27,6 +45,8 @@ struct	Directives
 		void	setMaxBodySize(const unsigned long& client_max_body_size);
 		void	setErrorPages(const std::map<int, std::string>& error_pages);
 
+		void	setDirective(const enum e_directive_type directve_type, ConfigParser& conf);
+
 	private:
 		std::string					_root;
 		std::string					_index;
@@ -35,3 +55,5 @@ struct	Directives
 		unsigned long				_client_max_body_size;
 		std::map<int, std::string>	_error_pages;
 };
+
+e_directive_type getDirectiveType(const std::string& directive_str);
