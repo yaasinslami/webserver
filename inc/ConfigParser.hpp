@@ -10,13 +10,12 @@ class	ConfigParser
 		~ConfigParser();
 
 		void	parse( void );
-		void	debug(void);
 
 		/* Getters */
-		std::string						getFileName() const;
+		const std::string&				getFileName() const;
 		const std::vector<std::string>&	getTokens() const;
-		size_t							getTokensIndex() const;
-		Http							getHttp() const;
+		const size_t&					getTokensIndex() const;
+		const Http&						getHttp() const;
 
 		/* Setters */
 		void	setFileName(const std::string& filename);
@@ -33,10 +32,8 @@ class	ConfigParser
 		// --- Helper Methods ---
 		void tokenize(std::string& content);
 		
-		void parseHttpBlock();
-		
 		void parseServerBlock();
-		void parseLocationBlock(ServerConfig& server);
+		void parseLocationBlock(Server& server);
 
 		// --- Token Utilities
 		std::string peekToken();

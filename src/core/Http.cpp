@@ -1,56 +1,23 @@
 #include "../../inc/Http.hpp"
 
 Http::Http() :
-	_root("/www/html"),
-	_index("index.html"),
-	_client_max_body_size(1048576)
+	// _root("/www/html"),
+	// _index("index.html"),
+	// _client_max_body_size(1048576)
+	_directives()
 {}
 
 Http::~Http() {}
 
-std::string	Http::getRoot() const
+Http::Http(const Http& other)
 {
-	return this->_root;
+	setServers(other.getServers());
 }
 
-std::string	Http::getIndex() const
-{
-	return this->_index;
-}
 
-unsigned long	Http::getMaxBodySize() const
-{
-	return this->_client_max_body_size;
-}
-
-std::map<int, std::string>	Http::getErrorPages() const
-{
-	return this->_error_pages;
-}
-
-std::vector<Server>	Http::getServers() const
+const std::vector<Server>&	Http::getServers() const
 {
 	return this->_servers;
-}
-
-void	Http::setRoot(const std::string& root)
-{
-	this->_root = root;
-}
-
-void	Http::setIndex(const std::string& index)
-{
-	this->_index = index;
-}
-
-void	Http::setMaxBodySize(const unsigned long& client_max_body_size)
-{
-	this->_client_max_body_size = client_max_body_size;
-}
-
-void	Http::setErrorPages(const std::map<int, std::string>& error_pages)
-{
-	this->_error_pages = error_pages;
 }
 
 void	Http::setServers(const std::vector<Server>& servers)

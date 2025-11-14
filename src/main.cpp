@@ -19,10 +19,10 @@ int main(int ac, char **av)
 		ConfigParser	parser(config_filename);
 		
 		parser.parse();
-		parser.debug();
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
+		Http http = parser.getHttp();
 	
-		Http = parser.getHttp();
+		http.logs();
 	}
 	catch (const std::exception& e)
 	{

@@ -209,16 +209,11 @@ void	ConfigParser::parseServerBlock( void )
 	_http.addServer(server);
 }
 
-void	ConfigParser::parseLocationBlock(ServerConfig& server)
+void	ConfigParser::parseLocationBlock(Server& server)
 {
-	Location	location;
+	Location	location(server);
 
-	// location inherite from server
-	location.root = server.root;
-	location.index = server.index;
-	location.error_pages = server.error_pages;
-
-	location.path = consumeToken();
+	location.setPath(consumeToken());
 
 	if (consumeToken() != "{")
 		throw std::runtime_error("Expected '{' after 'location' directive.");
@@ -229,23 +224,23 @@ void	ConfigParser::parseLocationBlock(ServerConfig& server)
 
 		if (directive == "root")
 		{
-			if (!location.getAlias().empty())
-				throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");	
-			location.root = consumeToken();
+			// if (!location.getAlias().empty())
+			// 	throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");	
+			location.setRoot(consumeToken());
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'root' directive.");
 		}
 		else if (directive == "alias")
 		{
-			if (!location.getRoot().empty())
-				throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");
-			location.alias = consumeToken();
+			// if (!location.getRoot().empty())
+			// 	throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");
+			location.setAlias(consumeToken());
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'alias' directive.");
 		}
 		else if (directive == "index")
 		{
-			location.index = consumeToken();
+			location.setIndex(consumeToken());
 			if (consumeToken() != ";")
 				throw std::runtime_error("Missing ';' after 'index' directive.");
 		}
@@ -256,7 +251,7 @@ void	ConfigParser::parseLocationBlock(ServerConfig& server)
 				std::string	method = consumeToken();
 				if (method != "GET" && method != "POST" && method != "DELETE")
 					throw std::runtime_error("Unknown or Unexpected Method in 'allowed_methods' directive.");
-				location.allowed_methods.push_back(method);
+				location.addMethod(method);
 			}
 			consumeToken();
 		}
@@ -264,9 +259,9 @@ void	ConfigParser::parseLocationBlock(ServerConfig& server)
 		{
 			std::string	autoindex = consumeToken();
 			if (autoindex == "on")
-				location.autoindex = true;
+				location.setAutoIndex(true);
 			else if (autoindex == "off")
-				location.autoindex = false;
+				location.setAutoIndex(false);
 			else
 				throw std::runtime_error("Unknown or unexpected in 'autoindex' directive.");
 			if (consumeToken() != ";")
@@ -278,47 +273,10 @@ void	ConfigParser::parseLocationBlock(ServerConfig& server)
 	}
 
 	consumeToken();
-	server.locations.push_back(location);
+	server.addLocation(location);
 }
 
-void	ConfigParser::debug( void )
-{
-	std::cout << "------------------ Http Global -----------------------\n";
-	std::cout << "root: " <<  _http_config.root << std::endl;
-	std::cout << "index: " << _http_config.index << std::endl;
-	std::cout << "client_max_body_size: " << _http_config.client_max_body_size << std::endl;
-	std::cout << "error_pages:\n";
-
-	for (std::map<int, std::string>::const_iterator it = _http_config.error_pages.begin(); it != _http_config.error_pages.end(); ++it)
-		std::cout << "Error " << it->first << " Page " << it->second << std::endl;
-
-	std::cout << "-------------- Servers -------------------------\n";
-	int	i = 0;
-	for(const ServerConfig& server : _http_config.server_configs)
-	{
-		std::cout << "-------- Server " << ++i << " ---------------" << std::endl;
-		std::cout << "interface: " << server.interface << std::endl;
-		std::cout << "port: " << server.port << std::endl;
-		std::cout << "server_name: " << server.server_name << std::endl;
-		std::cout << "root: " << server.root << std::endl;
-		
-		for (const LocationConfig& location : server.locations)
-		{
-			std::cout << "-------- Location '" << location.path << "' --------\n";
-			std::cout << "root: " << location.root << std::endl;
-			std::cout << "index: " << location.index << std::endl;
-			std::cout << "autoindex: " << location.autoindex << std::endl;
-			std::cout << "allowed_methods: ";
-			for (const std::string& it : location.allowed_methods)
-				std::cout << it << " ";
-			std::cout << std::endl;
-		}
-	}
-	std::cout << "----------------------------------------\n";
-}
-
-
-std::string	ConfigParser::getFileName() const
+const std::string&	ConfigParser::getFileName() const
 {
 	return this->_filename;
 }
@@ -328,9 +286,14 @@ const std::vector<std::string>&	ConfigParser::getTokens() const
 	return this->_tokens;
 }
 
-size_t	ConfigParser::getTokensIndex() const
+const size_t&	ConfigParser::getTokensIndex() const
 {
 	return this->_token_index;
+}
+
+const Http& ConfigParser::getHttp() const
+{
+	return _http;
 }
 
 void	ConfigParser::setFileName(const std::string& filename)
