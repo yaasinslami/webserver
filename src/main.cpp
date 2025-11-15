@@ -30,7 +30,3 @@ int main(int ac, char **av)
 		return 1;
 	}
 }
-
-// now here we should start our servers
-// we should create our
-// std::vector<int> _listening_fds;

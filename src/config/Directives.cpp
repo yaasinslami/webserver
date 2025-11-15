@@ -1,7 +1,11 @@
 #include "../../inc/Directives.hpp"
 #include  "../../inc/ConfigParser.hpp"
 
-Directives::Directives() {}
+Directives::Directives() :
+	_root(),
+	_index(),
+	_autoindex(false)
+{}
 
 Directives::~Directives() {}
 
