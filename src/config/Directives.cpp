@@ -1,4 +1,5 @@
 #include "../../inc/Directives.hpp"
+#include  "../../inc/ConfigParser.hpp"
 
 Directives::Directives() {}
 
@@ -20,6 +21,8 @@ Directives& Directives::operator=(const Directives& dir)
 		setMaxBodySize(dir.getMaxBodySize());
 		setErrorPages(dir.getErrorPages());
 	}
+
+	return *this;
 }
 
 const std::string&	Directives::getRoot() const

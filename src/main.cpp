@@ -22,7 +22,7 @@ int main(int ac, char **av)
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 		Http http = parser.getHttp();
 	
-		http.logs();
+		// http.logs();
 	}
 	catch (const std::exception& e)
 	{

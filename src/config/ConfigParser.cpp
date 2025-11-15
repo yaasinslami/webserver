@@ -1,6 +1,8 @@
 #include "../../inc/ConfigParser.hpp"
 #include "../../inc/Server.hpp"
 #include "../../inc/Location.hpp"
+#include "../../inc/Http.hpp"
+#include "../../inc/Directives.hpp"
 #include <stdexcept>
 
 static bool reg_directive(const enum e_directive_type directive_type)
@@ -107,6 +109,9 @@ void	ConfigParser::parse( void )
 		}
 		else if (directive_type == DIR_UNKNOWN)
 			throw std::runtime_error("Unknown or unexpected directive in global scope");
+		
+		if (consumeToken() != ";")
+			throw std::runtime_error("Missing ';' in the Global Section.");
 	}
 	if (getHttp().getServers().empty())
 		throw std::runtime_error("Configuration error: No 'server' blocks defined.");
@@ -126,9 +131,10 @@ void	ConfigParser::parseServerBlock( void )
 		e_directive_type directive_type = getDirectiveType(consumeToken());
 
 
-		if (directive_type == DIR_LOCATION)
-			parseLocationBlock(server.getDirectives());
-		else if (directive == "listen")
+		if (directive_type == DIR_LOCATION) {
+			server.addLocation(parseLocationBlock(server.getDirectives()));
+		}
+		else if (directive_type == DIR_LISTEN)
 		{
 			std::string	listenStr = consumeToken();
 		
@@ -142,36 +148,30 @@ void	ConfigParser::parseServerBlock( void )
 			}
 			else//we didnt find ":" => interfce or port ?
 			{
-				if (listenStr.find('.') != std::string::npos)// we found an IP
+				if (listenStr.find('.') != std::string::npos)// we found an interface
 					server.setInterface(listenStr);
 				else// we have a port
 					server.setPort(std::atoi(listenStr.c_str()));
 			}
-
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'listen' directive.");
 		}
-		else if (directive == "server_name")
-		{
+		else if (directive_type == DIR_SERVER_NAME) {
 			server.setServerName(consumeToken());
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'server_name' directive.");
 		}
-		else if (directive == "root")
-		{
-			server.setRoot(consumeToken());
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'root' directive.");
+		else if (reg_directive(directive_type)) {
+			server.getDirectives().setDirective(directive_type, *this);
 		}
 		else
-			throw std::runtime_error("Unknown or unexpected directive in server block: " + directive);
+			throw std::runtime_error("Unknown or unexpected directive in server block");
+		
+		if (consumeToken() != ";")
+			throw std::runtime_error("Missing ';'");
 	}
 
 	consumeToken();
-	_http.addServer(server);
+	getHttp().addServer(server);
 }
 
-void	ConfigParser::parseLocationBlock(const Directives& s_directives)
+Location	ConfigParser::parseLocationBlock(const Directives& s_directives)
 {
 	Location	location(s_directives);
 
@@ -182,60 +182,20 @@ void	ConfigParser::parseLocationBlock(const Directives& s_directives)
 
 	while (peekToken() != "}")
 	{
-		std::string	directive = consumeToken();
+		e_directive_type directive_type = getDirectiveType(consumeToken());
 
-		if (directive == "root")
-		{
-			// if (!location.getAlias().empty())
-			// 	throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");	
-			location.setRoot(consumeToken());
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'root' directive.");
-		}
-		else if (directive == "alias")
-		{
-			// if (!location.getRoot().empty())
-			// 	throw std::runtime_error("Configuration error: 'alias' and 'root' directives are mutually exclusive.");
+		if (directive_type == DIR_ALIAS) {
 			location.setAlias(consumeToken());
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'alias' directive.");
-		}
-		else if (directive == "index")
-		{
-			location.setIndex(consumeToken());
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'index' directive.");
-		}
-		else if (directive == "allowed_methods")
-		{
-			while (peekToken() != ";")
-			{
-				std::string	method = consumeToken();
-				if (method != "GET" && method != "POST" && method != "DELETE")
-					throw std::runtime_error("Unknown or Unexpected Method in 'allowed_methods' directive.");
-				location.addMethod(method);
-			}
-			consumeToken();
-		}
-		else if (directive == "autoindex")
-		{
-			std::string	autoindex = consumeToken();
-			if (autoindex == "on")
-				location.setAutoIndex(true);
-			else if (autoindex == "off")
-				location.setAutoIndex(false);
-			else
-				throw std::runtime_error("Unknown or unexpected in 'autoindex' directive.");
-			if (consumeToken() != ";")
-				throw std::runtime_error("Missing ';' after 'autoindex' directive.");
 		}
 		else
-			throw std::runtime_error("Unknown or unexpected directive in 'Location' block: " + directive);
+			throw std::runtime_error("Unknown or unexpected directive in 'Location' block");
 
+		if (consumeToken() != ";")
+			throw std::runtime_error("Missing ';'");
 	}
 
 	consumeToken();
-	server.addLocation(location);
+	return location;
 }
 
 const std::string&	ConfigParser::getFileName() const
@@ -253,7 +213,7 @@ const size_t&	ConfigParser::getTokensIndex() const
 	return this->_token_index;
 }
 
-const Http& ConfigParser::getHttp() const
+Http& ConfigParser::getHttp()
 {
 	return _http;
 }

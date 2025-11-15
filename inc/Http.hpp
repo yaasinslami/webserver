@@ -1,8 +1,8 @@
 #pragma once
 
-// #include "WebServer.hpp"
-#include "Server.hpp"
+#include "WebServer.hpp"
 #include "Directives.hpp"
+#include "Server.hpp"
 
 class	Http
 {
@@ -11,7 +11,8 @@ class	Http
 		Http(const Http& other);
 		~Http();
 	
-		Directives& getDirectives();
+		Directives&			getDirectives();
+		const Directives&	getDirectives() const;
 		const std::vector<Server>&			getServers() const;
 
 		void	setServers(const std::vector<Server>& servers);

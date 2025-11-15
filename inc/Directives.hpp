@@ -1,7 +1,9 @@
 #pragma once
 
 #include "WebServer.hpp"
-#include "ConfigParser.hpp"
+// #include "ConfigParser.hpp"
+
+class	ConfigParser;
 
 enum e_directive_type
 {

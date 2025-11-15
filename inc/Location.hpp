@@ -1,10 +1,7 @@
 #pragma once
 
 #include "WebServer.hpp"
-#include "Server.hpp"
-#include "Location.hpp"
-
-class	Server;
+#include "Directives.hpp"
 
 class	Location
 {

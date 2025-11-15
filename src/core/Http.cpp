@@ -1,4 +1,5 @@
 #include "../../inc/Http.hpp"
+#include <vector>
 
 Http::Http() :
 	_directives()
@@ -12,6 +13,11 @@ Http::Http(const Http& other)
 }
 
 Directives&	Http::getDirectives()
+{
+	return this->_directives;
+}
+
+const Directives&	Http::getDirectives() const
 {
 	return this->_directives;
 }

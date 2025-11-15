@@ -3,6 +3,9 @@
 #include "WebServer.hpp"
 #include "Http.hpp"
 
+class	Http;
+class	Location;
+
 class	ConfigParser
 {
 	public:
@@ -15,7 +18,7 @@ class	ConfigParser
 		const std::string&				getFileName() const;
 		const std::vector<std::string>&	getTokens() const;
 		const size_t&					getTokensIndex() const;
-		const Http&						getHttp() const;
+		Http&							getHttp();
 
 		/* Setters */
 		void	setFileName(const std::string& filename);
@@ -36,6 +39,6 @@ class	ConfigParser
 		// --- Helper Methods ---
 		void tokenize(std::string& content);
 		
-		void parseServerBlock();
-		void parseLocationBlock(const Directives& s_directives);
+		void		parseServerBlock();
+		Location	parseLocationBlock(const Directives& s_directives);
 };

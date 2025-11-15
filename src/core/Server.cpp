@@ -8,7 +8,25 @@ Server::Server(const Directives& g_directives) :
 
 Server::~Server() {}
 
+Server& Server::operator=(const Server& other)
+{
+	if (this != &other)
+	{
+		setDirectives(other.getDirectives());
+		setInterface(other.getInterface());
+		setPort(other.getPort());
+		setServerName(other.getServerName());
+		setLocations(other.getLocation());
+	}
+	return *this;
+}
+
 const Directives&	Server::getDirectives() const
+{
+	return this->_directives;
+}
+
+Directives&	Server::getDirectives()
 {
 	return this->_directives;
 }
@@ -56,4 +74,9 @@ void Server::setLocations(const std::vector<Location> &locations)
 void	Server::addLocation(const Location& location)
 {
 	this->_locations.push_back(location);
+}
+
+void	Server::setDirectives(const Directives& directves)
+{
+	this->_directives = directves;
 }
