@@ -103,6 +103,7 @@ void	ConfigParser::parse( void )
 		
 		if (directive_type == DIR_SERVER) {
 			parseServerBlock();
+			continue ;
 		}
 		else if (reg_directive(directive_type)) {
 			_http.getDirectives().setDirective(directive_type, *this);
@@ -115,7 +116,6 @@ void	ConfigParser::parse( void )
 	}
 	if (getHttp().getServers().empty())
 		throw std::runtime_error("Configuration error: No 'server' blocks defined.");
-	std::cout << "Parsing complete. Found " << _http.getServers().size() << " server blocks." << std::endl;
 }
 
 void	ConfigParser::parseServerBlock( void )
@@ -133,6 +133,7 @@ void	ConfigParser::parseServerBlock( void )
 
 		if (directive_type == DIR_LOCATION) {
 			server.addLocation(parseLocationBlock(server.getDirectives()));
+			continue ;
 		}
 		else if (directive_type == DIR_LISTEN)
 		{
@@ -164,7 +165,7 @@ void	ConfigParser::parseServerBlock( void )
 			throw std::runtime_error("Unknown or unexpected directive in server block");
 		
 		if (consumeToken() != ";")
-			throw std::runtime_error("Missing ';'");
+			throw std::runtime_error("Missing ';' In a Server Section.");
 	}
 
 	consumeToken();
@@ -187,11 +188,14 @@ Location	ConfigParser::parseLocationBlock(const Directives& s_directives)
 		if (directive_type == DIR_ALIAS) {
 			location.setAlias(consumeToken());
 		}
+		else if (reg_directive(directive_type)) {
+			location.getDirectives().setDirective(directive_type, *this);
+		}
 		else
 			throw std::runtime_error("Unknown or unexpected directive in 'Location' block");
 
 		if (consumeToken() != ";")
-			throw std::runtime_error("Missing ';'");
+			throw std::runtime_error("Missing ';' In a Location Section.");
 	}
 
 	consumeToken();

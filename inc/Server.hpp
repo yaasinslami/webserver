@@ -29,6 +29,8 @@ class	Server
 		void						addLocation(const Location& location);	
 		void						setDirectives(const Directives& directves);
 
+		void						logs() const;
+
 	private:
 		Directives					_directives;
 		std::string					_interface;

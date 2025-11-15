@@ -126,8 +126,7 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 		std::string path;
 		std::map<int, std::string> mp;
 
-		while (conf.getTokensIndex() < conf.getTokens().size() && isdigit(conf.peekToken()[0]))
-		{
+		while (conf.getTokensIndex() < conf.getTokens().size() && isdigit(conf.peekToken()[0])) {
 			codes.push_back(std::atoi(conf.consumeToken().c_str()));
 		}
 
@@ -138,9 +137,6 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 			throw std::runtime_error("No path specified for 'error_page'.");
 
 		path = conf.consumeToken();
-
-		if (conf.consumeToken() != ";")
-			throw std::runtime_error("Expected ';' after 'error_page' directive.");
 
 		for (size_t i = 0; i < codes.size(); ++i)
 		{
@@ -175,4 +171,30 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 		return it->second;
 
 	return DIR_UNKNOWN;
+}
+
+void	Directives::logs() const
+{
+	std::cout << "root: \"" << getRoot() << "\"\n";
+	std::cout << "index: \"" << getIndex() << "\"\n";
+	std::cout << "autoindex: \"" << ((getAutoIndex() == true) ? "on" : "off")  << "\"\n";
+	std::cout << "client_max_body_size: \"" << getMaxBodySize() << "\"\n";
+
+
+	std::cout << "allowed_methods: ";
+	for (const auto& method : getAllowedMethods()) {
+		std::cout << "\"" << method << "\" ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "error_pages: ";
+	const auto& pages = getErrorPages();
+	if (pages.empty()) {
+		std::cout << "(none)" << std::endl;
+	} else {
+		std::cout << std::endl;
+		for (const auto& pair : pages) {
+			std::cout << "\t" << pair.first << ": \"" << pair.second << "\"\n";
+		}
+	}
 }

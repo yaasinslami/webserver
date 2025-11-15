@@ -80,3 +80,18 @@ void	Server::setDirectives(const Directives& directves)
 {
 	this->_directives = directves;
 }
+
+void	Server::logs() const
+{
+	std::cout << "Server [" << getServerName() << "]\n";
+
+	getDirectives().logs();
+	std::cout << "interface: \"" << getInterface() << "\"\n";
+	std::cout << "port: \"" << getPort() << "\"\n";
+
+
+	for (const auto& location : getLocation()) {
+		location.logs();
+	}
+	std::cout << std::endl;
+}

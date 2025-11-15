@@ -10,6 +10,17 @@ Location::Location(const Directives& s_directives) :
 	_alias("")
 {}
 
+Directives&	Location::getDirectives()
+{
+	return this->_directives;
+}
+
+const Directives&	Location::getDirectives() const
+{
+	return this->_directives;
+}
+
+
 std::string Location::getPath() const
 {
 	return this->_path;
@@ -28,4 +39,15 @@ void Location::setPath(const std::string &path)
 void Location::setAlias(const std::string &alias)
 {
 	this->_alias = alias;
+}
+
+void	Location::logs() const
+{
+	std::cout << "Location [" << getPath() << "]\n";
+
+	getDirectives().logs();
+	std::cout << "path: \"" << getPath() << "\"\n";
+	std::cout << "alias: \"" << getAlias() << "\"\n";
+
+	std::cout << std::endl;
 }

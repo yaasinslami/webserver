@@ -49,6 +49,8 @@ struct	Directives
 
 		void	setDirective(const enum e_directive_type directve_type, ConfigParser& conf);
 
+		void	logs() const;
+
 	private:
 		std::string					_root;
 		std::string					_index;
