@@ -2,10 +2,14 @@
 #include  "../../inc/ConfigParser.hpp"
 
 Directives::Directives() :
-	_root(),
-	_index(),
+	_root("/www/html"),
+	_index("index.html"),
 	_autoindex(false)
-{}
+{
+	_allowed_methods.push_back("GET");
+	_allowed_methods.push_back("POST");
+	_allowed_methods.push_back("DELETE");
+}
 
 Directives::~Directives() {}
 
