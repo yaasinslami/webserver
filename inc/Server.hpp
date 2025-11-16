@@ -46,7 +46,7 @@ class	Server
 	private:
 		Directives					_directives;
 		in_addr_t					_interface;
-		uint16_t					_port;
+		in_port_t					_port;
 		std::string					_server_name;
 		std::vector<Location>		_locations;
 		int							_listen_fd;

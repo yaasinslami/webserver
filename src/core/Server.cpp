@@ -1,4 +1,5 @@
 #include "../../inc/Server.hpp"
+#include <netinet/in.h>
 #include <stdexcept>
 #include <sys/socket.h>
 
@@ -31,7 +32,10 @@ Server& Server::operator=(const Server& other)
 
 void	Server::initServer()
 {
-	if (_listen_fd = socket(AF_INET, SOCK_STREAM, 0));
+	//if (_listen_fd = socket(AF_INET, SOCK_STREAM, 0));
+
+	struct	sockaddr	addr;
+	struct sockaddr_in	name;
 }
 
 const Directives&	Server::getDirectives() const
