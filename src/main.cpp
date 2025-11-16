@@ -1,8 +1,4 @@
-#include <exception>
-#include <iostream>
 #include "../inc/ConfigParser.hpp"
-#include "../inc/Http.hpp"
-
 
 int main(int ac, char **av) 
 {
@@ -21,8 +17,8 @@ int main(int ac, char **av)
 		parser.parse();
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 		Http http = parser.getHttp();
-	
-		http.logs();
+
+		// lets start the real work
 	}
 	catch (const std::exception& e)
 	{

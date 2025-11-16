@@ -1,6 +1,5 @@
 #pragma once
 
-#include "WebServer.hpp"
 #include "Http.hpp"
 
 class	Http;

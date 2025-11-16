@@ -1,9 +1,14 @@
 #pragma once
 
-#include "WebServer.hpp"
-#include "Directives.hpp"
 #include "Location.hpp"
-//class	Location;
+
+enum	ServerTypes
+{
+	INTERFACE,
+	PORT,
+	S_NAME,
+	LOCATION
+};
 
 class	Server
 {
@@ -29,6 +34,7 @@ class	Server
 		void						addLocation(const Location& location);	
 		void						setDirectives(const Directives& directves);
 
+		void						validate() const;
 		void						logs() const;
 
 	private:
@@ -37,4 +43,6 @@ class	Server
 		int							_port;
 		std::string					_server_name;
 		std::vector<Location>		_locations;
+
+		std::map<ServerTypes, int>	_server_table;
 };

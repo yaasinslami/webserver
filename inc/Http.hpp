@@ -1,6 +1,5 @@
 #pragma once
 
-#include "WebServer.hpp"
 #include "Directives.hpp"
 #include "Server.hpp"
 
