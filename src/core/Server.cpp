@@ -1,12 +1,18 @@
 #include "../../inc/Server.hpp"
 #include <stdexcept>
+#include <sys/socket.h>
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
-	_interface("0.0.0.0"),
+	_interface(0),
 	_port(80),
 	_server_name("")
-{}
+{
+	_server_table[INTERFACE];
+	_server_table[PORT];
+	_server_table[S_NAME];
+	_server_table[LOCATION];	
+}
 
 Server::~Server() {}
 
@@ -23,6 +29,11 @@ Server& Server::operator=(const Server& other)
 	return *this;
 }
 
+void	Server::initServer()
+{
+	if (_listen_fd = socket(AF_INET, SOCK_STREAM, 0));
+}
+
 const Directives&	Server::getDirectives() const
 {
 	return this->_directives;
@@ -33,12 +44,12 @@ Directives&	Server::getDirectives()
 	return this->_directives;
 }
 
-const std::string&	Server::getInterface() const
+const in_addr_t&	Server::getInterface() const
 {
 	return this->_interface;
 }
 
-const int&	Server::getPort() const
+const uint16_t&	Server::getPort() const
 {
 	return this->_port;
 }
@@ -56,13 +67,20 @@ const std::vector<Location>&		Server::getLocation() const
 void Server::setInterface(const std::string &interface)
 {
 	_server_table[INTERFACE]++;
-	this->_interface = interface;
+	this->_interface = inet_addr(interface.c_str());
+}
+
+void	Server::setInterface(const in_addr_t& inter)
+{
+	this->_interface = inter;
 }
 
 void Server::setPort(const int &port)
 {
 	_server_table[PORT]++;
-	this->_port = port;
+	if (port < 1 || port > 65636)
+		throw std::runtime_error("Wrong syntax: port");
+	this->_port = (uint16_t) port;
 }
 
 void Server::setServerName(const std::string &server_name)
@@ -95,8 +113,11 @@ void	Server::validate() const
 	if (_server_table.at(INTERFACE) > 1 || _server_table.at(PORT) > 1)
 		throw std::runtime_error("Duplicate 'Interface|port' in server block.");
 
-	// if (_server)
+	if (_server_table.at(S_NAME) != 1)
+		throw std::runtime_error("Missing 'server_name'directve.");
 
+	if (_server_table.at(LOCATION) < 1)
+		throw std::runtime_error("Missing a 'location' block.");
 }
 
 void	Server::logs() const

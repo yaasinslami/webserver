@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Location.hpp"
+#include <cstdint>
+#include <netinet/in.h>
 
 enum	ServerTypes
 {
@@ -18,16 +20,20 @@ class	Server
 
 		Server& operator=(const Server& other);
 
+
+		void	initServer( void );
+
 		/* Getters */
 		const Directives&				getDirectives() const;
 		Directives&						getDirectives();
-		const std::string&				getInterface() const;
-		const int&						getPort() const;
+		const in_addr_t&				getInterface() const;
+		const uint16_t&					getPort() const;
 		const std::string&				getServerName() const;
 		const std::vector<Location>&	getLocation() const;
 
 		/* Setters */
 		void						setInterface(const std::string& interface);
+		void						setInterface(const in_addr_t& inter);
 		void						setPort(const int& port);
 		void						setServerName(const std::string& server_name);
 		void						setLocations(const std::vector<Location>& locations);
@@ -39,10 +45,11 @@ class	Server
 
 	private:
 		Directives					_directives;
-		std::string					_interface;
-		int							_port;
+		in_addr_t					_interface;
+		uint16_t					_port;
 		std::string					_server_name;
 		std::vector<Location>		_locations;
+		int							_listen_fd;
 
 		std::map<ServerTypes, int>	_server_table;
 };

@@ -4,7 +4,8 @@
 Directives::Directives() :
 	_root("/www/html"),
 	_index("index.html"),
-	_autoindex(false)
+	_autoindex(false),
+	_client_max_body_size(MAX_CONTENT_LENGTH)
 {
 	_allowed_methods.push_back("GET");
 	_allowed_methods.push_back("POST");

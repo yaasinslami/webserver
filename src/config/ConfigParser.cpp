@@ -168,6 +168,8 @@ void	ConfigParser::parseServerBlock( void )
 			throw std::runtime_error("Missing ';' In a Server Section.");
 	}
 
+	server.validate();
+
 	consumeToken();
 	getHttp().addServer(server);
 }
