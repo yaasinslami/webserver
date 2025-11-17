@@ -141,7 +141,7 @@ void	ConfigParser::parseServerBlock( void )
 		
 			size_t	colonPos = listenStr.find(':');
 
-			if (colonPos != std::string::npos)
+			if (colonPos != std::string::npos)//possibly found both interface:port
 			{
 				server.setInterface(listenStr.substr(0, colonPos));
 				std::string	portStr = listenStr.substr(colonPos + 1);
