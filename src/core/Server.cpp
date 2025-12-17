@@ -5,8 +5,8 @@
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
-	_interface(0),
-	_port(80),
+	_interface("localhost"),
+	_port("80"),
 	_server_name("")
 {
 	_server_table[INTERFACE];
@@ -22,8 +22,8 @@ Server& Server::operator=(const Server& other)
 	if (this != &other)
 	{
 		setDirectives(other.getDirectives());
-		setInterface(other.getInterface());
-		setPort(other.getPort());
+		setInterface(other.getInterfaceString());
+		setPort(other.getPortString());
 		setServerName(other.getServerName());
 		setLocations(other.getLocation());
 	}
@@ -48,12 +48,12 @@ Directives&	Server::getDirectives()
 	return this->_directives;
 }
 
-const in_addr_t&	Server::getInterface() const
+const std::string&	Server::getInterfaceString() const
 {
 	return this->_interface;
 }
 
-const uint16_t&	Server::getPort() const
+const std::string&	Server::getPortString() const
 {
 	return this->_port;
 }
@@ -74,17 +74,17 @@ void Server::setInterface(const std::string &interface)
 	this->_interface = inet_addr(interface.c_str());
 }
 
-void	Server::setInterface(const in_addr_t& inter)
+void	Server::setInterface(const std::string& inter)
 {
 	this->_interface = inter;
 }
 
-void Server::setPort(const int &port)
+void Server::setPort(const std::string &port)
 {
 	_server_table[PORT]++;
-	if (port < 1 || port > 65636)
-		throw std::runtime_error("Wrong syntax: port");
-	this->_port = (uint16_t) port;
+	// if (port < 1 || port > 65636)
+	// 	throw std::runtime_error("Wrong syntax: port");
+	this->_port = port;
 }
 
 void Server::setServerName(const std::string &server_name)
@@ -129,8 +129,8 @@ void	Server::logs() const
 	std::cout << "Server [" << getServerName() << "]\n";
 
 	getDirectives().logs();
-	std::cout << "interface: \"" << getInterface() << "\"\n";
-	std::cout << "port: \"" << getPort() << "\"\n";
+	std::cout << "interface: \"" << getInterfaceString() << "\"\n";
+	std::cout << "port: \"" << getPortString() << "\"\n";
 
 
 	for (std::vector<Location>::const_iterator it = _locations.begin(); it != _locations.end(); std::advance(it, 1)) {

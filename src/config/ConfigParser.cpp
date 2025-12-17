@@ -143,7 +143,7 @@ void	ConfigParser::parseServerBlock( void )
 			{
 				server.setInterface(listenStr.substr(0, colonPos));
 				std::string	portStr = listenStr.substr(colonPos + 1);
-				server.setPort(std::atoi(portStr.c_str()));
+				server.setPort(portStr.c_str());
 			}
 			else//we didnt find ":" => interfce or port ?
 			{
