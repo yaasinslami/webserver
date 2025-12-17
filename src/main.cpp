@@ -18,6 +18,8 @@ int main(int ac, char **av)
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 		Http http = parser.getHttp();
 
+		http.logs();
+
 		// lets start the real work
 	}
 	catch (const std::exception& e)

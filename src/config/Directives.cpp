@@ -196,13 +196,12 @@ void	Directives::logs() const
 	std::cout << std::endl;
 
 	std::cout << "error_pages: ";
-	const auto& pages = getErrorPages();
-	if (pages.empty()) {
+	if (_error_pages.empty()) {
 		std::cout << "(none)" << std::endl;
 	} else {
 		std::cout << std::endl;
-		for (const auto& pair : pages) {
-			std::cout << "\t" << pair.first << ": \"" << pair.second << "\"\n";
+		for (std::map<int, std::string>::const_iterator it = _error_pages.begin(); it != _error_pages.end(); ++it) {
+			std::cout << "\t" << it->first << ": \"" << it->second << "\"\n";
 		}
 	}
 }
