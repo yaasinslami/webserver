@@ -68,7 +68,11 @@ void	Http::setup_servers( void )
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
 		_servers[i].init_server();
-
 		_servers_by_port[_servers[i].get_sockaddr().sin_port].push_back(&_servers[i]);
+	}
+
+	for (std::map<int, std::vector<Server*>>::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
+	{
+		
 	}
 }
