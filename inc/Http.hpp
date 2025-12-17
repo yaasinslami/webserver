@@ -28,7 +28,5 @@ class	Http
 		Directives					_directives;
 		std::vector<Server>			_servers;
 
-		std::map<int, _servers> _servers_by_port;
-
-		// std:v:vector<int> vector of port each entry will have a coresspond server in the _servers
+		std::map<int, std::vector<Server*>> _servers_by_port;
 };

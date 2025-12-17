@@ -69,7 +69,6 @@ void	Http::setup_servers( void )
 	{
 		_servers[i].init_server();
 
-		// check if the server's port already taken by other server
-		for 
+		_servers_by_port[_servers[i].get_sockaddr().sin_port].push_back(&_servers[i]);
 	}
 }
