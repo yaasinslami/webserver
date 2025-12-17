@@ -1,7 +1,4 @@
 #include "../../inc/Server.hpp"
-#include <netinet/in.h>
-#include <stdexcept>
-#include <sys/socket.h>
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
@@ -22,21 +19,44 @@ Server& Server::operator=(const Server& other)
 	if (this != &other)
 	{
 		setDirectives(other.getDirectives());
-		setInterface(other.getInterfaceString());
-		setPort(other.getPortString());
+		setInterface(other.getInterfaceStr());
+		setPort(other.getPortStr());
 		setServerName(other.getServerName());
 		setLocations(other.getLocation());
 	}
 	return *this;
 }
 
-void	Server::initServer()
+void	Server::init_server( void )
 {
-	//if (_listen_fd = socket(AF_INET, SOCK_STREAM, 0));
+	struct addrinfo hints;
+	struct addrinfo *result;
+	int status;
 
-	// struct	sockaddr	addr;
-	// struct sockaddr_in	name;
+	memset(&hints, 0, sizeof(hints));
+
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	status = getaddrinfo(getInterfaceStr().c_str(), getPortStr().c_str(), &hints, &result);
+
+	if (status != 0)
+	{
+		// The lookup failed (e.g., invalid hostname, port number out of range)
+		std::cerr << "Error in getaddrinfo for [" << _interface << ":" << _port
+				  << "]: " << gai_strerror(status) << std::endl;
+
+		throw std::runtime_error("");
+	}
+
+	memset(&get_sockaddr(), 0, sizeof(get_sockaddr()));
+	set_sockaddr(*(struct sockaddr_in *)result->ai_addr);
+	get_sockaddr().sin_family = AF_INET;
+
+	freeaddrinfo(result);
 }
+
 
 const Directives&	Server::getDirectives() const
 {
@@ -48,12 +68,12 @@ Directives&	Server::getDirectives()
 	return this->_directives;
 }
 
-const std::string&	Server::getInterfaceString() const
+const std::string&	Server::getInterfaceStr() const
 {
 	return this->_interface;
 }
 
-const std::string&	Server::getPortString() const
+const std::string&	Server::getPortStr() const
 {
 	return this->_port;
 }
@@ -68,15 +88,15 @@ const std::vector<Location>&		Server::getLocation() const
 	return this->_locations;
 }
 
+struct sockaddr_in&	Server::get_sockaddr( void )
+{
+	return this->_server_sockaddr;
+}
+
 void Server::setInterface(const std::string &interface)
 {
 	_server_table[INTERFACE]++;
 	this->_interface = inet_addr(interface.c_str());
-}
-
-void	Server::setInterface(const std::string& inter)
-{
-	this->_interface = inter;
 }
 
 void Server::setPort(const std::string &port)
@@ -124,13 +144,18 @@ void	Server::validate() const
 		throw std::runtime_error("Missing a 'location' block.");
 }
 
+void	Server::set_sockaddr(const struct sockaddr_in& sockaddr)
+{
+	this->_server_sockaddr = sockaddr;
+}
+
 void	Server::logs() const
 {
 	std::cout << "Server [" << getServerName() << "]\n";
 
 	getDirectives().logs();
-	std::cout << "interface: \"" << getInterfaceString() << "\"\n";
-	std::cout << "port: \"" << getPortString() << "\"\n";
+	std::cout << "interface: \"" << getInterfaceStr() << "\"\n";
+	std::cout << "port: \"" << getPortStr() << "\"\n";
 
 
 	for (std::vector<Location>::const_iterator it = _locations.begin(); it != _locations.end(); std::advance(it, 1)) {

@@ -63,3 +63,13 @@ void	Http::logs() const
 	}
 }
 
+void	Http::setup_servers( void )
+{
+	for (size_t i = 0; i < _servers.size(); ++i)
+	{
+		_servers[i].init_server();
+
+		// check if the server's port already taken by other server
+		for 
+	}
+}

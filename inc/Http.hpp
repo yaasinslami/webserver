@@ -21,8 +21,14 @@ class	Http
 		void	addServer(const Server& server);
 
 		void	logs( void ) const;
+
+		void	setup_servers( void );
 	
 	private:
 		Directives					_directives;
 		std::vector<Server>			_servers;
+
+		std::map<int, _servers> _servers_by_port;
+
+		// std:v:vector<int> vector of port each entry will have a coresspond server in the _servers
 };

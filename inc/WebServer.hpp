@@ -11,3 +11,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdexcept>
+#include <sys/socket.h>
+ #include <sys/socket.h>
+#include <netdb.h>

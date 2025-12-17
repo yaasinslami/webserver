@@ -21,24 +21,26 @@ class	Server
 		Server& operator=(const Server& other);
 
 
-		void	initServer( void );
+		void	init_server( void );
 
 		/* Getters */
 		const Directives&				getDirectives() const;
 		Directives&						getDirectives();
-		const std::string&				getInterfaceString() const;
-		const std::string&					getPortString() const;
+		const std::string&				getInterfaceStr() const;
+		const std::string&					getPortStr() const;
 		const std::string&				getServerName() const;
 		const std::vector<Location>&	getLocation() const;
+		struct sockaddr_in&				get_sockaddr();
 
 		/* Setters */
 		void						setInterface(const std::string& interface);
-		void						setInterface(const std::string& inter);
+		// void						setInterface(const std::string& inter);
 		void						setPort(const std::string& port);
 		void						setServerName(const std::string& server_name);
 		void						setLocations(const std::vector<Location>& locations);
 		void						addLocation(const Location& location);	
 		void						setDirectives(const Directives& directves);
+		void						set_sockaddr(const struct sockaddr_in&);
 
 		void						validate() const;
 		void						logs() const;

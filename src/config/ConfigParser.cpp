@@ -150,7 +150,7 @@ void	ConfigParser::parseServerBlock( void )
 				if (listenStr.find('.') != std::string::npos)// we found an interface
 					server.setInterface(listenStr);
 				else// we have a port
-					server.setPort(std::atoi(listenStr.c_str()));
+					server.setPort(listenStr);
 			}
 		}
 		else if (directive_type == DIR_SERVER_NAME) {
