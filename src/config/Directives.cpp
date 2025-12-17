@@ -135,7 +135,7 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 		std::string path;
 		std::map<int, std::string> mp;
 
-		while (conf.getTokensIndex() < conf.getTokens().size() && isdigit(conf.peekToken()[0])) {
+		while (conf.getTokensIndex() < conf.getTokens().size() && std::isdigit(conf.peekToken()[0])) {
 			codes.push_back(std::atoi(conf.consumeToken().c_str()));
 		}
 
@@ -147,8 +147,7 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 
 		path = conf.consumeToken();
 
-		for (size_t i = 0; i < codes.size(); ++i)
-		{
+		for (size_t i = 0; i < codes.size(); ++i) {
 			mp[codes[i]] = path;
 		}
 		setErrorPages(mp);
@@ -191,8 +190,8 @@ void	Directives::logs() const
 
 
 	std::cout << "allowed_methods: ";
-	for (const auto& method : getAllowedMethods()) {
-		std::cout << "\"" << method << "\" ";
+	for (std::vector<std::string>::const_iterator it = _allowed_methods.begin(); it != _allowed_methods.end(); std::advance(it, 1)) {
+		std::cout << "\"" << *it << "\" ";
 	}
 	std::cout << std::endl;
 

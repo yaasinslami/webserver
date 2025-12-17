@@ -58,8 +58,8 @@ void	Http::logs() const
 
 	getDirectives().logs();
 
-	for (const auto& server: getServers()) {
-		server.logs();
+	for (std::vector<Server>::const_iterator it = _servers.begin(); it != _servers.end(); std::advance(it, 1)) {
+		it->logs();
 	}
 }
 

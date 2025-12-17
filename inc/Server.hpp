@@ -49,8 +49,8 @@ class	Server
 		in_port_t					_port;
 		std::string					_server_name;
 		std::vector<Location>		_locations;
-		struct sockaddr_in 			_server_sockaddr;
-		int							_listen_fd;
+		// struct sockaddr_in 			_server_sockaddr;
+		// int							_listen_fd;
 
 		std::map<ServerTypes, int>	_server_table;
 };

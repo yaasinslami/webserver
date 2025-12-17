@@ -28,7 +28,7 @@ class	ConfigParser
 		std::string peekToken();
 		std::string consumeToken();
 	
-		private:
+	private:
 		std::string					_filename;
 		std::ifstream				_file;
 		std::vector<std::string>	_tokens;

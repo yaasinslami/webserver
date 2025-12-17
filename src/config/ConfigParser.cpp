@@ -64,9 +64,7 @@ void	ConfigParser::tokenize(std::string& content)
 			spaced_content += ' ';
 		}
 		else
-		{
 			spaced_content += processed_content[i];
-		}
 	}
 
 	std::stringstream	ss_tokens(spaced_content);

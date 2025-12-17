@@ -34,8 +34,8 @@ void	Server::initServer()
 {
 	//if (_listen_fd = socket(AF_INET, SOCK_STREAM, 0));
 
-	struct	sockaddr	addr;
-	struct sockaddr_in	name;
+	// struct	sockaddr	addr;
+	// struct sockaddr_in	name;
 }
 
 const Directives&	Server::getDirectives() const
@@ -133,8 +133,8 @@ void	Server::logs() const
 	std::cout << "port: \"" << getPort() << "\"\n";
 
 
-	for (const auto& location : getLocation()) {
-		location.logs();
+	for (std::vector<Location>::const_iterator it = _locations.begin(); it != _locations.end(); std::advance(it, 1)) {
+		it->logs();
 	}
 	std::cout << std::endl;
 }
