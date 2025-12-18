@@ -63,20 +63,78 @@ void	Http::logs() const
 	}
 }
 
+void	Http::addto_poll(int fd, short events)
+{
+	struct pollfd p;
+
+	p.fd = fd;
+	p.events = events;
+	p.revents = 0;
+
+	_poll_fds.push_back(p);
+}
+
 void	Http::setup_servers( void )
 {
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
 		_servers[i].init_server();
-		_servers_by_port[_servers[i].get_sockaddr().sin_port].push_back(&_servers[i]);
+
+		unsigned short	port = _servers[i].get_sockaddr().sin_port;
+		_servers_by_port[port].push_back(&_servers[i]);
 	}
 
-	for (std::map<int, std::vector<Server*>>::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
+	for (std::map<unsigned short, std::vector<Server*>>::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
 	{
-		unsigned short	port = it->first;
 		std::vector<Server*> &servers = it->second;
 
+		Server *leader_server = servers[0];
 
+		int fd;
+		if (fd = socket(AF_INET, SOCK_STREAM, 0) == -1)
+			throw std::runtime_error("Error: failed to  create a socket");
 		
+		int	opt = 1;
+		setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+		if (bind(fd, (struct sockaddr *)&leader_server->get_sockaddr(), sizeof(leader_server->get_sockaddr())) == -1) {
+			throw std::runtime_error("Error: failed to bind a socket");
+		}
+
+		if (listen(fd, 128)) {
+			throw std::runtime_error("Error: socket failed to listen");
+		}
+
+		for (size_t i = 0; i < servers.size(); ++i) {
+			servers[i]->set_fd(fd);
+		}
+
+		addto_poll(fd, POLLIN);
+
+		std::cout << "Listening on port " << ntohs(it->first) << " (FD: " << fd << ")" << std::endl;
+	}
+}
+
+void	Http::run( void )
+{
+	std::cout << "Server is running..." << std::endl;
+
+	while (true)
+	{
+		int status = poll(_poll_fds.data(), _poll_fds.size(), -1);
+
+		if (status < 0) {
+			throw std::runtime_error("Error: poll failed");
+		}
+
+		// if (status == 0) continue;
+
+		for (size_t i = 0; i < _poll_fds.size(); ++i) {
+			if (_poll_fds[i].revents & POLLIN) {
+				int	curr_fd = _poll_fds[i].fd;
+
+				// DECISION: Is this a "Listener" or a "Client"?
+			}
+		}
 	}
 }

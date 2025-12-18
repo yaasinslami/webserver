@@ -149,6 +149,11 @@ void	Server::set_sockaddr(const struct sockaddr_in& sockaddr)
 	this->_server_sockaddr = sockaddr;
 }
 
+void	Server::set_fd(int fd)
+{
+	this->_listen_fd = fd;
+}
+
 void	Server::logs() const
 {
 	std::cout << "Server [" << getServerName() << "]\n";

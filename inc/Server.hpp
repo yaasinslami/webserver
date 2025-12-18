@@ -41,6 +41,7 @@ class	Server
 		void						addLocation(const Location& location);	
 		void						setDirectives(const Directives& directves);
 		void						set_sockaddr(const struct sockaddr_in&);
+		void						set_fd(int fd);
 
 		void						validate() const;
 		void						logs() const;

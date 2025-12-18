@@ -23,10 +23,15 @@ class	Http
 		void	logs( void ) const;
 
 		void	setup_servers( void );
+		void	run( void );
 	
 	private:
 		Directives					_directives;
 		std::vector<Server>			_servers;
 
-		std::map<int, std::vector<Server*>> _servers_by_port;
+		std::map<unsigned short, std::vector<Server*>> _servers_by_port;
+
+		std::vector<struct pollfd>  _poll_fds;
+
+		void	addto_poll(int fd, short events);
 };
