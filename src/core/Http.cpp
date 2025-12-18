@@ -73,6 +73,10 @@ void	Http::setup_servers( void )
 
 	for (std::map<int, std::vector<Server*>>::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
 	{
+		unsigned short	port = it->first;
+		std::vector<Server*> &servers = it->second;
+
+
 		
 	}
 }
