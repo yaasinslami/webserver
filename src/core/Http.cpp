@@ -84,14 +84,14 @@ void	Http::setup_servers( void )
 		_servers_by_port[port].push_back(&_servers[i]);
 	}
 
-	for (std::map<unsigned short, std::vector<Server*>>::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
+	for (std::map<unsigned short, std::vector<Server*> >::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
 	{
 		std::vector<Server*> &servers = it->second;
 
 		Server *leader_server = servers[0];
 
 		int fd;
-		if (fd = socket(AF_INET, SOCK_STREAM, 0) == -1)
+		if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 			throw std::runtime_error("Error: failed to  create a socket");
 		
 		int	opt = 1;
@@ -101,7 +101,7 @@ void	Http::setup_servers( void )
 			throw std::runtime_error("Error: failed to bind a socket");
 		}
 
-		if (listen(fd, 128)) {
+		if (listen(fd, 128) == -1) {
 			throw std::runtime_error("Error: socket failed to listen");
 		}
 
@@ -134,7 +134,85 @@ void	Http::run( void )
 				int	curr_fd = _poll_fds[i].fd;
 
 				// DECISION: Is this a "Listener" or a "Client"?
+				if (isListeningSocket(curr_fd)) {
+					handle_new_connection(curr_fd);
+				}
+				else {
+					handle_client_request(curr_fd);
+				}
 			}
+		}
+	}
+}
+
+bool	Http::isListeningSocket(int fd)
+{
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		if (_servers[i].get_fd() == fd) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void	Http::handle_new_connection(int listener_fd)
+{
+	struct sockaddr_in	client_addr;
+	socklen_t	addr_len = sizeof(client_addr);
+
+	int	client_fd = accept(listener_fd, (struct sockaddr *)&client_addr, &addr_len);
+
+	if (client_fd < 0) {
+		std::cerr << "Error accepting connection" << std::endl;
+		return;
+	}
+
+	fcntl(client_fd, F_SETFL, O_NONBLOCK);
+
+	addto_poll(client_fd, POLLIN);
+
+	std::cout << "New connection accepted! FD: " << client_fd << std::endl;
+}
+
+void Http::handle_client_request(int client_fd)
+{
+	char buffer[1024];
+
+	// Clear buffer to be safe (optional but good for debugging)
+	memset(buffer, 0, sizeof(buffer));
+
+	int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+
+	// FIX: Check for <= 0 (0 means closed connection, -1 means error)
+	if (bytes_read <= 0)
+	{
+		std::cout << "Client disconnected or Error." << std::endl;
+		close(client_fd);
+		remove_from_poll(client_fd);
+		return;
+	}
+
+	// Null-terminate the string so cout doesn't crash
+	buffer[bytes_read] = '\0';
+
+	// FIX: actually print the 'buffer'
+	std::cout << "\n------------ RAW REQUEST START ------------" << std::endl;
+	std::cout << buffer << std::endl;
+	std::cout << "------------- RAW REQUEST END -------------" << std::endl;
+
+    // Send the data
+
+	close(client_fd);
+	remove_from_poll(client_fd);
+}
+
+void	Http::remove_from_poll(int client_fd)
+{
+	for (std::vector<struct pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); ++it)
+	{
+		if (it->fd == client_fd) {
+			_poll_fds.erase(it);
+			return ;
 		}
 	}
 }

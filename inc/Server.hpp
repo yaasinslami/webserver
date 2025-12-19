@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Location.hpp"
-#include <cstdint>
+// #include <cstdint>
+#include <stdint.h>
 #include <netinet/in.h>
 
 enum	ServerTypes
@@ -31,6 +32,7 @@ class	Server
 		const std::string&				getServerName() const;
 		const std::vector<Location>&	getLocation() const;
 		struct sockaddr_in&				get_sockaddr();
+		int								get_fd( void );
 
 		/* Setters */
 		void						setInterface(const std::string& interface);

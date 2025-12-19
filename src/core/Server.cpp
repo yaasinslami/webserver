@@ -93,10 +93,16 @@ struct sockaddr_in&	Server::get_sockaddr( void )
 	return this->_server_sockaddr;
 }
 
+int	Server::get_fd( void )
+{
+	return this->_listen_fd;
+}
+
 void Server::setInterface(const std::string &interface)
 {
 	_server_table[INTERFACE]++;
-	this->_interface = inet_addr(interface.c_str());
+	// this->_interface = inet_addr(interface.c_str());
+	this->_interface = interface;
 }
 
 void Server::setPort(const std::string &port)

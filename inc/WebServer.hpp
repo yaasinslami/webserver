@@ -17,3 +17,8 @@
  #include <sys/socket.h>
 #include <netdb.h>
 #include <poll.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <cstring>
+#include <cstdlib>
