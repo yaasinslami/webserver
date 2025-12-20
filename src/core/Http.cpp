@@ -1,5 +1,6 @@
 #include "../../inc/Http.hpp"
 #include <vector>
+#include "Request.hpp"
 
 Http::Http() :
 	_directives()
@@ -145,15 +146,6 @@ void	Http::run( void )
 	}
 }
 
-bool	Http::isListeningSocket(int fd)
-{
-	for (size_t i = 0; i < _servers.size(); ++i) {
-		if (_servers[i].get_fd() == fd) {
-			return true;
-		}
-	}
-	return false;
-}
 
 void	Http::handle_new_connection(int listener_fd)
 {
@@ -171,36 +163,67 @@ void	Http::handle_new_connection(int listener_fd)
 
 	addto_poll(client_fd, POLLIN);
 
-	std::cout << "New connection accepted! FD: " << client_fd << std::endl;
+	// USE IT HERE: Convert the binary IP to a readable string
+    char *client_ip = inet_ntoa(client_addr.sin_addr);
+    int client_port = ntohs(client_addr.sin_port);
+
+    std::cout << "\nNew connection from " << client_ip << ":" << client_port 
+              << " (FD: " << client_fd << ")" << std::endl;
 }
 
 void Http::handle_client_request(int client_fd)
 {
-	char buffer[1024];
-
-	// Clear buffer to be safe (optional but good for debugging)
+	char buffer[4096];
 	memset(buffer, 0, sizeof(buffer));
 
 	int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-
-	// FIX: Check for <= 0 (0 means closed connection, -1 means error)
 	if (bytes_read <= 0)
 	{
 		std::cout << "Client disconnected or Error." << std::endl;
 		close(client_fd);
 		remove_from_poll(client_fd);
-		return;
+		return ;
 	}
-
-	// Null-terminate the string so cout doesn't crash
 	buffer[bytes_read] = '\0';
 
-	// FIX: actually print the 'buffer'
-	std::cout << "\n------------ RAW REQUEST START ------------" << std::endl;
-	std::cout << buffer << std::endl;
-	std::cout << "------------- RAW REQUEST END -------------" << std::endl;
+	// std::cout << "------------ RAW REQUEST START ------------" << std::endl;
+	// std::cout << buffer << std::endl;
+	// std::cout << "------------- RAW REQUEST END -------------" << std::endl;
 
-    // Send the data
+
+	// create Request object && parse the http request
+    Request req(buffer);
+
+    std::cout << "Client asked for Method: " << req.getMethod() << std::endl;
+    std::cout << "Client asked for File: "   << req.getPath() << std::endl;
+	std::cout << "Client asked for version: "   << req.getVersion() << std::endl;
+
+    std::string	file_content;
+	std::ifstream file("www/index.html");
+
+	if (file.is_open())
+	{
+		std::stringstream buffer;
+		buffer << file.rdbuf();
+		file_content = buffer.str();
+		file.close();
+	}
+	else {
+		file_content = "<html><body><h1>Error: index.html not found</h1></body></html>";
+	}
+
+	std::ostringstream response_stream;
+
+	response_stream << "HTTP/1.1 200 OK\r\n";
+	response_stream << "Content-Type: text/html\r\n";
+	response_stream << "Content-Length: " << file_content.length() << "\r\n";
+	response_stream << "\r\n";		 // Empty line matches header end
+	response_stream << file_content; // The actual HTML
+
+	std::string response = response_stream.str();
+
+	// Send it
+	send(client_fd, response.c_str(), response.length(), 0);
 
 	close(client_fd);
 	remove_from_poll(client_fd);
@@ -215,4 +238,14 @@ void	Http::remove_from_poll(int client_fd)
 			return ;
 		}
 	}
+}
+
+bool	Http::isListeningSocket(int fd)
+{
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		if (_servers[i].get_fd() == fd) {
+			return true;
+		}
+	}
+	return false;
 }
