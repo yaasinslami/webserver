@@ -20,10 +20,17 @@ class	Request
 
 		void	parse(std::string raw);
 
-		// class	RequestException : public std::exception
-		// {
-		// 	virtual const char * what() throw();
-		// }
+		class	RequestException : public std::exception
+		{
+			private:
+				int	_status_code;
+
+			public:
+				RequestException(int code);
+				int get_status_code() const;
+
+				virtual const char * what() throw();
+		}
 };
 
 #endif

@@ -2,15 +2,8 @@
 #include <sstream>
 #include <vector>
 
-Request::Request(std::string raw_content)
-{
-	parse(raw_content);
-}
-
-Request::~Request() {}
-
 /*
-	GET /api/users/123 HTTP/1.1
+	request line:	GET /api/users/123 HTTP/1.1
 	Host: api.example.com
 	User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
 	Accept: application/json
@@ -21,9 +14,6 @@ Request::~Request() {}
 void	Request::parse(std::string raw)
 {
 	std::stringstream	ss(raw);
-	// ss >> this->_method;
-	// ss >> this->_path;
-	// ss >> this->_version;
 
 	std::string line;
 
@@ -53,13 +43,13 @@ void	Request::parse(std::string raw)
 	}
 }
 
-// exception: Bad request
+Request::Request(std::string raw_content) { parse(raw_content); }
+Request::~Request() {}
 
 std::string Request::getMethod() const { return _method; }
 std::string Request::getPath() const { return _path; }
 std::string Request::getVersion() const { return _version; }
 
-// const char* Request::RequestException::what() throw()
-// {
-// 	return "";
-// }
+Request::RequestException::RequestException(int code) : _status_code(code) {}
+int Request::RequestException::get_status_code() const { return _status_code; }
+const char* Request::RequestException::what() throw() { return "Request Parsing Error"; }
