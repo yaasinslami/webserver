@@ -2,6 +2,7 @@
 #include <sstream>
 #include <vector>
 
+
 /*
 	request line:	GET /api/users/123 HTTP/1.1
 	Host: api.example.com
@@ -43,7 +44,8 @@ void	Request::parse(std::string raw)
 	}
 }
 
-Request::Request(std::string raw_content) { parse(raw_content); }
+Request::Request(std::string raw_content){ parse(raw_content); }
+
 Request::~Request() {}
 
 std::string Request::getMethod() const { return _method; }
