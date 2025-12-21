@@ -19,6 +19,11 @@ class	Request
 		std::string	_version;
 
 		void	parse(std::string raw);
+
+		// class	RequestException : public std::exception
+		// {
+		// 	virtual const char * what() throw();
+		// }
 };
 
 #endif
