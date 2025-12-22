@@ -18,8 +18,8 @@ void	Http::setup_servers( void )
 
 		Server *leader_server = servers[0];
 
-		int fd;
-		if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+		int fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (fd == -1)
 			throw std::runtime_error("Error: failed to  create a socket");
 		
 		int	opt = 1;
@@ -29,7 +29,7 @@ void	Http::setup_servers( void )
 			throw std::runtime_error("Error: failed to bind a socket");
 		}
 
-		if (listen(fd, 128) == -1) {
+		if (listen(fd, SOMAXCONN) == -1) {
 			throw std::runtime_error("Error: socket failed to listen");
 		}
 
@@ -47,8 +47,10 @@ void	Http::run( void )
 {
 	std::cout << "Server is running..." << std::endl;
 
+	// event loop
 	while (true)
 	{
+		std::cout << "H\n";
 		int status = poll(_poll_fds.data(), _poll_fds.size(), -1);
 
 		if (status < 0) {
@@ -57,6 +59,7 @@ void	Http::run( void )
 
 		// if (status == 0) continue;
 
+		// loop over the Interest List
 		for (size_t i = 0; i < _poll_fds.size(); ++i) {
 			if (_poll_fds[i].revents & POLLIN) {
 				int	curr_fd = _poll_fds[i].fd;
@@ -73,14 +76,17 @@ void	Http::run( void )
 	}
 }
 
-void	Http::handle_new_connection(int listener_fd)
+#include <sys/socket.h>
+
+void Http::handle_new_connection(int listener_fd)
 {
-	struct sockaddr_in	client_addr;
-	socklen_t	addr_len = sizeof(client_addr);
+	struct sockaddr_in client_addr;
+	socklen_t addr_len = sizeof(client_addr);
 
-	int	client_fd = accept(listener_fd, (struct sockaddr *)&client_addr, &addr_len);
+	int client_fd = accept(listener_fd, (struct sockaddr *)&client_addr, &addr_len);
 
-	if (client_fd < 0) {
+	if (client_fd < 0)
+	{
 		std::cerr << "Error accepting connection" << std::endl;
 		return;
 	}
@@ -90,11 +96,12 @@ void	Http::handle_new_connection(int listener_fd)
 	addto_poll(client_fd, POLLIN);
 
 	// USE IT HERE: Convert the binary IP to a readable string
-    char *client_ip = inet_ntoa(client_addr.sin_addr);
-    int client_port = ntohs(client_addr.sin_port);
+	char *client_ip = inet_ntoa(client_addr.sin_addr);
+	int client_port = ntohs(client_addr.sin_port);
 
-    std::cout << "\nNew connection from " << client_ip << ":" << client_port 
-              << " (FD: " << client_fd << ")" << std::endl;
+	std::cout << "\nNew connection from " << client_ip << ":" << client_port
+			  << " (FD: " << client_fd << ")" << std::endl;
+
 }
 
 void Http::handle_client_request(int client_fd)
