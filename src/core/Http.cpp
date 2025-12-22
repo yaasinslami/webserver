@@ -112,49 +112,50 @@ void Http::handle_client_request(int client_fd)
 	}
 	buffer[bytes_read] = '\0';
 
-	// std::cout << "------------ RAW REQUEST START ------------" << std::endl;
-	// std::cout << buffer << std::endl;
-	// std::cout << "------------- RAW REQUEST END -------------" << std::endl;
+	std::cout << "------------ RAW REQUEST START ------------" << std::endl;
+	std::cout << buffer << std::endl;
+	std::cout << "------------- RAW REQUEST END -------------" << std::endl;
 
 
 	// create Request object && parse the http request
 	try {
     	Request req(buffer);
+
+		std::cout << "Client asked for Method: " << req.getMethod() << std::endl;
+		std::cout << "Client asked for File: "   << req.getPath() << std::endl;
+		std::cout << "Client asked for version: "   << req.getVersion() << std::endl;
 	}
-	catch() {
-
-	}
-
-    std::cout << "Client asked for Method: " << req.getMethod() << std::endl;
-    std::cout << "Client asked for File: "   << req.getPath() << std::endl;
-	std::cout << "Client asked for version: "   << req.getVersion() << std::endl;
-
-    std::string	file_content;
-	std::ifstream file("www/index.html");
-
-	if (file.is_open())
-	{
-		std::stringstream buffer;
-		buffer << file.rdbuf();
-		file_content = buffer.str();
-		file.close();
-	}
-	else {
-		file_content = "<html><body><h1>Error: index.html not found</h1></body></html>";
+	catch(Request::RequestException& e) {
+		std::cout << e.what() << "\t" << e.get_status_code() << std::endl;
 	}
 
-	std::ostringstream response_stream;
 
-	response_stream << "HTTP/1.1 200 OK\r\n";
-	response_stream << "Content-Type: text/html\r\n";
-	response_stream << "Content-Length: " << file_content.length() << "\r\n";
-	response_stream << "\r\n";		 // Empty line matches header end
-	response_stream << file_content; // The actual HTML
+    // std::string	file_content;
+	// std::ifstream file("www/index.html");
 
-	std::string response = response_stream.str();
+	// if (file.is_open())
+	// {
+	// 	std::stringstream buffer;
+	// 	buffer << file.rdbuf();
+	// 	file_content = buffer.str();
+	// 	file.close();
+	// }
+	// else {
+	// 	file_content = "<html><body><h1>Error: index.html not found</h1></body></html>";
+	// }
 
-	// Send it
-	send(client_fd, response.c_str(), response.length(), 0);
+	// std::ostringstream response_stream;
+
+	// response_stream << "HTTP/1.1 200 OK\r\n";
+	// response_stream << "Content-Type: text/html\r\n";
+	// response_stream << "Content-Length: " << file_content.length() << "\r\n";
+	// response_stream << "\r\n";		 // Empty line matches header end
+	// response_stream << file_content; // The actual HTML
+
+	// std::string response = response_stream.str();
+
+	// // Send it
+	// send(client_fd, response.c_str(), response.length(), 0);
 
 	close(client_fd);
 	remove_from_poll(client_fd);

@@ -13,13 +13,6 @@ class	Request
         std::string getPath() const;
         std::string getVersion() const;
 
-	private:
-		std::string	_method;
-		std::string	_path;
-		std::string	_version;
-
-		void	parse(std::string raw);
-
 		class	RequestException : public std::exception
 		{
 			private:
@@ -29,8 +22,16 @@ class	Request
 				RequestException(int code);
 				int get_status_code() const;
 
-				virtual const char * what() throw();
-		}
+				virtual const char * what() const throw();
+		};
+	private:
+		std::string	_method;
+		std::string	_path;
+		std::string	_version;
+		std::string	_host;
+
+		void	parse(std::string raw);
+
 };
 
 #endif
