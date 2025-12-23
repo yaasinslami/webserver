@@ -27,6 +27,7 @@ ConfigParser::ConfigParser(const std::string& filename) :
 
 	std::stringstream	ss;
 	ss << _file.rdbuf();
+	_file.close();
 
 	std::string	file_content = ss.str();
 
@@ -93,8 +94,6 @@ std::string	ConfigParser::consumeToken( void )
 
 void	ConfigParser::parse( void )
 {
-	std::cout << "Start parsing tokens" << std::endl;
-
 	while (getTokensIndex() < getTokens().size())
 	{
 		e_directive_type directive_type = getDirectiveType(consumeToken());

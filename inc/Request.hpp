@@ -3,6 +3,15 @@
 
 #include <string>
 
+enum RequestState {
+	STATE_METHOD,
+	STATE_URI,
+	STATE_VERSION,
+	STATE_HEADERS,
+	STATE_BODY,
+	STATE_COMPLETE
+};
+
 class	Request
 {
 	public:
@@ -29,6 +38,7 @@ class	Request
 		std::string	_path;
 		std::string	_version;
 		std::string	_host;
+		std::string	_accept;
 
 		void	parse(std::string raw);
 

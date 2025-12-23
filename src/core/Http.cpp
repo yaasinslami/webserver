@@ -50,7 +50,6 @@ void	Http::run( void )
 	// event loop
 	while (true)
 	{
-		std::cout << "H\n";
 		int status = poll(_poll_fds.data(), _poll_fds.size(), -1);
 
 		if (status < 0) {
@@ -75,8 +74,6 @@ void	Http::run( void )
 		}
 	}
 }
-
-#include <sys/socket.h>
 
 void Http::handle_new_connection(int listener_fd)
 {
@@ -109,7 +106,8 @@ void Http::handle_client_request(int client_fd)
 	char buffer[4096];
 	memset(buffer, 0, sizeof(buffer));
 
-	int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+	// loop recv until found a CRLF(\r\n)
+	int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
 	if (bytes_read <= 0)
 	{
 		std::cout << "Client disconnected or Error." << std::endl;
@@ -119,9 +117,9 @@ void Http::handle_client_request(int client_fd)
 	}
 	buffer[bytes_read] = '\0';
 
-	std::cout << "------------ RAW REQUEST START ------------" << std::endl;
-	std::cout << buffer << std::endl;
-	std::cout << "------------- RAW REQUEST END -------------" << std::endl;
+	// std::cout << "------------ RAW REQUEST START ------------" << std::endl;
+	// std::cout << buffer << std::endl;
+	// std::cout << "------------- RAW REQUEST END -------------" << std::endl;
 
 
 	// create Request object && parse the http request
@@ -134,35 +132,10 @@ void Http::handle_client_request(int client_fd)
 	}
 	catch(Request::RequestException& e) {
 		std::cout << e.what() << "\t" << e.get_status_code() << std::endl;
+		close(client_fd);
+		remove_from_poll(client_fd);
+		return ;
 	}
-
-
-    // std::string	file_content;
-	// std::ifstream file("www/index.html");
-
-	// if (file.is_open())
-	// {
-	// 	std::stringstream buffer;
-	// 	buffer << file.rdbuf();
-	// 	file_content = buffer.str();
-	// 	file.close();
-	// }
-	// else {
-	// 	file_content = "<html><body><h1>Error: index.html not found</h1></body></html>";
-	// }
-
-	// std::ostringstream response_stream;
-
-	// response_stream << "HTTP/1.1 200 OK\r\n";
-	// response_stream << "Content-Type: text/html\r\n";
-	// response_stream << "Content-Length: " << file_content.length() << "\r\n";
-	// response_stream << "\r\n";		 // Empty line matches header end
-	// response_stream << file_content; // The actual HTML
-
-	// std::string response = response_stream.str();
-
-	// // Send it
-	// send(client_fd, response.c_str(), response.length(), 0);
 
 	close(client_fd);
 	remove_from_poll(client_fd);

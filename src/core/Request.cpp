@@ -27,11 +27,18 @@ void	Request::parse(std::string content)
 	_version = tokens[2];
 	if (_version != "HTTP/1.1") throw RequestException(505);
 
-	// request Header
+	// should a found new line (CRLF)
 
-	// while (std::getline(line_stream, line))
+	std::getline(ss, line);
+	if (line != "\r") throw RequestException(506);
+
+	// request Header
+	// while (std::getline(ss, line))
 	// {
-		
+	// 	// parse the Host
+	// 	std::string	host;
+
+	// 	if (line.size())
 	// }
 }
 
