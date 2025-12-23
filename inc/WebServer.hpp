@@ -22,3 +22,5 @@
 #include <unistd.h>
 #include <cstring>
 #include <cstdlib>
+
+extern bool g_running;

@@ -29,8 +29,8 @@ void	Request::parse(std::string content)
 
 	// should a found new line (CRLF)
 
-	std::getline(ss, line);
-	if (line != "\r") throw RequestException(506);
+	// std::getline(ss, line);
+	// if (line != "\r") throw RequestException(506);
 
 	// request Header
 	// while (std::getline(ss, line))
