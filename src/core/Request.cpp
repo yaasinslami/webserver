@@ -43,21 +43,9 @@ void	Request::parse_header(std::string header)
 		if (delim_pos == std::string::npos)
 			throw	RequestException(400);
 		
-		
+
 	}
 }
-
-/*
-        if (!line.empty() && line[line.size() - 1] == '\r') {
-            line.erase(line.size() - 1);
-        }
-        
-        if (line.empty()) continue;
-
-        // Now you can safely parse "Key: Value"
-        // ...
-    }
-*/
 
 Request::Request() : _state(STATE_READING_HEADERS), _content_length(0)
 {
