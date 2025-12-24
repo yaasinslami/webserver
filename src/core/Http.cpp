@@ -89,7 +89,6 @@ void Http::handle_new_connection(int listener_fd)
 	}
 
 	fcntl(client_fd, F_SETFL, O_NONBLOCK);
-
 	addto_poll(client_fd, POLLIN);
 
 	// USE IT HERE: Convert the binary IP to a readable string
@@ -108,7 +107,7 @@ void Http::handle_client_request(int client_fd)
 
 	// loop recv until found a CRLF(\r\n)
 	int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-	if (bytes_read <= 0)
+	if (bytes_read < 0)
 	{
 		std::cout << "Client disconnected or Error." << std::endl;
 		close(client_fd);

@@ -11,7 +11,10 @@ void	Request::parse(std::string content)
 	std::string line;
 	if (!std::getline(ss, line)) throw RequestException(400); // Empty request
 
-	if (!line.empty() && line[line.length() - 1] == '\r') line.erase(line.length() - 1);
+	if (!line.empty() && line[line.length() - 1] == '\r')
+		line.erase(line.length() - 1);
+	else
+		throw RequestException(401);
 
 	std::stringstream	line_stream(line);
 	std::string		token;
@@ -20,17 +23,20 @@ void	Request::parse(std::string content)
 	while (std::getline(line_stream, token, ' ')) {
 		if (!token.empty()) tokens.push_back(token);
 	}
-	if (tokens.size() != 3) throw RequestException(400);
+	if (tokens.size() != 3) throw RequestException(402);
 
 	_method = tokens[0];
 	_path = tokens[1];
 	_version = tokens[2];
 	if (_version != "HTTP/1.1") throw RequestException(505);
 
-	// should a found new line (CRLF)
-
-	std::getline(ss, line);
-	if (line != "\r") throw RequestException(506);
+	// loop over request header
+	while (std::getline(ss, line))
+	{
+		
+		std::cout << line << std::endl;
+	}
+	// if (line != "\r") throw RequestException(506);
 
 	// request Header
 	// while (std::getline(ss, line))
