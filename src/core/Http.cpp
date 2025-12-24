@@ -114,7 +114,7 @@ void Http::handle_client_request(int client_fd)
 
 		if (bytes_read <= 0)
 		{
-			if (bytes_read < 0 &&(errno == EWOULDBLOCK || errno == EAGAIN))
+			if (bytes_read < 0 && (errno == EWOULDBLOCK || errno == EAGAIN))
 				break ;
 
 			std::cout << "Client disconnected or Error" << std::endl;

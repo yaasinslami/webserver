@@ -3,6 +3,78 @@
 #include <vector>
 #include <iostream>
 
+void	Request::feed(const char* chunk, size_t size)
+{
+	_buffer.append(chunk, size);// append current read to our buffer
+
+	if (_state == STATE_READING_HEADERS)
+	{
+		size_t header_end = _buffer.find("\r\n\r\n");
+		if (header_end != std::string::npos)
+		{
+			std::string	header(_buffer);
+			try {
+				parse_header(header.substr(0, header_end));
+				_state = STATE_READING_BODY;
+			}
+			catch(std::exception& e) {
+				std::cerr << "Request Error: " << e.what() << std::endl;
+				_state = STATE_ERROR;
+			}
+		}
+	}
+}
+
+void	Request::parse_header(std::string header)
+{
+	std::stringstream ss(header);
+	std::string	line;
+
+	// loop over header lines
+	while (std::getline(ss, line))
+	{
+		if (!line.empty() && line[line.size() - 1] == '\r') {
+			line.erase(line.size() - 1);
+		}
+
+		if (line.empty()) continue ;
+
+		size_t	delim_pos = line.find(':');
+		if (delim_pos == std::string::npos)
+			throw	RequestException(400);
+		
+		
+	}
+}
+
+/*
+        if (!line.empty() && line[line.size() - 1] == '\r') {
+            line.erase(line.size() - 1);
+        }
+        
+        if (line.empty()) continue;
+
+        // Now you can safely parse "Key: Value"
+        // ...
+    }
+*/
+
+Request::Request() : _state(STATE_READING_HEADERS), _content_length(0)
+{
+	_content_length = 0;
+}
+
+Request::~Request() {}
+
+std::string Request::getMethod() const { return _method; }
+std::string Request::getPath() const { return _path; }
+std::string Request::getVersion() const { return _version; }
+
+Request::RequestException::RequestException(int code) : _status_code(code) {}
+int Request::RequestException::get_status_code() const { return _status_code; }
+const char* Request::RequestException::what() const throw() { return "Request Parsing Error"; }
+
+/* Request::parse()
 void	Request::parse(std::string content)
 {
 	std::stringstream	ss(content);
@@ -46,16 +118,4 @@ void	Request::parse(std::string content)
 
 	// 	if (line.size())
 	// }
-}
-
-Request::Request(std::string content){ parse(content); }
-
-Request::~Request() {}
-
-std::string Request::getMethod() const { return _method; }
-std::string Request::getPath() const { return _path; }
-std::string Request::getVersion() const { return _version; }
-
-Request::RequestException::RequestException(int code) : _status_code(code) {}
-int Request::RequestException::get_status_code() const { return _status_code; }
-const char* Request::RequestException::what() const throw() { return "Request Parsing Error"; }
+}*/
