@@ -1,7 +1,17 @@
 #include "../inc/ConfigParser.hpp"
+#include <csignal>
+
+bool	g_running = true;
+
+void	signalHandler(int signum) {
+	(void)signum;
+	g_running = false;
+}
 
 int main(int ac, char **av) 
 {
+	signal(SIGINT, signalHandler);
+
 	if (ac > 2)
 	{
 		std::cerr << "Error: Too many arguments." << std::endl;

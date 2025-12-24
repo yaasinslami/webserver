@@ -48,7 +48,7 @@ void	Http::run( void )
 	std::cout << "Server is running..." << std::endl;
 
 	// event loop
-	while (true)
+	while (g_running)
 	{
 		int status = poll(_poll_fds.data(), _poll_fds.size(), -1);
 
@@ -73,6 +73,7 @@ void	Http::run( void )
 			}
 		}
 	}
+	std::cout << "Server shutting down cleanly..." << std::endl;
 }
 
 void Http::handle_new_connection(int listener_fd)
@@ -110,7 +111,7 @@ void Http::handle_client_request(int client_fd)
 	if (bytes_read < 0)
 	{
 		std::cout << "Client disconnected or Error." << std::endl;
-		close(client_fd);
+		// close(client_fd);
 		remove_from_poll(client_fd);
 		return ;
 	}
@@ -131,12 +132,12 @@ void Http::handle_client_request(int client_fd)
 	}
 	catch(Request::RequestException& e) {
 		std::cout << e.what() << "\t" << e.get_status_code() << std::endl;
-		close(client_fd);
+		// close(client_fd);
 		remove_from_poll(client_fd);
 		return ;
 	}
 
-	close(client_fd);
+	// close(client_fd);
 	remove_from_poll(client_fd);
 }
 
@@ -145,6 +146,7 @@ void	Http::remove_from_poll(int client_fd)
 	for (std::vector<struct pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); ++it)
 	{
 		if (it->fd == client_fd) {
+			close(it->fd);
 			_poll_fds.erase(it);
 			return ;
 		}
@@ -177,7 +179,15 @@ Http::Http() :
 	_directives()
 {}
 
-Http::~Http() {}
+Http::~Http()
+{
+	for (size_t i = 0; i < _poll_fds.size(); i++)
+	{
+		if (_poll_fds[i].fd >= 0) {
+			close(_poll_fds[i].fd);
+		}
+	}
+}
 
 Http::Http(const Http& other)
 {
