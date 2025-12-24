@@ -3,19 +3,17 @@
 
 #include <string>
 
-enum RequestState {
-	STATE_METHOD,
-	STATE_URI,
-	STATE_VERSION,
-	STATE_HEADERS,
-	STATE_BODY,
+enum RequestState
+{
+	STATE_READING_HEADERS,
+	STATE_READING_BODY,
 	STATE_COMPLETE
 };
 
 class	Request
 {
 	public:
-		Request(std::string raw_content);
+		Request();
 		~Request();
 
 		std::string getMethod() const;
@@ -25,20 +23,28 @@ class	Request
 		class	RequestException : public std::exception
 		{
 			private:
-				int	_status_code;
+				int _status_code;
 
 			public:
 				RequestException(int code);
 				int get_status_code() const;
 
-				virtual const char * what() const throw();
+				virtual const char *what() const throw();
 		};
+
+		bool	parsingCompleted() const;
+		void	feed(const char* data, size_t size);
+
 	private:
-		std::string	_method;
-		std::string	_path;
-		std::string	_version;
-		std::string	_host;
-		std::string	_accept;
+		std::string		_buffer;
+		RequestState	_state;
+		size_t			_content_length;
+
+		std::string _method;
+		std::string _path;
+		std::string _version;
+		// std::map<string, string>	_headers;
+		// std::string				_body;
 
 		void	parse(std::string raw);
 

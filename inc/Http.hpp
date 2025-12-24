@@ -2,6 +2,7 @@
 
 #include "Directives.hpp"
 #include "Server.hpp"
+#include "Client.hpp"
 
 class	Http
 {
@@ -28,10 +29,9 @@ class	Http
 	private:
 		Directives					_directives;
 		std::vector<Server>			_servers;
-
 		std::map<unsigned short, std::vector<Server*> > _servers_by_port;
-
 		std::vector<struct pollfd>  _poll_fds;
+		std::map<int, Client>		_clients;
 
 		void	addto_poll(int fd, short events);
 		bool	isListeningSocket(int fd);

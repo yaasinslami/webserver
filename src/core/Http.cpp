@@ -82,9 +82,7 @@ void Http::handle_new_connection(int listener_fd)
 	socklen_t addr_len = sizeof(client_addr);
 
 	int client_fd = accept(listener_fd, (struct sockaddr *)&client_addr, &addr_len);
-
-	if (client_fd < 0)
-	{
+	if (client_fd < 0) {
 		std::cerr << "Error accepting connection" << std::endl;
 		return;
 	}
@@ -92,54 +90,68 @@ void Http::handle_new_connection(int listener_fd)
 	fcntl(client_fd, F_SETFL, O_NONBLOCK);
 	addto_poll(client_fd, POLLIN);
 
-	// USE IT HERE: Convert the binary IP to a readable string
-	char *client_ip = inet_ntoa(client_addr.sin_addr);
-	int client_port = ntohs(client_addr.sin_port);
+	// create a client with that fd and store it
+	Client new_client(client_fd);
+	_clients[client_fd] = new_client;
 
-	std::cout << "\nNew connection from " << client_ip << ":" << client_port
+	std::cout << "\nNew connection from " << inet_ntoa(client_addr.sin_addr) << ":" << htons(client_addr.sin_port)
 			  << " (FD: " << client_fd << ")" << std::endl;
 
 }
 
 void Http::handle_client_request(int client_fd)
 {
-	char buffer[4096];
-	memset(buffer, 0, sizeof(buffer));
+	Client	&curr_client = _clients[client_fd];
 
-	// loop recv until found a CRLF(\r\n)
-	int bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-	if (bytes_read < 0)
+	char	tmp_buffer[4096];
+	memset(tmp_buffer, 0, sizeof(tmp_buffer));
+	ssize_t	bytes_read;
+
+	// loop over recv until request is done
+	while (true)
 	{
-		std::cout << "Client disconnected or Error." << std::endl;
-		// close(client_fd);
-		remove_from_poll(client_fd);
-		return ;
+		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, 0);
+
+		if (bytes_read <= 0)
+		{
+			if (bytes_read < 0 &&(errno == EWOULDBLOCK || errno == EAGAIN))
+				break ;
+
+			std::cout << "Client disconnected or Error" << std::endl;
+			remove_from_poll(client_fd);
+			return ;
+		}
+
+		// we have data
+		curr_client.getRequest().feed(tmp_buffer, bytes_read);
 	}
-	buffer[bytes_read] = '\0';
+	// exit the while, we expect we have finished data
+
+	// remove_from_poll(client_fd);
+}
+
+/*
+
+	recv -> MSG_DONTWAIT
 
 	// std::cout << "------------ RAW REQUEST START ------------" << std::endl;
 	// std::cout << buffer << std::endl;
 	// std::cout << "------------- RAW REQUEST END -------------" << std::endl;
 
+		// std::cout << "Client asked for Method: " << req.getMethod() << std::endl;
+		// std::cout << "Client asked for File: "   << req.getPath() << std::endl;
+		// std::cout << "Client asked for version: "   << req.getVersion() << std::endl;
 
-	// create Request object && parse the http request
 	try {
-    	Request req(buffer);
+		Request request;
 
-		std::cout << "Client asked for Method: " << req.getMethod() << std::endl;
-		std::cout << "Client asked for File: "   << req.getPath() << std::endl;
-		std::cout << "Client asked for version: "   << req.getVersion() << std::endl;
 	}
 	catch(Request::RequestException& e) {
 		std::cout << e.what() << "\t" << e.get_status_code() << std::endl;
-		// close(client_fd);
 		remove_from_poll(client_fd);
 		return ;
 	}
-
-	// close(client_fd);
-	remove_from_poll(client_fd);
-}
+*/
 
 void	Http::remove_from_poll(int client_fd)
 {
