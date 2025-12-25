@@ -21,6 +21,7 @@ class	Request
 		std::string getMethod() const;
         std::string getPath() const;
         std::string getVersion() const;
+		bool		requestCompleted() const;
 
 		class	RequestException : public std::exception
 		{
@@ -49,7 +50,8 @@ class	Request
 		// std::string				_body;
 
 		void	_parse_request_line(const std::string&);
-		void	parse_header(const std::string&);
+		void	_parse_header(const std::string&);
+		void	_check_body_complete(size_t);
 
 };
 

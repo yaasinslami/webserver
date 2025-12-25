@@ -18,6 +18,9 @@ Client& Client::operator=(const Client& other)
 
 Client::~Client() {}
 
-// bool	Client::isRequestReady() const { return _ }
+bool	Client::isRequestReady() const
+{
+	return _request.requestCompleted();
+}
 
 Request& Client::getRequest() { return _request; }

@@ -14,7 +14,7 @@ class	Client
 
 		Client& operator=(const Client& other);
 
-		// bool	isRequestReady() const;
+		bool	isRequestReady() const;
 		Request &getRequest();
 
 	private:

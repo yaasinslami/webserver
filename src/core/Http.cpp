@@ -50,7 +50,7 @@ void	Http::run( void )
 	// event loop
 	while (g_running)
 	{
-		int status = poll(_poll_fds.data(), _poll_fds.size(), -1);
+		int status = poll(_poll_fds.data(), _poll_fds.size(), 1);
 
 		if (status < 0) {
 			throw std::runtime_error("Error: poll failed");
@@ -110,7 +110,8 @@ void Http::handle_client_request(int client_fd)
 	// loop over recv until request is done
 	while (true)
 	{
-		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, 0);
+		std::cout << "read\n";
+		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, MSG_DONTWAIT);
 
 		if (bytes_read <= 0)
 		{
@@ -124,8 +125,32 @@ void Http::handle_client_request(int client_fd)
 
 		// we have data
 		curr_client.getRequest().feed(tmp_buffer, bytes_read);
+		
+		//check if client request fully readed
+		if (curr_client.isRequestReady())
+			break ;
 	}
-	// exit the while, we expect we have finished data
+	std::cout << "feeding finish!\n";
+	// exit the while, we expect we have finished data - now let chose the best config match specific criteria absed on that request then do the parse number 2 to check validity 
+	// ...
+
+	if (curr_client.isRequestReady())
+    {
+        std::cout << "Request Ready! Sending Response..." << std::endl;
+
+        // A simple raw HTTP response
+        const char* response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+        
+        // Send it (blocking send for now, just to test)
+        send(client_fd, response, strlen(response), 0);
+
+        // NOW you can remove the client (because HTTP/1.0 or no Keep-Alive)
+        remove_from_poll(client_fd);
+        close(client_fd);
+        _clients.erase(client_fd);
+    }
+
+	// now lets generate the respounse based on the request method ....
 
 	// remove_from_poll(client_fd);
 }

@@ -5,6 +5,7 @@
 
 void	Request::feed(const char* chunk, size_t size)
 {
+	std::cout << "feed\n";
 	_buffer.append(chunk, size);
 	
 	size_t	header_end = _buffer.find("\r\n\r\n");
@@ -15,8 +16,10 @@ void	Request::feed(const char* chunk, size_t size)
 		{
 			std::string	header_str = _buffer.substr(0, header_end);
 			try {
-				parse_header(header_str);
+				_parse_header(header_str);
 				_state = STATE_READING_BODY;
+				_check_body_complete(header_end);
+				_state = STATE_COMPLETE;
 			}
 			catch(std::exception& e) {
 				std::cerr << "Request Error: " << e.what() << std::endl;
@@ -24,13 +27,13 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 		}
 	}
-	else if (_state == STATE_READING_BODY)
-	{
-		
+	else if (_state == STATE_READING_BODY) {
+		_check_body_complete(header_end);
 	}
+	_content_length = 1;
 }
 
-void	Request::parse_header(const std::string& header)
+void	Request::_parse_header(const std::string& header)
 {
 	std::stringstream ss(header);
 	std::string	line;
@@ -42,7 +45,7 @@ void	Request::parse_header(const std::string& header)
 
 	_parse_request_line(line);
 
-	// loop over header lines
+	// loop over header
 	while (std::getline(ss, line))
 	{
 		if (!line.empty() && line[line.size() - 1] == '\r') {
@@ -55,9 +58,13 @@ void	Request::parse_header(const std::string& header)
 		if (delim_pos == std::string::npos)
 			throw	RequestException(400);
 
-		// trim here
-		
-		_headers[line.substr(0, delim_pos)] = line.substr(delim_pos + 1);
+		std::string	key = line.substr(0, delim_pos);
+		std::string	value = line.substr(delim_pos + 1);
+
+		if (value[0] == ' ')
+			value = value.substr(1);
+
+		_headers[key] = value;
 	}
 }
 
@@ -73,6 +80,16 @@ void	Request::_parse_request_line(const std::string& line)
 		throw RequestException(400);
 }
 
+void	Request::_check_body_complete(size_t header_end)
+{
+	(void)header_end;
+}
+
+bool	Request::requestCompleted() const
+{
+	return _state == STATE_COMPLETE;
+}
+
 Request::Request() : _state(STATE_READING_HEADERS), _content_length(0) {}
 
 Request::~Request() {}
@@ -84,49 +101,3 @@ std::string Request::getVersion() const { return _version; }
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }
 const char* Request::RequestException::what() const throw() { return "Request Parsing Error"; }
-
-/* Request::parse()
-void	Request::parse(std::string content)
-{
-	std::stringstream	ss(content);
-
-	// Request line
-	std::string line;
-	if (!std::getline(ss, line)) throw RequestException(400); // Empty request
-
-	if (!line.empty() && line[line.length() - 1] == '\r')
-		line.erase(line.length() - 1);
-	else
-		throw RequestException(401);
-
-	std::stringstream	line_stream(line);
-	std::string		token;
-	std::vector<std::string> tokens;
-
-	while (std::getline(line_stream, token, ' ')) {
-		if (!token.empty()) tokens.push_back(token);
-	}
-	if (tokens.size() != 3) throw RequestException(402);
-
-	_method = tokens[0];
-	_path = tokens[1];
-	_version = tokens[2];
-	if (_version != "HTTP/1.1") throw RequestException(505);
-
-	// loop over request header
-	while (std::getline(ss, line))
-	{
-		
-		std::cout << line << std::endl;
-	}
-	// if (line != "\r") throw RequestException(506);
-
-	// request Header
-	// while (std::getline(ss, line))
-	// {
-	// 	// parse the Host
-	// 	std::string	host;
-
-	// 	if (line.size())
-	// }
-}*/
