@@ -38,4 +38,5 @@ class	Http
 		void	handle_new_connection(int);
 		void	handle_client_request(int);
 		void	remove_from_poll(int);
+		void	close_connection(int);
 };

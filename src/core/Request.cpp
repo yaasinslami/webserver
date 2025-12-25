@@ -5,7 +5,6 @@
 
 void	Request::feed(const char* chunk, size_t size)
 {
-	std::cout << "feed\n";
 	_buffer.append(chunk, size);
 	
 	size_t	header_end = _buffer.find("\r\n\r\n");
@@ -15,6 +14,7 @@ void	Request::feed(const char* chunk, size_t size)
 		if (header_end != std::string::npos)
 		{
 			std::string	header_str = _buffer.substr(0, header_end);
+			std::cout << "---- Header ----\n" << header_str << std::endl;
 			try {
 				_parse_header(header_str);
 				_state = STATE_READING_BODY;
@@ -88,6 +88,11 @@ void	Request::_check_body_complete(size_t header_end)
 bool	Request::requestCompleted() const
 {
 	return _state == STATE_COMPLETE;
+}
+
+void	Request::resetState()
+{
+	this->_state = STATE_READING_HEADERS;
 }
 
 Request::Request() : _state(STATE_READING_HEADERS), _content_length(0) {}

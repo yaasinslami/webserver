@@ -37,6 +37,7 @@ class	Request
 
 		// bool	parsingCompleted() const;
 		void	feed(const char* chunk, size_t size);
+		void	resetState();
 
 	private:
 		std::string		_buffer;

@@ -50,7 +50,7 @@ void	Http::run( void )
 	// event loop
 	while (g_running)
 	{
-		int status = poll(_poll_fds.data(), _poll_fds.size(), 1);
+		int status = poll(_poll_fds.data(), _poll_fds.size(), -1);
 
 		if (status < 0) {
 			throw std::runtime_error("Error: poll failed");
@@ -110,73 +110,61 @@ void Http::handle_client_request(int client_fd)
 	// loop over recv until request is done
 	while (true)
 	{
-		std::cout << "read\n";
+		std::cout << "---- Nfarmiw zaml boha had recv ----\n";
 		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, MSG_DONTWAIT);
 
-		if (bytes_read <= 0)
+		if (bytes_read < 0)
 		{
-			if (bytes_read < 0 && (errno == EWOULDBLOCK || errno == EAGAIN))
-				break ;
+			if (errno == EWOULDBLOCK || errno == EAGAIN)
+				break;
 
-			std::cout << "Client disconnected or Error" << std::endl;
-			remove_from_poll(client_fd);
+			std::cerr << "Recv Error: " << strerror(errno) << std::endl;
+			close_connection(client_fd);
 			return ;
 		}
-
+		else if (bytes_read == 0)
+		{
+			std::cout << "Client " << client_fd << " disconnected cleanly." << std::endl;
+			close_connection(client_fd);
+			return;
+		}
 		// we have data
 		curr_client.getRequest().feed(tmp_buffer, bytes_read);
 		
 		//check if client request fully readed
-		if (curr_client.isRequestReady())
+		if (curr_client.isRequestReady()) {
+			std::cerr << "---- Salina l farming ----\n";
 			break ;
+		}
 	}
-	std::cout << "feeding finish!\n";
+	std::cout << "\n";
 	// exit the while, we expect we have finished data - now let chose the best config match specific criteria absed on that request then do the parse number 2 to check validity 
 	// ...
 
+	// now lets generate the respounse based on the request method ....
 	if (curr_client.isRequestReady())
     {
-        std::cout << "Request Ready! Sending Response..." << std::endl;
+		// 1. Process and Send Response
+		std::cout << "Request Ready! Sending Response..." << std::endl;
+		// by now just close connection | no Keep-Alive logic
+		close_connection(client_fd);
 
-        // A simple raw HTTP response
-        const char* response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-        
-        // Send it (blocking send for now, just to test)
-        send(client_fd, response, strlen(response), 0);
-
-        // NOW you can remove the client (because HTTP/1.0 or no Keep-Alive)
-        remove_from_poll(client_fd);
-        close(client_fd);
-        _clients.erase(client_fd);
-    }
-
-	// now lets generate the respounse based on the request method ....
-
-	// remove_from_poll(client_fd);
+		// 2. Logic for Keep-Alive
+		// if (curr_client.getRequest().shouldKeepAlive()) {
+		// 	curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
+		// }
+		// else {
+		// 	close_connection(client_fd);
+		// }
+	}
 }
 
-/*
-
-	recv -> MSG_DONTWAIT
-
-	// std::cout << "------------ RAW REQUEST START ------------" << std::endl;
-	// std::cout << buffer << std::endl;
-	// std::cout << "------------- RAW REQUEST END -------------" << std::endl;
-
-		// std::cout << "Client asked for Method: " << req.getMethod() << std::endl;
-		// std::cout << "Client asked for File: "   << req.getPath() << std::endl;
-		// std::cout << "Client asked for version: "   << req.getVersion() << std::endl;
-
-	try {
-		Request request;
-
-	}
-	catch(Request::RequestException& e) {
-		std::cout << e.what() << "\t" << e.get_status_code() << std::endl;
-		remove_from_poll(client_fd);
-		return ;
-	}
-*/
+void	Http::close_connection(int client_fd)
+{
+	remove_from_poll(client_fd);
+	close(client_fd);
+	_clients.erase(client_fd);
+}
 
 void	Http::remove_from_poll(int client_fd)
 {
