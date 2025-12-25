@@ -48,7 +48,8 @@ class	Request
 		std::map<std::string, std::string>	_headers;
 		// std::string				_body;
 
-		void	parse_header(std::string header);
+		void	_parse_request_line(const std::string&);
+		void	parse_header(const std::string&);
 
 };
 

@@ -5,16 +5,17 @@
 
 void	Request::feed(const char* chunk, size_t size)
 {
-	_buffer.append(chunk, size);// append current read to our buffer
+	_buffer.append(chunk, size);
+	
+	size_t	header_end = _buffer.find("\r\n\r\n");
 
 	if (_state == STATE_READING_HEADERS)
 	{
-		size_t header_end = _buffer.find("\r\n\r\n");
 		if (header_end != std::string::npos)
 		{
-			std::string	header(_buffer);
+			std::string	header_str = _buffer.substr(0, header_end);
 			try {
-				parse_header(header.substr(0, header_end));
+				parse_header(header_str);
 				_state = STATE_READING_BODY;
 			}
 			catch(std::exception& e) {
@@ -23,12 +24,23 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 		}
 	}
+	else if (_state == STATE_READING_BODY)
+	{
+		
+	}
 }
 
-void	Request::parse_header(std::string header)
+void	Request::parse_header(const std::string& header)
 {
 	std::stringstream ss(header);
 	std::string	line;
+
+	// before start parsing headers, parse the request line first
+	if (!std::getline(ss, line)) throw RequestException(400);
+
+	if (!line.empty() && line[line.size() - 1] == '\r') line.erase(line.size() - 1);
+
+	_parse_request_line(line);
 
 	// loop over header lines
 	while (std::getline(ss, line))
@@ -42,15 +54,26 @@ void	Request::parse_header(std::string header)
 		size_t	delim_pos = line.find(':');
 		if (delim_pos == std::string::npos)
 			throw	RequestException(400);
-		
 
+		// trim here
+		
+		_headers[line.substr(0, delim_pos)] = line.substr(delim_pos + 1);
 	}
 }
 
-Request::Request() : _state(STATE_READING_HEADERS), _content_length(0)
+void	Request::_parse_request_line(const std::string& line)
 {
-	_content_length = 0;
+	std::stringstream	ss(line);
+
+	if (!(ss >> _method >> _path >> _version))
+		throw RequestException(400);
+
+	std::string	trash;
+	if (ss >> trash)
+		throw RequestException(400);
 }
+
+Request::Request() : _state(STATE_READING_HEADERS), _content_length(0) {}
 
 Request::~Request() {}
 
