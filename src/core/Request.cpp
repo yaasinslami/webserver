@@ -3,34 +3,61 @@
 #include <vector>
 #include <iostream>
 
+/* FSM */
 void	Request::feed(const char* chunk, size_t size)
 {
-	_buffer.append(chunk, size);
-	
-	size_t	header_end = _buffer.find("\r\n\r\n");
-
-	if (_state == STATE_READING_HEADERS)
+	for (size_t i = 0; i < size; ++i)
 	{
-		if (header_end != std::string::npos)
+		unsigned char ch = chunk[i];
+	
+		switch (_state)
 		{
-			std::string	header_str = _buffer.substr(0, header_end);
-			std::cout << "---- Header ----\n" << header_str << std::endl;
-			try {
-				_parse_header(header_str);
-				_state = STATE_READING_BODY;
-				_check_body_complete(header_end);
-				_state = STATE_COMPLETE;
+			case STATE_START:
+			{
+				if (ch == 'G')
+					_method = GET;
+				else if (ch == 'P')
+					_method = POST;
+				else if (ch == 'D')
+					_method = DELETE;
+				else
+				{
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					return ;
+				}
+				break ;
 			}
-			catch(std::exception& e) {
-				std::cerr << "Request Error: " << e.what() << std::endl;
-				_state = STATE_ERROR;
-			}
+			case STATE_METHOD:
+			{
+				// if (ch == _methodStr[_method][curr_index])
+				// 	return ;
+				// else {
+				// 	std::cerr << "Error\n";
+				// 	return ;
+				// }
+				switch (_method)
+				{
+					case GET:
+					{
+						if ()
+						else
+						{
+							std::cerr << "Bad Request Line at: " << ch << std::endl;
+							return ;
+						}
+					}
+					case POST:
+					{
+
+					}
+					case DELETE:
+					{
+
+					}
+				}
+			}		
 		}
 	}
-	else if (_state == STATE_READING_BODY) {
-		_check_body_complete(header_end);
-	}
-	_content_length = 1;
 }
 
 void	Request::_parse_header(const std::string& header)
@@ -38,10 +65,11 @@ void	Request::_parse_header(const std::string& header)
 	std::stringstream ss(header);
 	std::string	line;
 
-	// before start parsing headers, parse the request line first
+	// request line first
 	if (!std::getline(ss, line)) throw RequestException(400);
 
 	if (!line.empty() && line[line.size() - 1] == '\r') line.erase(line.size() - 1);
+	else throw RequestException(400);
 
 	_parse_request_line(line);
 
@@ -66,18 +94,30 @@ void	Request::_parse_header(const std::string& header)
 
 		_headers[key] = value;
 	}
+
+	if (_headers.find("Host") == _headers.end()) throw RequestException(400);
+
+	// here we should change the implimentation from line by line to byte by byte
+
+	// nginx clone -> so we can clone using FSM implimentation
 }
 
 void	Request::_parse_request_line(const std::string& line)
 {
-	std::stringstream	ss(line);
+	size_t	first_space = line.find(' ');
+	if (first_space == std::string::npos) throw RequestException(400);
 
-	if (!(ss >> _method >> _path >> _version))
-		throw RequestException(400);
+	_method = line.substr(0, first_space);
+	if (_method.empty()) throw RequestException(400);
 
-	std::string	trash;
-	if (ss >> trash)
-		throw RequestException(400);
+	size_t second_space = line.find(' ', first_space + 1);
+	if (second_space == std::string::npos) throw RequestException(400);
+
+	_path = line.substr(first_space + 1, second_space - first_space - 1);
+	if (_path.empty()) throw RequestException(400);
+
+	_version = line.substr(second_space + 1);
+	if (_version.empty() || _version.find(' ') != std::string::npos) throw RequestException(400);
 }
 
 void	Request::_check_body_complete(size_t header_end)
@@ -92,10 +132,10 @@ bool	Request::requestCompleted() const
 
 void	Request::resetState()
 {
-	this->_state = STATE_READING_HEADERS;
+	this->_state = STATE_START;
 }
 
-Request::Request() : _state(STATE_READING_HEADERS), _content_length(0) {}
+Request::Request() : _state(STATE_START), _content_length(0) {}
 
 Request::~Request() {}
 
@@ -105,4 +145,4 @@ std::string Request::getVersion() const { return _version; }
 
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }
-const char* Request::RequestException::what() const throw() { return "Request Parsing Error"; }
+const char* Request::RequestException::what() const throw() { return "Bad Request"; }

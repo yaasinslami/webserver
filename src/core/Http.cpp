@@ -110,13 +110,15 @@ void Http::handle_client_request(int client_fd)
 	// loop over recv until request is done
 	while (true)
 	{
-		std::cout << "---- Nfarmiw zaml boha had recv ----\n";
-		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, MSG_DONTWAIT);
+		std::cout << "recv ...\n";
+		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, 0);
 
 		if (bytes_read < 0)
 		{
-			if (errno == EWOULDBLOCK || errno == EAGAIN)
+			if (errno == EWOULDBLOCK || errno == EAGAIN) {
+				std::cout << "-- farmina dakche li khass ytfarma akhoya --\n";
 				break;
+			}
 
 			std::cerr << "Recv Error: " << strerror(errno) << std::endl;
 			close_connection(client_fd);
@@ -126,23 +128,31 @@ void Http::handle_client_request(int client_fd)
 		{
 			std::cout << "Client " << client_fd << " disconnected cleanly." << std::endl;
 			close_connection(client_fd);
-			return;
-		}
-		// we have data
-		curr_client.getRequest().feed(tmp_buffer, bytes_read);
-		
-		//check if client request fully readed
-		if (curr_client.isRequestReady()) {
-			std::cerr << "---- Salina l farming ----\n";
 			break ;
 		}
+		// we have data
+		try {
+			std::cout << "feeding ...\n";
+			curr_client.getRequest().feed(tmp_buffer, bytes_read);
+		}
+		catch(std::exception& e) {
+			std::cerr << "Request Error: " << e.what() << std::endl;
+			close_connection(client_fd);
+			return ;
+		}
+		
+		//check if client request fully readed
+		// if (curr_client.isRequestReady()) {
+		// 	std::cerr << "---- Salina l farming ----\n";
+		// 	break ;
+		// }
 	}
-	std::cout << "\n";
+
 	// exit the while, we expect we have finished data - now let chose the best config match specific criteria absed on that request then do the parse number 2 to check validity 
 	// ...
 
 	// now lets generate the respounse based on the request method ....
-	if (curr_client.isRequestReady())
+	if (curr_client.isRequestReady())// the request should be completed here
     {
 		// 1. Process and Send Response
 		std::cout << "Request Ready! Sending Response..." << std::endl;
@@ -156,6 +166,10 @@ void Http::handle_client_request(int client_fd)
 		// else {
 		// 	close_connection(client_fd);
 		// }
+	}
+	else {
+		std::cerr << "Misconigured Request" << std::endl;
+		close_connection(client_fd);
 	}
 }
 

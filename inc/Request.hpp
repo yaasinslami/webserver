@@ -4,12 +4,40 @@
 #include <string>
 #include <map>
 
+#define MAX_HEADER_SIZE 8192
+
+// enum RequestState
+// {
+// 	STATE_READING_HEADERS,
+// 	STATE_READING_BODY,
+// 	STATE_COMPLETE,
+// 	STATE_ERROR
+// };
+
+enum HttpMethod
+{
+	GET,
+	POST,
+	DELETE,
+	NONE
+};
+
 enum RequestState
 {
-	STATE_READING_HEADERS,
-	STATE_READING_BODY,
-	STATE_COMPLETE,
-	STATE_ERROR
+	STATE_START,			  // Waiting for first byte
+	STATE_METHOD,			  // Reading "GET", "POST"...
+	STATE_SPACE_BEFORE_URI,	  // Reading space after method
+	STATE_URI,				  // Reading "/index.html"
+	STATE_SPACE_BEFORE_PROTO, // Reading space after URI
+	STATE_PROTOCOL,			  // Reading "HTTP/1.1"
+	STATE_CR,				  // Saw '\r', expecting '\n' (Line End)
+	STATE_HEADER_KEY,		  // Reading "Host", "User-Agent"
+	STATE_HEADER_COLON,		  // Saw ':', waiting for value
+	STATE_HEADER_VALUE,		  // Reading "localhost:8080"
+	STATE_HEADER_CR,		  // Saw '\r' inside a header line
+	STATE_CR_LF_CR,			  // Saw '\r\n\r', expecting '\n' (End of Headers)
+	STATE_BODY,				  // Reading body data
+	STATE_COMPLETE			  // Request finished
 };
 
 class	Request
@@ -44,7 +72,7 @@ class	Request
 		RequestState	_state;
 		size_t			_content_length;
 
-		std::string					_method;
+		HttpMethod					_method;
 		std::string 				_path;
 		std::string 				_version;
 		std::map<std::string, std::string>	_headers;
