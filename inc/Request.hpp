@@ -68,13 +68,15 @@ class	Request
 		void	resetState();
 
 	private:
-		std::string		_buffer;
-		RequestState	_state;
-		size_t			_content_length;
+		std::string							_buffer;
+		RequestState						_state;
+		short								_m_index;
+		size_t								_content_length;
 
-		HttpMethod					_method;
-		std::string 				_path;
-		std::string 				_version;
+		HttpMethod							_method;
+		std::map<u_int8_t, std::string>		_method_str;
+		std::string 						_path;
+		std::string 						_version;
 		std::map<std::string, std::string>	_headers;
 		// std::string				_body;
 

@@ -23,42 +23,40 @@ void	Request::feed(const char* chunk, size_t size)
 				else
 				{
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					return ;
+					throw RequestException(501);
 				}
+				++_m_index;
+				_state = STATE_METHOD;
 				break ;
 			}
 			case STATE_METHOD:
 			{
-				// if (ch == _methodStr[_method][curr_index])
-				// 	return ;
-				// else {
-				// 	std::cerr << "Error\n";
-				// 	return ;
-				// }
-				switch (_method)
-				{
-					case GET:
-					{
-						if ()
-						else
-						{
-							std::cerr << "Bad Request Line at: " << ch << std::endl;
-							return ;
-						}
-					}
-					case POST:
-					{
-
-					}
-					case DELETE:
-					{
-
-					}
+				if (ch != _method_str[_method][++_m_index]) {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(501);
 				}
-			}		
+				if ((size_t)_m_index == _method_str[_state].length())
+					_state = STATE_SPACE_BEFORE_URI;
+				break ;
+			}
+			case STATE_SPACE_BEFORE_URI:
+			{
+				if (ch != ' ') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_URI;
+				continue ;
+			}
+			case STATE_URI:
+			{
+				
+			}
 		}
 	}
 }
+
+// GET /blabla HTTP/1.1
 
 void	Request::_parse_header(const std::string& header)
 {
@@ -135,7 +133,15 @@ void	Request::resetState()
 	this->_state = STATE_START;
 }
 
-Request::Request() : _state(STATE_START), _content_length(0) {}
+Request::Request() :
+	_state(STATE_START),
+	_m_index(0),
+	_content_length(0)
+{
+	_method_str[GET] = "GET";
+	_method_str[POST] = "POST";
+	_method_str[DELETE] = "DELETE";
+}
 
 Request::~Request() {}
 
