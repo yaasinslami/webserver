@@ -14,14 +14,10 @@ void	Request::feed(const char* chunk, size_t size)
 		{
 			case STATE_START:
 			{
-				if (ch == 'G')
-					_method = GET;
-				else if (ch == 'P')
-					_method = POST;
-				else if (ch == 'D')
-					_method = DELETE;
-				else
-				{
+				if (ch == 'G') _method = GET;
+				else if (ch == 'P') _method = POST;
+				else if (ch == 'D') _method = DELETE;
+				else {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(501);
 				}
@@ -45,78 +41,70 @@ void	Request::feed(const char* chunk, size_t size)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
 				}
-				_state = STATE_URI;
+				_state = STATE_URI_SLASH;
 				continue ;
 			}
-			case STATE_URI:
+			case STATE_URI_SLASH:
 			{
-				
+				if (ch != '/') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_URI_PATH;
+				break ;
+			}
+			case STATE_URI_PATH:
+			{
+				if (ch == ' ') {
+					_path = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_PROTOCOL_H;
+					continue ;
+				}
+				break ;
+			}
+			case STATE_PROTOCOL_H:
+			{
+				if (ch != 'H') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_PROTOCOL_HT;
+				break; 
+			}
+			case STATE_PROTOCOL_HT:
+			{
+				if (ch != 'T') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_PROTOCOL_HTT;
+				break; 
+			}
+			case STATE_PROTOCOL_HTT:
+			{
+				if (ch != 'T') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_PROTOCOL_HTTP;
+				break; 
+			}
+			case STATE_PROTOCOL_HTTP:
+			{
+				if (ch != 'P') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_CR;
+				break; 
 			}
 		}
+
+		_tmp_buffer += ch;
 	}
 }
 
-// GET /blabla HTTP/1.1
-
-void	Request::_parse_header(const std::string& header)
-{
-	std::stringstream ss(header);
-	std::string	line;
-
-	// request line first
-	if (!std::getline(ss, line)) throw RequestException(400);
-
-	if (!line.empty() && line[line.size() - 1] == '\r') line.erase(line.size() - 1);
-	else throw RequestException(400);
-
-	_parse_request_line(line);
-
-	// loop over header
-	while (std::getline(ss, line))
-	{
-		if (!line.empty() && line[line.size() - 1] == '\r') {
-			line.erase(line.size() - 1);
-		}
-
-		if (line.empty()) continue ;
-
-		size_t	delim_pos = line.find(':');
-		if (delim_pos == std::string::npos)
-			throw	RequestException(400);
-
-		std::string	key = line.substr(0, delim_pos);
-		std::string	value = line.substr(delim_pos + 1);
-
-		if (value[0] == ' ')
-			value = value.substr(1);
-
-		_headers[key] = value;
-	}
-
-	if (_headers.find("Host") == _headers.end()) throw RequestException(400);
-
-	// here we should change the implimentation from line by line to byte by byte
-
-	// nginx clone -> so we can clone using FSM implimentation
-}
-
-void	Request::_parse_request_line(const std::string& line)
-{
-	size_t	first_space = line.find(' ');
-	if (first_space == std::string::npos) throw RequestException(400);
-
-	_method = line.substr(0, first_space);
-	if (_method.empty()) throw RequestException(400);
-
-	size_t second_space = line.find(' ', first_space + 1);
-	if (second_space == std::string::npos) throw RequestException(400);
-
-	_path = line.substr(first_space + 1, second_space - first_space - 1);
-	if (_path.empty()) throw RequestException(400);
-
-	_version = line.substr(second_space + 1);
-	if (_version.empty() || _version.find(' ') != std::string::npos) throw RequestException(400);
-}
 
 void	Request::_check_body_complete(size_t header_end)
 {
@@ -145,7 +133,6 @@ Request::Request() :
 
 Request::~Request() {}
 
-std::string Request::getMethod() const { return _method; }
 std::string Request::getPath() const { return _path; }
 std::string Request::getVersion() const { return _version; }
 
