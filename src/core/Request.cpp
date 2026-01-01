@@ -158,14 +158,18 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_FIELD_START:
 			{
-				if (ch == '\r') {//we finish header parsing
+				if (ch == '\r') {
 					_state = STATE_FIELD_END;
 				}
-				else (Request::_is_token(ch)) {
-					_state = STATE_FIELD;
+				else if (Request::_is_token(ch)) {
+					_state = STATE_FIELD_NAME;
 				}
 				else throw RequestException(400);
 				break ;
+			}
+			case STATE_FIELD_END:
+			{
+				
 			}
 
 			case STATE_COMPLETE:
