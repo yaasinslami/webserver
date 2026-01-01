@@ -34,7 +34,14 @@ enum RequestState
 	STATE_PROTOCOL_HT,
 	STATE_PROTOCOL_HTT,
 	STATE_PROTOCOL_HTTP,
-	STATE_CR
+	STATE_PROTOCOL_SLASH,
+	STATE_MAJOR_DIGIT,
+	STATE_DOT_AFTER_DIGIT,
+	STATE_MINOR_DIGIT,
+	STATE_FIRST_CR,
+	STATE_FIRST_LF,
+	STATE_FIELD_START,
+	STATE_FIELD_END,
 	STATE_COMPLETE
 };
 
@@ -82,6 +89,7 @@ class	Request
 		void	_parse_header(const std::string&);
 		void	_check_body_complete(size_t);
 
+		static bool	_is_token(unsigned char ch);
 };
 
 #endif

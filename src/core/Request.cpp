@@ -21,22 +21,23 @@ void	Request::feed(const char* chunk, size_t size)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(501);
 				}
-				++_m_index;
 				_state = STATE_METHOD;
-				break ;
+				continue ;
 			}
 			case STATE_METHOD:
 			{
+				std::cout << "STATE_METHOD\t" << "index " << _m_index << std::endl;
 				if (ch != _method_str[_method][++_m_index]) {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(501);
 				}
-				if ((size_t)_m_index == _method_str[_state].length())
+				if ((size_t)_m_index == _method_str[_method].length() - 1)
 					_state = STATE_SPACE_BEFORE_URI;
-				break ;
+				continue ;
 			}
 			case STATE_SPACE_BEFORE_URI:
 			{
+				std::cout << "STATE_SPACE_BEFORE_URI\n";
 				if (ch != ' ') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
@@ -46,6 +47,7 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_URI_SLASH:
 			{
+				std::cout << "STATE_URI_SLASH\n";
 				if (ch != '/') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
@@ -55,6 +57,7 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_URI_PATH:
 			{
+				std::cout << "STATE_URI_PATH\n";
 				if (ch == ' ') {
 					_path = _tmp_buffer;
 					_tmp_buffer.clear();
@@ -70,7 +73,7 @@ void	Request::feed(const char* chunk, size_t size)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_HT;
-				break; 
+				continue ;
 			}
 			case STATE_PROTOCOL_HT:
 			{
@@ -79,7 +82,7 @@ void	Request::feed(const char* chunk, size_t size)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_HTT;
-				break; 
+				continue ;
 			}
 			case STATE_PROTOCOL_HTT:
 			{
@@ -88,7 +91,7 @@ void	Request::feed(const char* chunk, size_t size)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_HTTP;
-				break; 
+				continue ;
 			}
 			case STATE_PROTOCOL_HTTP:
 			{
@@ -96,15 +99,90 @@ void	Request::feed(const char* chunk, size_t size)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
 				}
-				_state = STATE_CR;
-				break; 
+				_state = STATE_PROTOCOL_SLASH;
+				continue ;
 			}
-		}
+			case STATE_PROTOCOL_SLASH:
+			{
+				if (ch != '/') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_MAJOR_DIGIT;
+				continue ;
+			}
+			case STATE_MAJOR_DIGIT:
+			{
+				if (ch != '1') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_DOT_AFTER_DIGIT;
+				continue ;
+			}
+			case STATE_DOT_AFTER_DIGIT:
+			{
+				if (ch != '.') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_MINOR_DIGIT;
+				continue ;
+			}
+			case STATE_MINOR_DIGIT:
+			{
+				if (ch != '1') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_FIRST_CR;
+				continue ;
+			}
+			case STATE_FIRST_CR:
+			{
+				if (ch != '\r') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_FIRST_LF;
+				continue ;
+			}
+			case STATE_FIRST_LF:
+			{
+				if (ch != '\n') {
+					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					throw RequestException(400);
+				}
+				_state = STATE_COMPLETE;
+				return ;
+			}
+			case STATE_FIELD_START:
+			{
+				if (ch == '\r') {//we finish header parsing
+					_state = STATE_FIELD_END;
+				}
+				else (Request::_is_token(ch)) {
+					_state = STATE_FIELD;
+				}
+				else throw RequestException(400);
+				break ;
+			}
 
+			case STATE_COMPLETE:
+				return ;
+		}
 		_tmp_buffer += ch;
 	}
 }
 
+bool Request::_is_token(unsigned char c)
+{
+	if (isalnum(c))
+		return true;
+
+	std::string symbols = "!#$%&'*+-.^_`|~";
+	return (symbols.find(c) != std::string::npos);
+}
 
 void	Request::_check_body_complete(size_t header_end)
 {
