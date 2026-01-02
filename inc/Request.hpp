@@ -49,6 +49,21 @@ enum RequestState
 
 class	Request
 {
+	private:
+		std::string		_buffer;
+		RequestState	_state;
+		short			_m_index;
+		std::string		_tmp_buffer;
+		size_t			_content_length;
+
+		HttpMethod							_method;
+		std::map<u_int8_t, std::string>		_method_str;
+		std::string 						_path;
+		std::string 						_version;
+		std::map<std::string, std::string>	_headers;
+		// std::string				_body;
+		bool			_body_exist;
+
 	public:
 		Request();
 		~Request();
@@ -74,24 +89,14 @@ class	Request
 		void	resetState();
 
 	private:
-		std::string							_buffer;
-		RequestState						_state;
-		short								_m_index;
-		std::string							_tmp_buffer;
-		size_t								_content_length;
-
-		HttpMethod							_method;
-		std::map<u_int8_t, std::string>		_method_str;
-		std::string 						_path;
-		std::string 						_version;
-		std::map<std::string, std::string>	_headers;
-		// std::string				_body;
-
 		void	_parse_request_line(const std::string&);
 		void	_parse_header(const std::string&);
 		void	_check_body_complete(size_t);
 
 		static bool	_is_token(unsigned char ch);
+		void	_add_header();
+		void	__headers();
+
 };
 
 #endif
