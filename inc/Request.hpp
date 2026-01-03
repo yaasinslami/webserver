@@ -44,6 +44,8 @@ enum RequestState
 	STATE_FIELD_NAME,
 	STATE_FIELD_VALUE,
 	STATE_FIELD_END,
+	STATE_CHUNK_START,
+	STATE_BODY,
 	STATE_COMPLETE
 };
 
@@ -55,13 +57,15 @@ class	Request
 		short			_m_index;
 		std::string		_tmp_buffer;
 		size_t			_content_length;
+		bool			_chunked_transfer;
 
 		HttpMethod							_method;
 		std::map<u_int8_t, std::string>		_method_str;
 		std::string 						_path;
 		std::string 						_version;
+		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
-		// std::string				_body;
+		std::string				_body;
 		bool			_body_exist;
 
 	public:
