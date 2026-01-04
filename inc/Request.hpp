@@ -45,6 +45,9 @@ enum RequestState
 	STATE_FIELD_VALUE,
 	STATE_FIELD_END,
 	STATE_CHUNK_START,
+	STATE_CHUNK_FEED,
+	STATE_CHUNK_CR,
+	STATE_CHUNK_LF,
 	STATE_BODY,
 	STATE_COMPLETE
 };
@@ -58,6 +61,7 @@ class	Request
 		std::string		_tmp_buffer;
 		size_t			_content_length;
 		bool			_chunked_transfer;
+		size_t			_chunk_length;
 
 		HttpMethod							_method;
 		std::map<u_int8_t, std::string>		_method_str;
