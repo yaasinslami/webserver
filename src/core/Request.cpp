@@ -215,19 +215,18 @@ void	Request::feed(const char* chunk, size_t size)
 				}
 				break ;
 			}
-			case STATE_CHUNK_START:
+			case STATE_CHUNK_LENGTH:
 			{
 				if (!isxdigit(ch)) {
 					std::cerr << "bad chunk-length" << std::endl;
 					throw RequestException(400);
 				}
+				else if (ch == '\r') {
+					this->_state = STATE_
+				}
 
 				this->_chunk_length = charToHex(ch);
-				if (this->_chunk_length == 0)
-					this->_state = STATE_CHUNK_CR;
-				else
-					this->_state = STATE_CHUNK_FEED;
-				continue ;
+				break ;
 			}
 			case STATE_CHUNK_FEED:
 			{
@@ -252,7 +251,7 @@ void	Request::feed(const char* chunk, size_t size)
 				if (ch != '\n') throw RequestException(400);
 
 				if (this->_chunk_length == 0) {
-					_state = STATE_CHUNK_START;
+					_state = STATE_CHUNK_LENGTH;
 				}
 				else // ISSUE!
 			}
@@ -266,7 +265,7 @@ void	Request::feed(const char* chunk, size_t size)
 
 /*
 \r\n
-7/r/n
+71f/r/n
 Hellowo\r\n
 */
 
