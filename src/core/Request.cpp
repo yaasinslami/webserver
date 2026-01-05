@@ -26,7 +26,7 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_METHOD:
 			{
-				std::cout << "STATE_METHOD\t" << "index " << _m_index << std::endl;
+				// std::cout << "STATE_METHOD\t" << "index " << _m_index << std::endl;
 				if (ch != _method_str[_method][++_m_index]) {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(501);
@@ -135,6 +135,7 @@ void	Request::feed(const char* chunk, size_t size)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
 				}
+				std::cout << "STATE_HTTP_VERSION_DONE\n";
 				_state = STATE_FIRST_CR;
 				continue ;
 			}
@@ -158,11 +159,13 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_FIELD_START:
 			{
-				if (ch == '\r') {
-					_state = STATE_FIELD_END;
-					continue ;
-				}
-				else if (Request::_is_token(ch)) {
+				std::cout << "start headers\n";
+				std::cout << "ch: " << ch << std::endl;
+				// if (ch == '\r') {
+				// 	_state = STATE_FIELD_END;
+				// 	continue ;
+				// }
+				if (Request::_is_token(ch)) {
 					_state = STATE_FIELD_NAME;
 				}
 				else throw RequestException(400);
@@ -170,6 +173,12 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_FIELD_NAME:
 			{
+				if (ch == '\r') {
+					_state = STATE_FIELD_END;
+					continue ;
+				}
+
+				std::cout << ch << std::endl;
 				if (ch == ':') {// we have key:value
 					_state = STATE_FIELD_VALUE;
 				}
@@ -182,20 +191,32 @@ void	Request::feed(const char* chunk, size_t size)
 			case STATE_FIELD_VALUE:
 			{
 				if (ch == '\r') {
+					std::cout << "end of one header\n";
 					_add_header();
-					_state = STATE_FIELD_START;
+					_state = STATE_FIELD_LF;
 					continue ;
 				}
 				break ;
 			}
+			case STATE_FIELD_LF:
+			{
+				if (ch != '\n') throw RequestException(400);
+				std::cout << "found a newline\n";
+
+				_state = STATE_FIELD_NAME;
+				continue ;
+			}
 			case STATE_FIELD_END:
 			{
+				std::cout << "end headers\n";
 				if (ch != '\n') throw RequestException(400);
 
 				__headers();
 				if (_body_exist) {
-					if (_chunked_transfer)
-						_state = STATE_CHUNK_START;
+					if (_chunked_transfer) {
+						_state = STATE_CHUNK_LENGTH;
+						std::cout << "STATE_CHUNKED!!!!!!!!!\n";
+					}
 					else
 						_state = STATE_BODY;
 					continue ;
@@ -213,30 +234,44 @@ void	Request::feed(const char* chunk, size_t size)
 					_state = STATE_COMPLETE;
 					return ;
 				}
-				break ;
+				continue ;
 			}
 			case STATE_CHUNK_LENGTH:
 			{
-				if (!isxdigit(ch)) {
+				std::cout << "first_chunk_char " << ch << std::endl;
+				if (ch == '\r') {
+					std::stringstream ss;
+					ss << _tmp_buffer;
+					ss >> std::hex >> _chunk_length;
+					if (_chunk_length == 0 && _chunk_state == INIT)
+						throw RequestException(400);
+					else if (_chunk_length == 0) {
+						_state = STATE_COMPLETE;
+						return ;
+					}
+					this->_chunk_state = PAYLOAD_BODY;
+					this->_state = STATE_CHUNK_CR;
+					std::cout << "length: " << _chunk_length << std::endl;
+				}
+				else if (!isxdigit(ch)) {
 					std::cerr << "bad chunk-length" << std::endl;
 					throw RequestException(400);
 				}
-				else if (ch == '\r') {
-					this->_state = STATE_
-				}
-
-				this->_chunk_length = charToHex(ch);
 				break ;
 			}
-			case STATE_CHUNK_FEED:
+			case STATE_CHUNK_FEED://still need to handle \r
 			{
+				std::cout << "feeding chunk...\n";
 				if (ch == '\r') {
-					this->_state = STATE_CHUNK_CR;
+					if (_chunk_length != 0) throw RequestException(400);
+					_state = STATE_CHUNK_LF;
+					_chunk_state = PAYLOAD_BODY;
 					continue ;
 				}
 
-				this->_buffer += ch;
-				--this->_chunk_length;
+				this->_body += ch;
+				if (this->_chunk_length > 0)
+					--this->_chunk_length;
 				continue ;
 			}
 			case STATE_CHUNK_CR:
@@ -248,12 +283,18 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_CHUNK_LF:
 			{
+				std::cout << "chunk new line\n";
 				if (ch != '\n') throw RequestException(400);
 
-				if (this->_chunk_length == 0) {
-					_state = STATE_CHUNK_LENGTH;
+				if (_chunk_state == LENGTH && _chunk_length != 0)
+					_state = STATE_CHUNK_FEED;
+				else if (_chunk_length == 0) {
+					_state = STATE_COMPLETE;
+					continue ;
 				}
-				else // ISSUE!
+				else if (_chunk_state == PAYLOAD_BODY)
+					_state = STATE_CHUNK_LENGTH;
+				continue ;
 			}
 
 			case STATE_COMPLETE:
@@ -294,7 +335,7 @@ void	Request::__headers()
 		_body_exist = true;
 	}
 
-	if (_headers.count("transfer-encoding"))
+	if (_headers.count("Transfer-Encoding"))
 	{
 		if (_headers["transfer-encoding"].find("chunked"))
 		{
@@ -363,7 +404,8 @@ Request::Request() :
 	_content_length(0),
 	_chunked_transfer(false),
 	_chunk_length(0),
-	_body_exist(false)
+	_body_exist(false),
+	_chunk_state(INIT)
 {
 	_method_str[GET] = "GET";
 	_method_str[POST] = "POST";

@@ -44,6 +44,8 @@ enum RequestState
 	STATE_FIELD_NAME,
 	STATE_FIELD_VALUE,
 	STATE_FIELD_END,
+	// STATE_FIELD_CR,
+	STATE_FIELD_LF,
 	STATE_CHUNK_LENGTH,
 	STATE_CHUNK_FEED,
 	STATE_CHUNK_CR,
@@ -52,10 +54,18 @@ enum RequestState
 	STATE_COMPLETE
 };
 
+enum	ChunkState
+{
+	INIT,
+	START,
+	LENGTH,
+	PAYLOAD_BODY,
+	FINISH,
+};
+
 class	Request
 {
 	private:
-		std::string		_buffer;
 		RequestState	_state;
 		short			_m_index;
 		std::string		_tmp_buffer;
@@ -71,6 +81,7 @@ class	Request
 		std::map<std::string, std::string>	_headers;
 		std::string				_body;
 		bool			_body_exist;
+		ChunkState		_chunk_state;
 
 	public:
 		Request();
