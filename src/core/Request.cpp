@@ -26,7 +26,6 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_METHOD:
 			{
-				// std::cout << "STATE_METHOD\t" << "index " << _m_index << std::endl;
 				if (ch != _method_str[_method][++_m_index]) {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(501);
@@ -37,7 +36,6 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_SPACE_BEFORE_URI:
 			{
-				std::cout << "STATE_SPACE_BEFORE_URI\n";
 				if (ch != ' ') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
@@ -47,7 +45,6 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_URI_SLASH:
 			{
-				std::cout << "STATE_URI_SLASH\n";
 				if (ch != '/') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
@@ -57,7 +54,6 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_URI_PATH:
 			{
-				std::cout << "STATE_URI_PATH\n";
 				if (ch == ' ') {
 					_path = _tmp_buffer;
 					_tmp_buffer.clear();
@@ -135,7 +131,6 @@ void	Request::feed(const char* chunk, size_t size)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
 				}
-				std::cout << "STATE_HTTP_VERSION_DONE\n";
 				_state = STATE_FIRST_CR;
 				continue ;
 			}
@@ -159,8 +154,6 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_FIELD_START:
 			{
-				std::cout << "start headers\n";
-				std::cout << "ch: " << ch << std::endl;
 				// if (ch == '\r') {
 				// 	_state = STATE_FIELD_END;
 				// 	continue ;
@@ -177,8 +170,6 @@ void	Request::feed(const char* chunk, size_t size)
 					_state = STATE_FIELD_END;
 					continue ;
 				}
-
-				std::cout << ch << std::endl;
 				if (ch == ':') {// we have key:value
 					_state = STATE_FIELD_VALUE;
 				}
@@ -191,7 +182,6 @@ void	Request::feed(const char* chunk, size_t size)
 			case STATE_FIELD_VALUE:
 			{
 				if (ch == '\r') {
-					std::cout << "end of one header\n";
 					_add_header();
 					_state = STATE_FIELD_LF;
 					continue ;
@@ -201,21 +191,18 @@ void	Request::feed(const char* chunk, size_t size)
 			case STATE_FIELD_LF:
 			{
 				if (ch != '\n') throw RequestException(400);
-				std::cout << "found a newline\n";
 
 				_state = STATE_FIELD_NAME;
 				continue ;
 			}
 			case STATE_FIELD_END:
 			{
-				std::cout << "end headers\n";
 				if (ch != '\n') throw RequestException(400);
 
 				__headers();
 				if (_body_exist) {
 					if (_chunked_transfer) {
 						_state = STATE_CHUNK_LENGTH;
-						std::cout << "STATE_CHUNKED!!!!!!!!!\n";
 					}
 					else
 						_state = STATE_BODY;
@@ -223,7 +210,7 @@ void	Request::feed(const char* chunk, size_t size)
 				}
 				else {
 					_state = STATE_COMPLETE;
-					return ;
+					continue ;
 				}
 			}
 			case STATE_BODY:
@@ -232,26 +219,26 @@ void	Request::feed(const char* chunk, size_t size)
 					_body += ch;
 				if (_body.size() == _content_length) {
 					_state = STATE_COMPLETE;
-					return ;
+					continue ;
 				}
 				continue ;
 			}
 			case STATE_CHUNK_LENGTH:
 			{
-				std::cout << "first_chunk_char " << ch << std::endl;
 				if (ch == '\r') {
 					std::stringstream ss;
 					ss << _tmp_buffer;
+					_tmp_buffer.clear();
 					ss >> std::hex >> _chunk_length;
-					if (_chunk_length == 0 && _chunk_state == INIT)
+					if (_chunk_length == 0 && _chunk_state == START)
 						throw RequestException(400);
 					else if (_chunk_length == 0) {
 						_state = STATE_COMPLETE;
-						return ;
+						continue ;
 					}
 					this->_chunk_state = PAYLOAD_BODY;
-					this->_state = STATE_CHUNK_CR;
-					std::cout << "length: " << _chunk_length << std::endl;
+					this->_state = STATE_CHUNK_LF;
+					continue ;
 				}
 				else if (!isxdigit(ch)) {
 					std::cerr << "bad chunk-length" << std::endl;
@@ -259,20 +246,17 @@ void	Request::feed(const char* chunk, size_t size)
 				}
 				break ;
 			}
-			case STATE_CHUNK_FEED://still need to handle \r
+			case STATE_CHUNK_FEED:
 			{
-				std::cout << "feeding chunk...\n";
 				if (ch == '\r') {
-					if (_chunk_length != 0) throw RequestException(400);
 					_state = STATE_CHUNK_LF;
-					_chunk_state = PAYLOAD_BODY;
+					_chunk_state = LENGTH;
 					continue ;
 				}
 
-				this->_body += ch;
-				if (this->_chunk_length > 0)
-					--this->_chunk_length;
-				continue ;
+				if (_tmp_buffer.length() + 1 > _chunk_length)
+					throw RequestException(400);
+				break ;
 			}
 			case STATE_CHUNK_CR:
 			{
@@ -283,22 +267,24 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_CHUNK_LF:
 			{
-				std::cout << "chunk new line\n";
 				if (ch != '\n') throw RequestException(400);
 
-				if (_chunk_state == LENGTH && _chunk_length != 0)
+				if (_chunk_state == PAYLOAD_BODY)
 					_state = STATE_CHUNK_FEED;
-				else if (_chunk_length == 0) {
-					_state = STATE_COMPLETE;
-					continue ;
-				}
-				else if (_chunk_state == PAYLOAD_BODY)
+				
+				if (_chunk_state == LENGTH) {
+					this->_body += _tmp_buffer;
+					_tmp_buffer.clear();
 					_state = STATE_CHUNK_LENGTH;
+				}
 				continue ;
 			}
 
 			case STATE_COMPLETE:
+			{
+
 				return ;
+			}
 		}
 		_tmp_buffer += ch;
 	}
@@ -383,11 +369,6 @@ bool Request::_is_token(unsigned char c)
 	return (symbols.find(c) != std::string::npos);
 }
 
-void	Request::_check_body_complete(size_t header_end)
-{
-	(void)header_end;
-}
-
 bool	Request::requestCompleted() const
 {
 	return _state == STATE_COMPLETE;
@@ -405,7 +386,7 @@ Request::Request() :
 	_chunked_transfer(false),
 	_chunk_length(0),
 	_body_exist(false),
-	_chunk_state(INIT)
+	_chunk_state(START)
 {
 	_method_str[GET] = "GET";
 	_method_str[POST] = "POST";
@@ -420,3 +401,29 @@ std::string Request::getVersion() const { return _version; }
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }
 const char* Request::RequestException::what() const throw() { return "Bad Request"; }
+
+
+void	Request::show() const
+{
+	HttpMethod mtdh = _method;
+	std::cout << "Method:";
+	switch (mtdh) {
+		case GET:
+			std::cout << "GET\n";
+			break ;
+		case POST:
+			std::cout << "POST\n";
+			break ;
+		case DELETE:
+			std::cout << "DELETE\n";
+			break ;
+		case NONE:
+			std::cout << "NONE\n";
+			break ;
+	}
+
+	std::cout << "Path:" << _method << std::endl;
+	std::cout << "Version:" << _method << std::endl;
+	std::cout << "ServerName:" << _server_name << std::endl;
+
+}

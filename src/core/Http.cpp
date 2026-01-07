@@ -148,8 +148,10 @@ void Http::handle_client_request(int client_fd)
 		// }
 	}
 
-	// exit the while, we expect we have finished data - now let chose the best config match specific criteria absed on that request then do the parse number 2 to check validity 
+	// exit the while, we expect we have finished data - now let chose the best config match specific criteria based on that request then do the parse number 2 to check validity 
 	// ...
+
+	curr_client.show();
 
 	// now lets generate the respounse based on the request method ....
 	if (curr_client.isRequestReady())// the request should be completed here

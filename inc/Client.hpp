@@ -17,6 +17,8 @@ class	Client
 		bool	isRequestReady() const;
 		Request &getRequest();
 
+		void	show() const;
+
 	private:
 		int			_fd;
 		Request		_request;

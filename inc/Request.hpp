@@ -56,7 +56,6 @@ enum RequestState
 
 enum	ChunkState
 {
-	INIT,
 	START,
 	LENGTH,
 	PAYLOAD_BODY,
@@ -79,9 +78,9 @@ class	Request
 		std::string 						_version;
 		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
-		std::string				_body;
-		bool			_body_exist;
-		ChunkState		_chunk_state;
+		std::string			_body;
+		bool				_body_exist;
+		ChunkState			_chunk_state;
 
 	public:
 		Request();
@@ -107,10 +106,11 @@ class	Request
 		void	feed(const char* chunk, size_t size);
 		void	resetState();
 
+		void	show() const;
+
 	private:
 		void	_parse_request_line(const std::string&);
 		void	_parse_header(const std::string&);
-		void	_check_body_complete(size_t);
 
 		static bool	_is_token(unsigned char ch);
 		void	_add_header();

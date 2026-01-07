@@ -1,4 +1,12 @@
 #include "Client.hpp"
+#include <iostream>
+
+void	Client::show() const
+{
+	std::cout << "------ Client (" << _fd << ") ------\n";
+
+	_request.show();
+}
 
 Client::Client() : _fd(-1) {}
 
