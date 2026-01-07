@@ -75,7 +75,6 @@ class	Request
 		HttpMethod							_method;
 		std::map<u_int8_t, std::string>		_method_str;
 		std::string 						_path;
-		std::string 						_version;
 		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
 		std::string			_body;

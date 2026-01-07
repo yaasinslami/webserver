@@ -202,6 +202,7 @@ void	Request::feed(const char* chunk, size_t size)
 				__headers();
 				if (_body_exist) {
 					if (_chunked_transfer) {
+						std::cout << "_chunked_transfer\n";
 						_state = STATE_CHUNK_LENGTH;
 					}
 					else
@@ -323,16 +324,18 @@ void	Request::__headers()
 
 	if (_headers.count("Transfer-Encoding"))
 	{
-		if (_headers["transfer-encoding"].find("chunked"))
+		std::cout << "here1\n";
+		if (_headers["trfewgergernsfer-encoding"].find("chunked"))
 		{
+			std::cout << "here2\n";
 			_chunked_transfer = true;
 		}
 		_body_exist = true;
 	}
 
-	if (_headers.count("host"))
+	if (_headers.count("Host"))
 	{
-		_server_name = _headers["host"];
+		_server_name = _headers["Host"];
 	}
 
 	// handle Content-Type ...
@@ -396,7 +399,6 @@ Request::Request() :
 Request::~Request() {}
 
 std::string Request::getPath() const { return _path; }
-std::string Request::getVersion() const { return _version; }
 
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }
@@ -422,8 +424,7 @@ void	Request::show() const
 			break ;
 	}
 
-	std::cout << "Path:" << _method << std::endl;
-	std::cout << "Version:" << _method << std::endl;
+	std::cout << "Path:" << _path << std::endl;
 	std::cout << "ServerName:" << _server_name << std::endl;
 
 }
