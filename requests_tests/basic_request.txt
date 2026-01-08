@@ -1,6 +1,5 @@
-POST /root/text.txt HTTP/1.1
-Host: 127.0.0.1
-Transfer-Encoding: chunked
+POST /root HTTP/1.1
+Host: f  
 
 4
 WIKI

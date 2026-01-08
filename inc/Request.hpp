@@ -112,6 +112,7 @@ class	Request
 		void	_parse_header(const std::string&);
 
 		static bool	_is_token(unsigned char ch);
+		static bool	_is_valid_value(unsigned char);
 		void	_add_header();
 		void	__headers();
 

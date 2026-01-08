@@ -154,14 +154,15 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_FIELD_START:
 			{
-				// if (ch == '\r') {
-				// 	_state = STATE_FIELD_END;
-				// 	continue ;
-				// }
+				if (ch == '\r') throw RequestException(400);
+
 				if (Request::_is_token(ch)) {
+					ch = tolower(ch);
 					_state = STATE_FIELD_NAME;
 				}
-				else throw RequestException(400);
+				else {
+					throw RequestException(400);
+				}
 				break ;
 			}
 			case STATE_FIELD_NAME:
@@ -174,9 +175,11 @@ void	Request::feed(const char* chunk, size_t size)
 					_state = STATE_FIELD_VALUE;
 				}
 				else if (!Request::_is_token(ch)) {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
+					std::cerr << "Bad Header Key at: `" << ch << "`\n";
 					throw RequestException(400);
 				}
+				// make ch lowercase
+				ch = tolower(ch);
 				break ;
 			}
 			case STATE_FIELD_VALUE:
@@ -185,6 +188,9 @@ void	Request::feed(const char* chunk, size_t size)
 					_add_header();
 					_state = STATE_FIELD_LF;
 					continue ;
+				}
+				if (!_is_valid_value(ch)) {
+					throw RequestException(400);
 				}
 				break ;
 			}
@@ -280,7 +286,6 @@ void	Request::feed(const char* chunk, size_t size)
 				}
 				continue ;
 			}
-
 			case STATE_COMPLETE:
 			{
 
@@ -291,14 +296,52 @@ void	Request::feed(const char* chunk, size_t size)
 	}
 }
 
-/*
-\r\n
-71f/r/n
-Hellowo\r\n
-*/
+void	Request::_add_header()
+{
+	size_t	delim = _tmp_buffer.find(':');
+	std::string	key = _tmp_buffer.substr(0, delim);
+	std::string value = _tmp_buffer.substr(delim + 1);
+
+	if (key.empty() || value.empty()) {
+		std::cerr << "key or value can't be empty!" << std::endl;
+		throw RequestException(400);
+	}
+
+	// trim the space from the value
+	// Key:  value  \r\n
+	const std::string whitespace = " \t";
+	size_t start = value.find_first_not_of(whitespace);
+	size_t end = value.find_last_not_of(whitespace);
+
+	std::cout << "start:" << start << std::endl;
+	std::cout << "end:" << end << std::endl;
+
+	if (start == std::string::npos)	throw RequestException(400);
+	if (start > 1 || end < value.length() - 2) {
+		std::cerr << "very bad Header Value!" << std::endl;
+		throw RequestException(400);
+	}
+
+	value = value.substr(start, end - start +1);
+	if (value.empty()) {
+		std::cerr << "Bad Header Value!\n";
+		throw RequestException(400);
+	}
+
+	// check if the key already exist
+	if (_headers.count(key)) {
+		_headers[key] += ", " + value;
+	}
+	else
+		_headers[key] = value;
+	
+	_tmp_buffer.clear();
+	std::cout << key << " Added Successfully!\n";
+}
 
 void	Request::__headers()
 {
+	std::cout << "handle_headers\n";
 	if (_headers.count("content-length")) {
 		std::string	value = _headers["content-length"];
 	
@@ -322,45 +365,24 @@ void	Request::__headers()
 		_body_exist = true;
 	}
 
-	if (_headers.count("Transfer-Encoding"))
+	if (_headers.count("transfer-encoding"))
 	{
-		std::cout << "here1\n";
-		if (_headers["trfewgergernsfer-encoding"].find("chunked"))
+		if (_headers["transfer-encoding"].find("chunked"))
 		{
-			std::cout << "here2\n";
 			_chunked_transfer = true;
 		}
 		_body_exist = true;
 	}
 
-	if (_headers.count("Host"))
-	{
-		_server_name = _headers["Host"];
+	if (_headers.count("host")) {
+		_server_name = _headers["host"];
 	}
-
-	// handle Content-Type ...
-}
-
-void	Request::_add_header()
-{
-	size_t	delim = _tmp_buffer.find(':');
-
-	std::string	key = _tmp_buffer.substr(0, delim);
-	std::string value = _tmp_buffer.substr(delim + 1);
-
-	if (key.empty() || value.empty()) {
-		std::cerr << "key or value can't be empty!" << std::endl;
+	else {
+		std::cerr << "`Host` Header not found\n";
 		throw RequestException(400);
 	}
 
-	// check if the key already exist
-	if (_headers.count(key)) {
-		_headers[key] += ", " + value;
-	}
-	else
-		_headers[key] = value;
-	
-	_tmp_buffer.clear();
+	// handle Content-Type ...
 }
 
 bool Request::_is_token(unsigned char c)
@@ -370,6 +392,22 @@ bool Request::_is_token(unsigned char c)
 
 	std::string symbols = "!#$%&'*+-.^_`|~";
 	return (symbols.find(c) != std::string::npos);
+}
+
+bool Request::_is_valid_value(unsigned char c)
+{
+	if (c == ' ' || c == '\t')
+		return true;
+
+	// Allow Visible ASCII (0x21 - 0x7E)
+	if (c >= 0x21 && c <= 0x7E)
+		return true;
+
+	// Allow Extended ASCII (obs-text) (0x80 - 0xFF)
+	if (c >= 0x80)
+		return true;
+
+	return false;
 }
 
 bool	Request::requestCompleted() const
@@ -424,7 +462,7 @@ void	Request::show() const
 			break ;
 	}
 
-	std::cout << "Path:" << _path << std::endl;
-	std::cout << "ServerName:" << _server_name << std::endl;
+	std::cout << "Path:" << _path << "|" << std::endl;
+	std::cout << "ServerName:" << _server_name << "|" << std::endl;
 
 }
