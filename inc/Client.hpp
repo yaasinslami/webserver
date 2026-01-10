@@ -13,6 +13,7 @@ class	Client
 		~Client();
 
 		Client& operator=(const Client& other);
+		std::string& getRequestBuffer();
 
 		bool	isRequestReady() const;
 		Request &getRequest();
@@ -22,6 +23,7 @@ class	Client
 	private:
 		int			_fd;
 		Request		_request;
+		std::string	_request_buffer;
 };
 
 #endif

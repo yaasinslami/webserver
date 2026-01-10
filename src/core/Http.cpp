@@ -105,7 +105,7 @@ void Http::handle_client_request(int client_fd)
 
 	char	tmp_buffer[4096];
 	memset(tmp_buffer, 0, sizeof(tmp_buffer));
-	ssize_t	bytes_read;
+	ssize_t	bytes_read = 0;
 
 	// loop over recv until request is done
 	while (true)
@@ -126,36 +126,33 @@ void Http::handle_client_request(int client_fd)
 		}
 		else if (bytes_read == 0)
 		{
+			// Handle disconnection...
 			std::cout << "Client " << client_fd << " disconnected cleanly." << std::endl;
-			close_connection(client_fd);
 			break ;
 		}
-		// we have data
-		try {
-			std::cout << "feeding ...\n";
-			curr_client.getRequest().feed(tmp_buffer, bytes_read);
-		}
-		catch(std::exception& e) {
-			std::cerr << "Request Error: " << e.what() << std::endl;
-			close_connection(client_fd);
-			return ;
-		}
-		
-		//check if client request fully readed
-		// if (curr_client.isRequestReady()) {
-		// 	std::cerr << "---- Salina l farming ----\n";
-		// 	break ;
+		curr_client.getRequestBuffer().append(tmp_buffer, bytes_read);
+
+		// try {
+		// 	std::cout << "feeding ...\n";
+		// 	curr_client.getRequest().feed(tmp_buffer, bytes_read);
+		// }
+		// catch(std::exception& e) {
+		// 	std::cerr << "Request Error: " << e.what() << std::endl;
+		// 	close_connection(client_fd);
+		// 	return ;
 		// }
 	}
 
-	// exit the while, we expect we have finished data - now let chose the best config match specific criteria based on that request then do the parse number 2 to check validity 
-	// ...
+	while (!curr_client.getRequestBuffer().empty()) {
+		size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
 
-	curr_client.show();
+		
+	}
 
 	// now lets generate the respounse based on the request method ....
 	if (curr_client.isRequestReady())// the request should be completed here
     {
+		curr_client.show();
 		// 1. Process and Send Response
 		std::cout << "Request Ready! Sending Response..." << std::endl;
 		// by now just close connection | no Keep-Alive logic

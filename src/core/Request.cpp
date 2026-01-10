@@ -4,11 +4,12 @@
 #include <iostream>
 
 /* FSM */
-void	Request::feed(const char* chunk, size_t size)
+size_t	Request::feed(const std::string& data)
 {
-	for (size_t i = 0; i < size; ++i)
+	size_t	i = 0;
+	while  (i < data.length())
 	{
-		unsigned char ch = chunk[i];
+		unsigned char ch = data[i];
 	
 		switch (_state)
 		{
@@ -288,12 +289,13 @@ void	Request::feed(const char* chunk, size_t size)
 			}
 			case STATE_COMPLETE:
 			{
-
-				return ;
+				return i;
 			}
 		}
 		_tmp_buffer += ch;
+		i++;
 	}
+	return i;
 }
 
 void	Request::_add_header()
@@ -301,8 +303,9 @@ void	Request::_add_header()
 	size_t	delim = _tmp_buffer.find(':');
 	std::string	key = _tmp_buffer.substr(0, delim);
 	std::string value = _tmp_buffer.substr(delim + 1);
+	// std::cout << "value:" << value << std::endl;
 
-	if (key.empty() || value.empty()) {
+	if (key.empty()) {
 		std::cerr << "key or value can't be empty!" << std::endl;
 		throw RequestException(400);
 	}
@@ -316,27 +319,25 @@ void	Request::_add_header()
 	std::cout << "start:" << start << std::endl;
 	std::cout << "end:" << end << std::endl;
 
-	if (start == std::string::npos)	throw RequestException(400);
-	if (start > 1 || end < value.length() - 2) {
-		std::cerr << "very bad Header Value!" << std::endl;
-		throw RequestException(400);
+	if (start == std::string::npos)
+		value = "";
+	else {
+		value = value.substr(start, end - start + 1);
 	}
 
-	value = value.substr(start, end - start +1);
-	if (value.empty()) {
-		std::cerr << "Bad Header Value!\n";
-		throw RequestException(400);
-	}
-
-	// check if the key already exist
 	if (_headers.count(key)) {
+		if (key == "host" || key == "content-length") {
+			throw RequestException(400);
+		}
+
 		_headers[key] += ", " + value;
 	}
 	else
 		_headers[key] = value;
-	
+
+	std::cout << "Header Added: [" << key << "] -> [" << value << "]\n";
+
 	_tmp_buffer.clear();
-	std::cout << key << " Added Successfully!\n";
 }
 
 void	Request::__headers()
@@ -367,8 +368,9 @@ void	Request::__headers()
 
 	if (_headers.count("transfer-encoding"))
 	{
-		if (_headers["transfer-encoding"].find("chunked"))
+		if (_headers["transfer-encoding"].find("chunked") != std::string::npos)
 		{
+			std::cout << "BAAA3\n";
 			_chunked_transfer = true;
 		}
 		_body_exist = true;
@@ -443,26 +445,101 @@ int Request::RequestException::get_status_code() const { return _status_code; }
 const char* Request::RequestException::what() const throw() { return "Bad Request"; }
 
 
-void	Request::show() const
+#define RESET "\033[0m"
+#define RED "\033[31m"
+#define GREEN "\033[32m"
+#define YELLOW "\033[33m"
+#define BLUE "\033[34m"
+#define CYAN "\033[36m"
+
+void Request::show() const
 {
-	HttpMethod mtdh = _method;
-	std::cout << "Method:";
-	switch (mtdh) {
-		case GET:
-			std::cout << "GET\n";
-			break ;
-		case POST:
-			std::cout << "POST\n";
-			break ;
-		case DELETE:
-			std::cout << "DELETE\n";
-			break ;
-		case NONE:
-			std::cout << "NONE\n";
-			break ;
+	std::cout << "header size: " << _headers.size() << std::endl;
+	std::cout << "\n"
+			  << CYAN << "=== HTTP REQUEST DEBUG INFO ===" << RESET << std::endl;
+
+	// 1. Request Line Info
+	std::cout << YELLOW << "[Request Line]" << RESET << "\n";
+	std::cout << "  Method:       " << GREEN;
+	switch (_method)
+	{
+	case GET:
+		std::cout << "GET";
+		break;
+	case POST:
+		std::cout << "POST";
+		break;
+	case DELETE:
+		std::cout << "DELETE";
+		break;
+	default:
+		std::cout << "UNKNOWN";
+	}
+	std::cout << RESET << "\n";
+	std::cout << "  Path:         " << _path << "\n";
+	// std::cout << "  Query:        " << (_query.empty() ? "(empty)" : _query) << "\n";
+	std::cout << "  Target Host:  " << (_server_name.empty() ? "(default)" : _server_name) << "\n";
+
+	// 2. Headers
+	std::cout << "\n"
+			  << YELLOW << "[Headers]" << RESET << "\n";
+	if (_headers.empty())
+	{
+		std::cout << "  (No Headers)\n";
+	}
+	else
+	{
+		std::map<std::string, std::string>::const_iterator it;
+		for (it = _headers.begin(); it != _headers.end(); ++it) {
+			std::cout << "  " << BLUE << it->first << RESET << ": " << it->second << "\n";
+		}
 	}
 
-	std::cout << "Path:" << _path << "|" << std::endl;
-	std::cout << "ServerName:" << _server_name << "|" << std::endl;
+	// 3. Body Metadata (The specific logic you asked for)
+	std::cout << "\n"
+			  << YELLOW << "[Body Metadata]" << RESET << "\n";
+	if (_body_exist)
+	{
+		if (_chunked_transfer)
+		{
+			std::cout << "  Mode:         " << RED << "Chunked Transfer Encoding" << RESET << "\n";
+			std::cout << "  Decoded Size: " << _body.length() << " bytes\n";
+		}
+		else
+		{
+			std::cout << "  Mode:         " << GREEN << "Content-Length" << RESET << "\n";
+			std::cout << "  Header Value: " << _content_length << "\n";
+			std::cout << "  Actual Read:  " << _body.length() << " bytes\n";
 
+			// Safety Warning if they don't match
+			if (_content_length != _body.length())
+			{
+				std::cout << RED << "  WARNING: Body size mismatch!" << RESET << "\n";
+			}
+		}
+	}
+	else
+	{
+		std::cout << "  (No Body Present)\n";
+	}
+
+	// 4. The Actual Body Content
+	// Only print if not empty, and maybe truncate if it's too huge
+	if (_body_exist && !_body.empty())
+	{
+		std::cout << "\n"
+				  << YELLOW << "[Body Content Preview]" << RESET << "\n";
+		if (_body.length() > 1000)
+		{
+			std::cout << _body.substr(0, 1000) << "\n"
+					  << RED << "...(truncated " << _body.length() - 1000 << " bytes)..." << RESET << "\n";
+		}
+		else
+		{
+			std::cout << _body << "\n";
+		}
+	}
+
+	std::cout << CYAN << "===============================" << RESET << "\n"
+			  << std::endl;
 }

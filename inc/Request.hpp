@@ -102,7 +102,7 @@ class	Request
 		};
 
 		// bool	parsingCompleted() const;
-		void	feed(const char* chunk, size_t size);
+		size_t	feed(const std::string&);
 		void	resetState();
 
 		void	show() const;

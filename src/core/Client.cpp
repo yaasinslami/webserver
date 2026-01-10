@@ -8,6 +8,11 @@ void	Client::show() const
 	_request.show();
 }
 
+std::string& Client::getRequestBuffer()
+{
+	return _request_buffer;
+}
+
 Client::Client() : _fd(-1) {}
 
 Client::Client(int fd) : _fd(fd) {}
