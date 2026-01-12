@@ -80,6 +80,7 @@ class	Request
 		std::string			_body;
 		bool				_body_exist;
 		ChunkState			_chunk_state;
+		bool				_keep_alive;
 
 	public:
 		Request();
@@ -88,6 +89,7 @@ class	Request
         std::string getPath() const;
         std::string getVersion() const;
 		bool		requestCompleted() const;
+		bool		shouldKeepAlive() const;
 
 		class	RequestException : public std::exception
 		{

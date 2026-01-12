@@ -384,6 +384,10 @@ void	Request::__headers()
 		throw RequestException(400);
 	}
 
+	if (_headers.count("connection") && _headers["connection"].find("close")) {
+		_keep_alive = false;
+	}
+
 	// handle Content-Type ...
 }
 
@@ -412,6 +416,11 @@ bool Request::_is_valid_value(unsigned char c)
 	return false;
 }
 
+bool	Request::shouldKeepAlive() const
+{
+	return this->_keep_alive;
+}
+
 bool	Request::requestCompleted() const
 {
 	return _state == STATE_COMPLETE;
@@ -429,7 +438,8 @@ Request::Request() :
 	_chunked_transfer(false),
 	_chunk_length(0),
 	_body_exist(false),
-	_chunk_state(START)
+	_chunk_state(START),
+	_keep_alive(true)
 {
 	_method_str[GET] = "GET";
 	_method_str[POST] = "POST";

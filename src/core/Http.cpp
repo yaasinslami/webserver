@@ -146,29 +146,26 @@ void Http::handle_client_request(int client_fd)
 	while (!curr_client.getRequestBuffer().empty()) {
 		size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
 
-		
-	}
+		curr_client.getRequestBuffer().erase(0, consumed);
 
-	// now lets generate the respounse based on the request method ....
-	if (curr_client.isRequestReady())// the request should be completed here
-    {
-		curr_client.show();
-		// 1. Process and Send Response
-		std::cout << "Request Ready! Sending Response..." << std::endl;
-		// by now just close connection | no Keep-Alive logic
-		close_connection(client_fd);
+		// now lets generate the respounse based on the request method ....
+		if (curr_client.isRequestReady())// the request should be completed here
+		{
+			curr_client.show();
+			// Process and Send Response
+			std::cout << "Request Ready! Sending Response..." << std::endl;
 
-		// 2. Logic for Keep-Alive
-		// if (curr_client.getRequest().shouldKeepAlive()) {
-		// 	curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
-		// }
-		// else {
-		// 	close_connection(client_fd);
-		// }
-	}
-	else {
-		std::cerr << "Misconigured Request" << std::endl;
-		close_connection(client_fd);
+			// Logic for Keep-Alive
+			if (curr_client.getRequest().shouldKeepAlive()) {
+				curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
+			}
+			else {
+				close_connection(client_fd);
+				break ;
+			}
+		}
+		else
+			break ;
 	}
 }
 
