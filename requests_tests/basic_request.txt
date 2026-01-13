@@ -1,7 +1,13 @@
 POST /root HTTP/1.1
 Host:127.0.0
-Transfer-Encoding:chnked
+Transfer-Encoding:chunked
 
-2
-ZaASF
+1
+j
+5
+Hello
 0
+
+
+GET /root HTTP/1.1
+Host:127.0.0.1

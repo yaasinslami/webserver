@@ -102,6 +102,7 @@ void Http::handle_new_connection(int listener_fd)
 void Http::handle_client_request(int client_fd)
 {
 	Client	&curr_client = _clients[client_fd];
+	bool	client_disconnected = false;
 
 	char	tmp_buffer[4096];
 	memset(tmp_buffer, 0, sizeof(tmp_buffer));
@@ -116,7 +117,7 @@ void Http::handle_client_request(int client_fd)
 		if (bytes_read < 0)
 		{
 			if (errno == EWOULDBLOCK || errno == EAGAIN) {
-				std::cout << "-- farmina dakche li khass ytfarma akhoya --\n";
+				std::cout << "errno == EWOULDBLOCK || errno == EAGAIN => break!\n";
 				break;
 			}
 
@@ -126,46 +127,54 @@ void Http::handle_client_request(int client_fd)
 		}
 		else if (bytes_read == 0)
 		{
-			// Handle disconnection...
-			std::cout << "Client " << client_fd << " disconnected cleanly." << std::endl;
+			std::cout << "Client " << client_fd << " disconnected (EOF)." << std::endl;
+			client_disconnected = true;
 			break ;
 		}
-		curr_client.getRequestBuffer().append(tmp_buffer, bytes_read);
-
-		// try {
-		// 	std::cout << "feeding ...\n";
-		// 	curr_client.getRequest().feed(tmp_buffer, bytes_read);
-		// }
-		// catch(std::exception& e) {
-		// 	std::cerr << "Request Error: " << e.what() << std::endl;
-		// 	close_connection(client_fd);
-		// 	return ;
-		// }
+		else {
+			curr_client.getRequestBuffer().append(tmp_buffer, bytes_read);
+		}
 	}
 
 	while (!curr_client.getRequestBuffer().empty()) {
-		size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
+		std::cout << "feeding...\n";
+		try {
+			std::cout << "=== what will be parsed now ====\n";
+			std::cout << curr_client.getRequestBuffer() << std::endl;
+			size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
+			std::cout << "terminating feeding...\n";
+			curr_client.getRequestBuffer().erase(0, consumed);
+			// now lets generate the respounse based on the request method ....
+			if (curr_client.isRequestReady())// the request should be completed here
+			{
+				curr_client.show();
+				// Process and Send Response
+				std::cout << "Request Ready! Sending Response..." << std::endl;
 
-		curr_client.getRequestBuffer().erase(0, consumed);
-
-		// now lets generate the respounse based on the request method ....
-		if (curr_client.isRequestReady())// the request should be completed here
-		{
-			curr_client.show();
-			// Process and Send Response
-			std::cout << "Request Ready! Sending Response..." << std::endl;
-
-			// Logic for Keep-Alive
-			if (curr_client.getRequest().shouldKeepAlive()) {
-				curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
+				// Logic for Keep-Alive
+				if (curr_client.getRequest().shouldKeepAlive()) {
+					curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
+				}
+				else {
+					std::cout << "Connection: close requested. Closing.\n";
+					close_connection(client_fd);
+					return ;
+				}
 			}
 			else {
-				close_connection(client_fd);
+				std::cout << "Request not ready yet, wait for more data\n";
 				break ;
 			}
 		}
-		else
-			break ;
+		catch (const std::exception& e) {
+			std::cerr << "🚫 Bad Request: " << e.what() << "\n";
+			close_connection(client_fd);
+			return ;
+		}
+	}
+	if (client_disconnected) {
+		std::cout << "Cleaning up disconnected client.\n";
+		close_connection(client_fd);
 	}
 }
 

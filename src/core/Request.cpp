@@ -7,14 +7,17 @@
 size_t	Request::feed(const std::string& data)
 {
 	size_t	i = 0;
-	while  (i < data.length())
+	while (i < data.length())
 	{
 		unsigned char ch = data[i];
-	
 		switch (_state)
 		{
 			case STATE_START:
 			{
+				if (ch == '\r' || ch == '\n') {
+					++i;
+					continue ;
+				}
 				if (ch == 'G') _method = GET;
 				else if (ch == 'P') _method = POST;
 				else if (ch == 'D') _method = DELETE;
@@ -23,6 +26,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(501);
 				}
 				_state = STATE_METHOD;
+				++i;
 				continue ;
 			}
 			case STATE_METHOD:
@@ -33,6 +37,7 @@ size_t	Request::feed(const std::string& data)
 				}
 				if ((size_t)_m_index == _method_str[_method].length() - 1)
 					_state = STATE_SPACE_BEFORE_URI;
+				++i;
 				continue ;
 			}
 			case STATE_SPACE_BEFORE_URI:
@@ -42,6 +47,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_URI_SLASH;
+				++i;
 				continue ;
 			}
 			case STATE_URI_SLASH:
@@ -59,6 +65,7 @@ size_t	Request::feed(const std::string& data)
 					_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_PROTOCOL_H;
+					++i;
 					continue ;
 				}
 				break ;
@@ -70,6 +77,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_HT;
+				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_HT:
@@ -79,6 +87,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_HTT;
+				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_HTT:
@@ -88,6 +97,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_HTTP;
+				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_HTTP:
@@ -97,6 +107,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_PROTOCOL_SLASH;
+				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_SLASH:
@@ -106,6 +117,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_MAJOR_DIGIT;
+				++i;
 				continue ;
 			}
 			case STATE_MAJOR_DIGIT:
@@ -115,6 +127,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_DOT_AFTER_DIGIT;
+				++i;
 				continue ;
 			}
 			case STATE_DOT_AFTER_DIGIT:
@@ -124,6 +137,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_MINOR_DIGIT;
+				++i;
 				continue ;
 			}
 			case STATE_MINOR_DIGIT:
@@ -133,6 +147,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_FIRST_CR;
+				++i;
 				continue ;
 			}
 			case STATE_FIRST_CR:
@@ -142,6 +157,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_FIRST_LF;
+				++i;
 				continue ;
 			}
 			case STATE_FIRST_LF:
@@ -151,6 +167,7 @@ size_t	Request::feed(const std::string& data)
 					throw RequestException(400);
 				}
 				_state = STATE_FIELD_START;
+				++i;
 				continue ;
 			}
 			case STATE_FIELD_START:
@@ -168,8 +185,10 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_FIELD_NAME:
 			{
+				std::cout << "ch:" << std::endl;
 				if (ch == '\r') {
 					_state = STATE_FIELD_END;
+					++i;
 					continue ;
 				}
 				if (ch == ':') {// we have key:value
@@ -188,6 +207,7 @@ size_t	Request::feed(const std::string& data)
 				if (ch == '\r') {
 					_add_header();
 					_state = STATE_FIELD_LF;
+					++i;
 					continue ;
 				}
 				if (!_is_valid_value(ch)) {
@@ -200,6 +220,7 @@ size_t	Request::feed(const std::string& data)
 				if (ch != '\n') throw RequestException(400);
 
 				_state = STATE_FIELD_NAME;
+				++i;
 				continue ;
 			}
 			case STATE_FIELD_END:
@@ -209,15 +230,16 @@ size_t	Request::feed(const std::string& data)
 				__headers();
 				if (_body_exist) {
 					if (_chunked_transfer) {
-						std::cout << "_chunked_transfer\n";
 						_state = STATE_CHUNK_LENGTH;
 					}
 					else
 						_state = STATE_BODY;
+					++i;
 					continue ;
 				}
 				else {
 					_state = STATE_COMPLETE;
+					++i;
 					continue ;
 				}
 			}
@@ -225,10 +247,9 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (_body.size() < _content_length)
 					_body += ch;
-				if (_body.size() == _content_length) {
+				if (_body.size() == _content_length)
 					_state = STATE_COMPLETE;
-					continue ;
-				}
+				++i;
 				continue ;
 			}
 			case STATE_CHUNK_LENGTH:
@@ -242,10 +263,12 @@ size_t	Request::feed(const std::string& data)
 						throw RequestException(400);
 					else if (_chunk_length == 0) {
 						_state = STATE_COMPLETE;
+						++i;
 						continue ;
 					}
 					this->_chunk_state = PAYLOAD_BODY;
 					this->_state = STATE_CHUNK_LF;
+					++i;
 					continue ;
 				}
 				else if (!isxdigit(ch)) {
@@ -259,6 +282,7 @@ size_t	Request::feed(const std::string& data)
 				if (ch == '\r') {
 					_state = STATE_CHUNK_LF;
 					_chunk_state = LENGTH;
+					++i;
 					continue ;
 				}
 
@@ -271,6 +295,7 @@ size_t	Request::feed(const std::string& data)
 				if (ch != '\r') throw RequestException(400);
 
 				this->_state = STATE_CHUNK_LF;
+				++i;
 				continue ;
 			}
 			case STATE_CHUNK_LF:
@@ -285,6 +310,7 @@ size_t	Request::feed(const std::string& data)
 					_tmp_buffer.clear();
 					_state = STATE_CHUNK_LENGTH;
 				}
+				++i;
 				continue ;
 			}
 			case STATE_COMPLETE:
@@ -293,7 +319,7 @@ size_t	Request::feed(const std::string& data)
 			}
 		}
 		_tmp_buffer += ch;
-		i++;
+		++i;
 	}
 	return i;
 }
@@ -315,9 +341,6 @@ void	Request::_add_header()
 	const std::string whitespace = " \t";
 	size_t start = value.find_first_not_of(whitespace);
 	size_t end = value.find_last_not_of(whitespace);
-
-	std::cout << "start:" << start << std::endl;
-	std::cout << "end:" << end << std::endl;
 
 	if (start == std::string::npos)
 		value = "";
@@ -342,7 +365,6 @@ void	Request::_add_header()
 
 void	Request::__headers()
 {
-	std::cout << "handle_headers\n";
 	if (_headers.count("content-length")) {
 		std::string	value = _headers["content-length"];
 	
@@ -368,9 +390,7 @@ void	Request::__headers()
 
 	if (_headers.count("transfer-encoding"))
 	{
-		if (_headers["transfer-encoding"].find("chunked") != std::string::npos)
-		{
-			std::cout << "BAAA3\n";
+		if (_headers["transfer-encoding"].find("chunked") != std::string::npos) {
 			_chunked_transfer = true;
 		}
 		_body_exist = true;
@@ -389,6 +409,8 @@ void	Request::__headers()
 	}
 
 	// handle Content-Type ...
+
+	std::cout << "we finish parsing of headers\n";
 }
 
 bool Request::_is_token(unsigned char c)
@@ -428,7 +450,14 @@ bool	Request::requestCompleted() const
 
 void	Request::resetState()
 {
-	this->_state = STATE_START;
+	_state = STATE_START;
+	_m_index = 0;
+	_content_length = 0;
+	_chunked_transfer = false;
+	_chunk_length = 0;
+	_body_exist = false;
+	_chunk_state = START;
+	_keep_alive = true;
 }
 
 Request::Request() :
