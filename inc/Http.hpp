@@ -39,4 +39,6 @@ class	Http
 		void	handle_client_request(int);
 		void	remove_from_poll(int);
 		void	close_connection(int);
+
+		Server* _find_best_match_server(const Client& client);
 };

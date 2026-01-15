@@ -87,7 +87,7 @@ class	Request
 		~Request();
 
         std::string getPath() const;
-        std::string getVersion() const;
+        std::string	getHeader(const std::string& key) const;
 		bool		requestCompleted() const;
 		bool		shouldKeepAlive() const;
 

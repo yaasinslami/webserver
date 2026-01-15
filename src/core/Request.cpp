@@ -185,7 +185,6 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_FIELD_NAME:
 			{
-				std::cout << "ch:" << std::endl;
 				if (ch == '\r') {
 					_state = STATE_FIELD_END;
 					++i;
@@ -329,7 +328,6 @@ void	Request::_add_header()
 	size_t	delim = _tmp_buffer.find(':');
 	std::string	key = _tmp_buffer.substr(0, delim);
 	std::string value = _tmp_buffer.substr(delim + 1);
-	// std::cout << "value:" << value << std::endl;
 
 	if (key.empty()) {
 		std::cerr << "key or value can't be empty!" << std::endl;
@@ -359,7 +357,6 @@ void	Request::_add_header()
 		_headers[key] = value;
 
 	std::cout << "Header Added: [" << key << "] -> [" << value << "]\n";
-
 	_tmp_buffer.clear();
 }
 
@@ -458,6 +455,8 @@ void	Request::resetState()
 	_body_exist = false;
 	_chunk_state = START;
 	_keep_alive = true;
+	_tmp_buffer.clear();
+	_headers.clear();
 }
 
 Request::Request() :
@@ -478,6 +477,10 @@ Request::Request() :
 Request::~Request() {}
 
 std::string Request::getPath() const { return _path; }
+std::string	Request::getHeader(const std::string& key) const
+{
+	return _headers.at(key);
+}
 
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }
@@ -493,7 +496,6 @@ const char* Request::RequestException::what() const throw() { return "Bad Reques
 
 void Request::show() const
 {
-	std::cout << "header size: " << _headers.size() << std::endl;
 	std::cout << "\n"
 			  << CYAN << "=== HTTP REQUEST DEBUG INFO ===" << RESET << std::endl;
 

@@ -3,8 +3,7 @@
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
 	_interface("localhost"),
-	_port("80"),
-	_server_name("")
+	_port("80")
 {
 	_server_table[INTERFACE];
 	_server_table[PORT];
@@ -78,7 +77,7 @@ const std::string&	Server::getPortStr() const
 	return this->_port;
 }
 
-const std::string&	Server::getServerName() const
+const std::vector<std::string>&	Server::getServerName() const
 {
 	return this->_server_name;
 }
@@ -113,10 +112,15 @@ void Server::setPort(const std::string &port)
 	this->_port = port;
 }
 
-void Server::setServerName(const std::string &server_name)
+void Server::setServerName(const std::vector<std::string> &server_name)
 {
-	_server_table[S_NAME]++;
-	this->_server_name = server_name;
+	_server_name = server_name;
+}
+
+void	Server::addServerName(const std::string& server_name)
+{
+	++_server_table[S_NAME];
+	this->_server_name.push_back(server_name);
 }
 
 void Server::setLocations(const std::vector<Location> &locations)
@@ -143,8 +147,10 @@ void	Server::validate() const
 	if (_server_table.at(INTERFACE) > 1 || _server_table.at(PORT) > 1)
 		throw std::runtime_error("Duplicate 'Interface|port' in server block.");
 
-	if (_server_table.at(S_NAME) != 1)
+	if (_server_table.at(S_NAME) < 1) {
+		std::cout << _server_table.at(S_NAME) << std::endl;
 		throw std::runtime_error("Missing 'server_name'directve.");
+	}
 
 	if (_server_table.at(LOCATION) < 1)
 		throw std::runtime_error("Missing a 'location' block.");
@@ -162,7 +168,6 @@ void	Server::set_fd(int fd)
 
 void	Server::logs() const
 {
-	std::cout << "Server [" << getServerName() << "]\n";
 
 	getDirectives().logs();
 	std::cout << "interface: \"" << getInterfaceStr() << "\"\n";

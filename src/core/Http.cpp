@@ -8,8 +8,9 @@ void	Http::setup_servers( void )
 	{
 		_servers[i].init_server();
 
-		unsigned short	port = _servers[i].get_sockaddr().sin_port;
+		unsigned short port = ntohs(_servers[i].get_sockaddr().sin_port);
 		_servers_by_port[port].push_back(&_servers[i]);
+		std::cout << "port=" << port << std::endl;
 	}
 
 	for (std::map<unsigned short, std::vector<Server*> >::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
@@ -90,13 +91,25 @@ void Http::handle_new_connection(int listener_fd)
 	fcntl(client_fd, F_SETFL, O_NONBLOCK);
 	addto_poll(client_fd, POLLIN);
 
+	// 2. FIND THE LOCAL PORT (Server Port)
+	struct sockaddr_in server_addr;
+	socklen_t server_len = sizeof(server_addr);
+	if (getsockname(client_fd, (struct sockaddr *)&server_addr, &server_len) == -1)
+	{
+		std::cerr << "getsockname failed" << std::endl;
+		close(client_fd);
+		return;
+	}
+	// Convert to host byte order (e.g., 8080)
+	unsigned short server_port = ntohs(server_addr.sin_port);
+
 	// create a client with that fd and store it
-	Client new_client(client_fd);
+	Client new_client(client_fd, server_port);
 	_clients[client_fd] = new_client;
 
-	std::cout << "\nNew connection from " << inet_ntoa(client_addr.sin_addr) << ":" << htons(client_addr.sin_port)
-			  << " (FD: " << client_fd << ")" << std::endl;
-
+	std::cout << "\n[" << client_fd << "] -> New connection from " << inet_ntoa(client_addr.sin_addr) 
+              << ":" << htons(client_addr.sin_port) 
+              << " on Server Port: " << server_port << std::endl;
 }
 
 void Http::handle_client_request(int client_fd)
@@ -139,8 +152,8 @@ void Http::handle_client_request(int client_fd)
 	while (!curr_client.getRequestBuffer().empty()) {
 		std::cout << "feeding...\n";
 		try {
-			std::cout << "=== what will be parsed now ====\n";
-			std::cout << curr_client.getRequestBuffer() << std::endl;
+			// std::cout << "=== what will be parsed now ====\n";
+			// std::cout << curr_client.getRequestBuffer() << std::endl;
 			size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
 			std::cout << "terminating feeding...\n";
 			curr_client.getRequestBuffer().erase(0, consumed);
@@ -150,6 +163,15 @@ void Http::handle_client_request(int client_fd)
 				curr_client.show();
 				// Process and Send Response
 				std::cout << "Request Ready! Sending Response..." << std::endl;
+
+				// before sending respounse we should fetch for the best match (from our config file) -> found a server match
+				// we have _servers_by_port map
+
+				Server* server =  _find_best_match_server(curr_client);
+				if (server == NULL) {
+					// we didnt find a server
+					std::cerr << "No Server Found!" << std::endl;
+				}
 
 				// Logic for Keep-Alive
 				if (curr_client.getRequest().shouldKeepAlive()) {
@@ -176,6 +198,32 @@ void Http::handle_client_request(int client_fd)
 		std::cout << "Cleaning up disconnected client.\n";
 		close_connection(client_fd);
 	}
+}
+
+Server* Http::_find_best_match_server(const Client& client)
+{
+	unsigned short	port = client.getServerPort();
+	std::string host_header = client.getRequest().getHeader("host");
+
+	size_t	colon_pos = host_header.find(':');
+	if (colon_pos != std::string::npos) {
+		host_header = host_header.substr(0, colon_pos);
+		std::cout << "host_header:" << host_header << std::endl;
+	}
+
+	std::vector<Server*>&	candidates = _servers_by_port[port];
+	for (size_t i = 0; i < candidates.size(); ++i) {
+		const std::vector<std::string>& names = candidates[i]->getServerName();
+
+		for (size_t i = 0; i < names.size(); ++i) {
+			if (host_header == names[i]) {
+				std::cout << "Server matches! -> " << names[i] << std::endl;
+				return candidates[i];
+			}
+		}
+	}
+
+	return NULL;
 }
 
 void	Http::close_connection(int client_fd)

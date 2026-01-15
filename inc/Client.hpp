@@ -8,7 +8,7 @@ class	Client
 {
 	public:
 		Client();
-		Client(int fd);
+		Client(int fd, unsigned short server_port);
 		Client(const Client& other);
 		~Client();
 
@@ -17,11 +17,15 @@ class	Client
 
 		bool	isRequestReady() const;
 		Request &getRequest();
+		const Request& getRequest() const;
+
+		unsigned short	getServerPort() const;
 
 		void	show() const;
 
 	private:
-		int			_fd;
+		int				_fd;
+		unsigned short _server_port;
 		Request		_request;
 		std::string	_request_buffer;
 };

@@ -153,7 +153,7 @@ void	ConfigParser::parseServerBlock( void )
 			}
 		}
 		else if (directive_type == DIR_SERVER_NAME) {
-			server.setServerName(consumeToken());
+			server.addServerName(consumeToken());
 		}
 		else if (reg_directive(directive_type)) {
 			server.getDirectives().setDirective(directive_type, *this);
