@@ -6,14 +6,6 @@
 
 #define MAX_HEADER_SIZE 8192
 
-// enum RequestState
-// {
-// 	STATE_READING_HEADERS,
-// 	STATE_READING_BODY,
-// 	STATE_COMPLETE,
-// 	STATE_ERROR
-// };
-
 enum HttpMethod
 {
 	GET,
@@ -22,14 +14,27 @@ enum HttpMethod
 	NONE
 };
 
+enum	ChunkState
+{
+	START,
+	LENGTH,
+	PAYLOAD_BODY,
+	FINISH,
+};
+
 enum RequestState
 {
 	STATE_START,
 	STATE_METHOD,
 	STATE_SPACE_BEFORE_URI,
-	STATE_URI_SLASH,
+	STATE_URI_START,
+	STATE_URI_SCHEME,
+	STATE_SCHEME_FIRST_SLASH,
+	STATE_SCHEME_SECOND_SLASH,
+	STATE_URI_AUTH,
 	STATE_URI_PATH,
-	// STATE_URI_QUERY,
+	STATE_URI_QUERY,
+	STATE_URI_FRAGMENT,
 	STATE_PROTOCOL_H,
 	STATE_PROTOCOL_HT,
 	STATE_PROTOCOL_HTT,
@@ -54,14 +59,6 @@ enum RequestState
 	STATE_COMPLETE
 };
 
-enum	ChunkState
-{
-	START,
-	LENGTH,
-	PAYLOAD_BODY,
-	FINISH,
-};
-
 class	Request
 {
 	private:
@@ -74,7 +71,9 @@ class	Request
 
 		HttpMethod							_method;
 		std::map<u_int8_t, std::string>		_method_str;
-		std::string 						_path;
+		std::string							_uri_scheme;
+		std::string							_uri_auth;
+		std::string 						_uri_path;
 		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
 		std::string			_body;
@@ -113,7 +112,8 @@ class	Request
 		void	_parse_request_line(const std::string&);
 		void	_parse_header(const std::string&);
 
-		static bool	_is_token(unsigned char ch);
+		static bool	_is_scheme_char(unsigned char);
+		static bool	_is_token(unsigned char);
 		static bool	_is_valid_value(unsigned char);
 		void	_add_header();
 		void	__headers();

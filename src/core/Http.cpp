@@ -194,6 +194,7 @@ void Http::handle_client_request(int client_fd)
 			return ;
 		}
 	}
+	// curr_client.show();
 	if (client_disconnected) {
 		std::cout << "Cleaning up disconnected client.\n";
 		close_connection(client_fd);

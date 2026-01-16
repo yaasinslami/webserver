@@ -46,21 +46,108 @@ size_t	Request::feed(const std::string& data)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
 				}
-				_state = STATE_URI_SLASH;
+				_state = STATE_URI_START;
 				++i;
 				continue ;
 			}
-			case STATE_URI_SLASH:
+			case STATE_URI_START:
 			{
-				if (ch != '/') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
+				if (ch == '/') {
+					_state = STATE_URI_PATH;
+				}
+				else if (_is_scheme_char(ch)) {
+					_state = STATE_URI_SCHEME;
+				}
+				else {
 					throw RequestException(400);
 				}
-				_state = STATE_URI_PATH;
+				break; // Break causes: _tmp_buffer += ch;
+			}
+			case STATE_URI_SCHEME:
+			{
+				// Reading "http","https",...
+				if (ch == ':') {
+					_uri_scheme = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_SCHEME_FIRST_SLASH;
+					++i;
+					continue;
+				}
+				else if (!_is_scheme_char(ch)) {
+					throw RequestException(400);
+				}
+				break;
+			}
+			case STATE_SCHEME_FIRST_SLASH:
+			{
+				if (ch != '/') {
+					throw RequestException(400);
+				}
+
+				_state = STATE_SCHEME_SECOND_SLASH;
+				i++;
+				continue;
+			}
+			case STATE_SCHEME_SECOND_SLASH:
+			{
+				if (ch != '/') {
+					throw RequestException(400);
+				}
+
+				_state = STATE_URI_AUTH;
+				i++;
+				continue;
+			}
+			case STATE_URI_AUTH:
+			{
+				// http://localhost.com:8080/images/dir/?id=4#
+				if (ch == '/' && !_tmp_buffer.empty()) {
+					// we finish AUTH
+					_uri_auth = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_URI_PATH;
+				}
+				else if (!_is_token(ch)) {
+					throw RequestException(400);
+				}
 				break ;
 			}
+
 			case STATE_URI_PATH:
 			{
+				if (ch == ' ')// URI FINISHED
+				{
+					_uri_path = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_PROTOCOL_H;
+					++i;
+					continue;
+				}
+				else if (ch == '?')
+				{
+					_uri_path = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_URI_QUERY;
+					++i;
+					continue;
+				}
+				else if (ch == '#')
+				{
+					_uri_path = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_URI_FRAGMENT;
+					++i;
+					continue;
+				}
+				break;
+			}
+			case STATE_URI_QUERY:
+			{
+				
+			}
+			case STATE_URI_FRAGMENT:
+			{
+				// first check for # charachter
 				if (ch == ' ') {
 					_path = _tmp_buffer;
 					_tmp_buffer.clear();
@@ -348,6 +435,7 @@ void	Request::_add_header()
 
 	if (_headers.count(key)) {
 		if (key == "host" || key == "content-length") {
+			std::cerr << "Duplicated Header Not Allowed!\n";
 			throw RequestException(400);
 		}
 
@@ -408,6 +496,11 @@ void	Request::__headers()
 	// handle Content-Type ...
 
 	std::cout << "we finish parsing of headers\n";
+}
+
+bool Request::_is_scheme_char(unsigned char c)
+{
+	return (isalnum(c) || c == '+' || c == '-' || c == '.');
 }
 
 bool Request::_is_token(unsigned char c)
