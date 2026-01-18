@@ -1,5 +1,7 @@
 #include "../../inc/Server.hpp"
 
+Server::findLocation()
+
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
 	_interface("localhost"),
@@ -20,7 +22,7 @@ Server& Server::operator=(const Server& other)
 		setDirectives(other.getDirectives());
 		setInterface(other.getInterfaceStr());
 		setPort(other.getPortStr());
-		setServerName(other.getServerName());
+		setServerName(other.getServerNames());
 		setLocations(other.getLocation());
 	}
 	return *this;
@@ -77,7 +79,7 @@ const std::string&	Server::getPortStr() const
 	return this->_port;
 }
 
-const std::vector<std::string>&	Server::getServerName() const
+const std::vector<std::string>&	Server::getServerNames() const
 {
 	return this->_server_name;
 }

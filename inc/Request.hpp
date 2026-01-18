@@ -74,6 +74,7 @@ class	Request
 		std::string							_uri_scheme;
 		std::string							_uri_auth;
 		std::string 						_uri_path;
+		std::string 						_uri_query;
 		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
 		std::string			_body;
@@ -86,6 +87,7 @@ class	Request
 		~Request();
 
         std::string getPath() const;
+		std::string	getServerName()const;
         std::string	getHeader(const std::string& key) const;
 		bool		requestCompleted() const;
 		bool		shouldKeepAlive() const;
@@ -109,10 +111,11 @@ class	Request
 		void	show() const;
 
 	private:
-		void	_parse_request_line(const std::string&);
-		void	_parse_header(const std::string&);
-
 		static bool	_is_scheme_char(unsigned char);
+		static bool	_is_unreserved(unsigned char);
+		static bool	_is_sub_delim(unsigned char);
+		static bool	_is_pchar(unsigned char);
+		static bool	_is_query_char(unsigned char);
 		static bool	_is_token(unsigned char);
 		static bool	_is_valid_value(unsigned char);
 		void	_add_header();

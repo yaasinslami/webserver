@@ -29,7 +29,7 @@ class	Server
 		Directives&						getDirectives();
 		const std::string&				getInterfaceStr() const;
 		const std::string&					getPortStr() const;
-		const std::vector<std::string>&				getServerName() const;
+		const std::vector<std::string>&				getServerNames() const;
 		const std::vector<Location>&	getLocation() const;
 		struct sockaddr_in&				get_sockaddr();
 		int								get_fd( void );
@@ -49,6 +49,8 @@ class	Server
 
 		void						validate() const;
 		void						logs() const;
+
+		void	findLocation();
 
 	private:
 		Directives					_directives;

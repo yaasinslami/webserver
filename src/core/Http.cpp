@@ -164,14 +164,22 @@ void Http::handle_client_request(int client_fd)
 				// Process and Send Response
 				std::cout << "Request Ready! Sending Response..." << std::endl;
 
-				// before sending respounse we should fetch for the best match (from our config file) -> found a server match
-				// we have _servers_by_port map
-
 				Server* server =  _find_best_match_server(curr_client);
 				if (server == NULL) {
-					// we didnt find a server
-					std::cerr << "No Server Found!" << std::endl;
+					close_connection(client_fd);
+					return ;
 				}
+
+				const Location*	location = findLocation(curr_client.getRequest().getPath());
+
+				if (!location) {
+					// 404 or use a default internal locationation
+				}
+
+				// 3. Store in Client (State belongs to Client, not Server)
+				curr_client.setConfig(server, location);
+
+				// Response response(curr_client.getRequest(), *server, *loc);
 
 				// Logic for Keep-Alive
 				if (curr_client.getRequest().shouldKeepAlive()) {
@@ -204,27 +212,31 @@ void Http::handle_client_request(int client_fd)
 Server* Http::_find_best_match_server(const Client& client)
 {
 	unsigned short	port = client.getServerPort();
-	std::string host_header = client.getRequest().getHeader("host");
+	std::string host_name = client.getRequest().getServerName();
 
-	size_t	colon_pos = host_header.find(':');
-	if (colon_pos != std::string::npos) {
-		host_header = host_header.substr(0, colon_pos);
-		std::cout << "host_header:" << host_header << std::endl;
+	if (_servers_by_port.find(port) == _servers_by_port.end() || _servers_by_port[port].empty()) {
+		std::cerr << "Error: No servers found for port " << port << std::endl;
+		return NULL;
 	}
 
-	std::vector<Server*>&	candidates = _servers_by_port[port];
-	for (size_t i = 0; i < candidates.size(); ++i) {
-		const std::vector<std::string>& names = candidates[i]->getServerName();
+	std::vector<Server*>& candidates = _servers_by_port[port];
 
-		for (size_t i = 0; i < names.size(); ++i) {
-			if (host_header == names[i]) {
-				std::cout << "Server matches! -> " << names[i] << std::endl;
+	for (size_t i = 0; i < candidates.size(); ++i)
+	{
+		const std::vector<std::string> &names = candidates[i]->getServerNames();
+
+		for (size_t j = 0; j < names.size(); ++j)
+		{
+			if (host_name == names[j]){
+				std::cout << "Server match found: " << names[j] << std::endl;
 				return candidates[i];
 			}
 		}
 	}
 
-	return NULL;
+	// FALLBACK
+	std::cout << "No name match. Using default server for port " << port << std::endl;
+	return candidates[0];
 }
 
 void	Http::close_connection(int client_fd)

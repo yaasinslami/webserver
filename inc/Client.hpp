@@ -6,6 +6,10 @@
 
 class	Client
 {
+	private:
+		Server *_matched_server; // Pointer to the config shared object
+		const Location *_matched_location;
+
 	public:
 		Client();
 		Client(int fd, unsigned short server_port);
@@ -13,8 +17,10 @@ class	Client
 		~Client();
 
 		Client& operator=(const Client& other);
-		std::string& getRequestBuffer();
 
+		void	setConfig(Server* s, const Location* l);
+
+		std::string& getRequestBuffer();
 		bool	isRequestReady() const;
 		Request &getRequest();
 		const Request& getRequest() const;

@@ -61,7 +61,7 @@ size_t	Request::feed(const std::string& data)
 				else {
 					throw RequestException(400);
 				}
-				break; // Break causes: _tmp_buffer += ch;
+				break;
 			}
 			case STATE_URI_SCHEME:
 			{
@@ -100,19 +100,17 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_URI_AUTH:
 			{
-				// http://localhost.com:8080/images/dir/?id=4#
 				if (ch == '/' && !_tmp_buffer.empty()) {
 					// we finish AUTH
 					_uri_auth = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_PATH;
 				}
-				else if (!_is_token(ch)) {
+				else if (!_is_unreserved(ch) && !_is_sub_delim(ch) && ch != ':' && ch != '@' && ch != '[' && ch != ']' && ch != '%') {
 					throw RequestException(400);
 				}
 				break ;
 			}
-
 			case STATE_URI_PATH:
 			{
 				if (ch == ' ')// URI FINISHED
@@ -139,23 +137,40 @@ size_t	Request::feed(const std::string& data)
 					++i;
 					continue;
 				}
+				else if (!_is_pchar(ch) && ch != '/') {
+					throw RequestException(400);
+				}
 				break;
 			}
 			case STATE_URI_QUERY:
 			{
-				
-			}
-			case STATE_URI_FRAGMENT:
-			{
-				// first check for # charachter
 				if (ch == ' ') {
-					_path = _tmp_buffer;
+					_uri_query = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_PROTOCOL_H;
 					++i;
 					continue ;
 				}
+				else if (ch == '#')
+				{
+					_uri_query = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_URI_FRAGMENT;
+					++i;
+					continue;
+				}
+				else if (!_is_query_char(ch)) {
+					throw RequestException(400);
+				}
 				break ;
+			}
+			case STATE_URI_FRAGMENT:
+			{
+				if (ch == ' ') {
+					_state = STATE_PROTOCOL_H;
+				}
+				i++;
+				continue;
 			}
 			case STATE_PROTOCOL_H:
 			{
@@ -450,6 +465,28 @@ void	Request::_add_header()
 
 void	Request::__headers()
 {
+	if (_headers.find("host") == _headers.end()) {
+		std::cerr << "Error: HTTP/1.1 request missing 'Host' header\n";
+		throw RequestException(400);
+	}
+
+	std::string	raw_host;
+	if (!_uri_auth.empty()) {
+		raw_host = _uri_path;
+	}
+	else {
+		raw_host = _headers["host"];
+	}
+
+	size_t colon_pos = raw_host.find(':');
+
+	if (colon_pos != std::string::npos) {
+		_server_name = raw_host.substr(0, colon_pos);
+	}
+	else {
+		_server_name = raw_host;
+	}
+
 	if (_headers.count("content-length")) {
 		std::string	value = _headers["content-length"];
 	
@@ -481,13 +518,6 @@ void	Request::__headers()
 		_body_exist = true;
 	}
 
-	if (_headers.count("host")) {
-		_server_name = _headers["host"];
-	}
-	else {
-		std::cerr << "`Host` Header not found\n";
-		throw RequestException(400);
-	}
 
 	if (_headers.count("connection") && _headers["connection"].find("close")) {
 		_keep_alive = false;
@@ -501,6 +531,28 @@ void	Request::__headers()
 bool Request::_is_scheme_char(unsigned char c)
 {
 	return (isalnum(c) || c == '+' || c == '-' || c == '.');
+}
+
+bool Request::_is_unreserved(unsigned char c)
+{
+	// ALPHA / DIGIT / "-" / "." / "_" / "~"
+	return (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~');
+}
+
+bool Request::_is_sub_delim(unsigned char c)
+{
+	std::string sub_delims = "!$&'()*+,;=";
+	return (sub_delims.find(c) != std::string::npos);
+}
+
+bool Request::_is_pchar(unsigned char c)
+{
+	return (_is_unreserved(c) || _is_sub_delim(c) || c == ':' || c == '@' || c == '%');
+}
+
+bool Request::_is_query_char(unsigned char c)
+{
+	return (_is_pchar(c) || c == '/' || c == '?');
 }
 
 bool Request::_is_token(unsigned char c)
@@ -569,11 +621,9 @@ Request::Request() :
 
 Request::~Request() {}
 
-std::string Request::getPath() const { return _path; }
-std::string	Request::getHeader(const std::string& key) const
-{
-	return _headers.at(key);
-}
+std::string Request::getPath() const { return _uri_path; }
+std::string	Request::getHeader(const std::string& key) const { return _headers.at(key); }
+std::string	Request::getServerName() const { return _server_name; }
 
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }
@@ -610,7 +660,10 @@ void Request::show() const
 		std::cout << "UNKNOWN";
 	}
 	std::cout << RESET << "\n";
-	std::cout << "  Path:         " << _path << "\n";
+	std::cout << "  Sheme:         " << _uri_scheme << "\n";
+	std::cout << "  Auth:         " << _uri_auth << "\n";
+	std::cout << "  Path:         " << _uri_path << "\n";
+	std::cout << "  Query:         " << _uri_query << "\n";
 	// std::cout << "  Query:        " << (_query.empty() ? "(empty)" : _query) << "\n";
 	std::cout << "  Target Host:  " << (_server_name.empty() ? "(default)" : _server_name) << "\n";
 
@@ -646,8 +699,7 @@ void Request::show() const
 			std::cout << "  Actual Read:  " << _body.length() << " bytes\n";
 
 			// Safety Warning if they don't match
-			if (_content_length != _body.length())
-			{
+			if (_content_length != _body.length()) {
 				std::cout << RED << "  WARNING: Body size mismatch!" << RESET << "\n";
 			}
 		}

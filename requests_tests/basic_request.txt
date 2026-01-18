@@ -1,10 +1,5 @@
-POST http://localhost.com:8080/images/dir/?id=4#test HTTP/1.1
-Host:127.0.0.1
-Transfer-Encoding:chunked
+POST /root HTTP/1.1
+Host:
+Content-length: 5
 
-1
-j
-5
-Hello
-0
-
+Hel
