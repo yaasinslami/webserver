@@ -1,7 +1,7 @@
 #include "Client.hpp"
 #include <iostream>
 
-void	Client::setConfig()
+// void	Client::setConfig()
 
 void	Client::show() const
 {

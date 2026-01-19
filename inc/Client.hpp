@@ -3,12 +3,13 @@
 
 #include <string>
 #include "Request.hpp"
+#include "Server.hpp"
 
 class	Client
 {
 	private:
-		Server *_matched_server; // Pointer to the config shared object
-		const Location *_matched_location;
+		// Server *_matched_server; // Pointer to the config shared object
+		// const Location *_matched_location;
 
 	public:
 		Client();
@@ -18,7 +19,7 @@ class	Client
 
 		Client& operator=(const Client& other);
 
-		void	setConfig(Server* s, const Location* l);
+		// void	setConfig(Server* s, const Location* l);
 
 		std::string& getRequestBuffer();
 		bool	isRequestReady() const;

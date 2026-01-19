@@ -50,7 +50,7 @@ class	Server
 		void						validate() const;
 		void						logs() const;
 
-		void	findLocation();
+		const Location*	findLocation(const std::string&) const;
 
 	private:
 		Directives					_directives;

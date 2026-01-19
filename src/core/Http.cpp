@@ -157,28 +157,24 @@ void Http::handle_client_request(int client_fd)
 			size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
 			std::cout << "terminating feeding...\n";
 			curr_client.getRequestBuffer().erase(0, consumed);
-			// now lets generate the respounse based on the request method ....
-			if (curr_client.isRequestReady())// the request should be completed here
+			if (curr_client.isRequestReady())
 			{
+				std::cout << "----------\tRequest Ready!" << std::endl;
 				curr_client.show();
 				// Process and Send Response
-				std::cout << "Request Ready! Sending Response..." << std::endl;
 
 				Server* server =  _find_best_match_server(curr_client);
-				if (server == NULL) {
+				if (server == NULL) {// an error occured
 					close_connection(client_fd);
 					return ;
 				}
-
-				const Location*	location = findLocation(curr_client.getRequest().getPath());
-
-				if (!location) {
-					// 404 or use a default internal locationation
-				}
+				const Location*	location = server->findLocation(curr_client.getRequest().getPath());
+				(void)location;
 
 				// 3. Store in Client (State belongs to Client, not Server)
-				curr_client.setConfig(server, location);
+				// curr_client.setConfig(server, location);
 
+				std::cout << "---------\tSending Response..." << std::endl;
 				// Response response(curr_client.getRequest(), *server, *loc);
 
 				// Logic for Keep-Alive
@@ -219,6 +215,7 @@ Server* Http::_find_best_match_server(const Client& client)
 		return NULL;
 	}
 
+	std::cout << "port:" << port << std::endl;
 	std::vector<Server*>& candidates = _servers_by_port[port];
 
 	for (size_t i = 0; i < candidates.size(); ++i)
@@ -227,15 +224,15 @@ Server* Http::_find_best_match_server(const Client& client)
 
 		for (size_t j = 0; j < names.size(); ++j)
 		{
+			std::cout << "name:" << names[j] << std::endl;
 			if (host_name == names[j]){
 				std::cout << "Server match found: " << names[j] << std::endl;
 				return candidates[i];
 			}
 		}
 	}
-
 	// FALLBACK
-	std::cout << "No name match. Using default server for port " << port << std::endl;
+	std::cout << "No Server match. Using default server for port " << port << std::endl;
 	return candidates[0];
 }
 

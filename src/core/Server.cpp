@@ -1,6 +1,33 @@
 #include "../../inc/Server.hpp"
 
-Server::findLocation()
+const Location*	Server::findLocation(const std::string& path) const
+{
+	const Location *best_match = NULL;
+	size_t best_len = 0;
+
+	for (size_t i = 0; i < _locations.size(); ++i)
+	{
+		const std::string &loc_path = _locations[i].getPath();
+		std::cout << "- loc_path->" << loc_path << std::endl;
+		if (path.compare(0, loc_path.length(), loc_path) == 0)
+		{
+			std::cout << "- found a good path" << std::endl;
+			if (loc_path.length() > best_len)
+			{
+				best_match = &_locations[i];
+				best_len = loc_path.length();
+			}
+		}
+		if (best_match) {
+			std::cout << "Location found[" << best_match->getPath() << "]" << std::endl;
+			return best_match;
+		}
+	}
+	// if no location found - use fallback one
+	std::cout << "No location matched. use Default Path\n";
+	// here, I think i should use an algo that get the most closer path to the root '/'
+	return &_locations[0];
+}
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
