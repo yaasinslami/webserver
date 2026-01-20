@@ -12,27 +12,26 @@ const Location*	Server::findLocation(const std::string& path) const
 		if (path.compare(0, loc_path.length(), loc_path) == 0)
 		{
 			std::cout << "- found a good path" << std::endl;
-			if (loc_path.length() > best_len)
-			{
+			if (loc_path.length() > best_len) {
 				best_match = &_locations[i];
 				best_len = loc_path.length();
 			}
 		}
-		if (best_match) {
-			std::cout << "Location found[" << best_match->getPath() << "]" << std::endl;
-			return best_match;
-		}
 	}
-	// if no location found - use fallback one
-	std::cout << "No location matched. use Default Path\n";
-	// here, I think i should use an algo that get the most closer path to the root '/'
+	if (best_match) {
+		std::cout << "Location found[" << best_match->getPath() << "]" << std::endl;
+		return best_match;
+	}
+
+	// if no location found - l3ab la baghi tl3b bel fallback one
+	std::cout << "No location matched. use Default Path (first location)\n";
 	return &_locations[0];
 }
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
 	_interface("localhost"),
-	_port("80")
+	_port("4242")
 {
 	_server_table[INTERFACE];
 	_server_table[PORT];
@@ -66,6 +65,8 @@ void	Server::init_server( void )
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
+
+	std::cout << "interface:" << _interface << "\nport:" << _port << std::endl;
 
 	status = getaddrinfo(getInterfaceStr().c_str(), getPortStr().c_str(), &hints, &result);
 

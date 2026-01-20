@@ -8,8 +8,9 @@
 class	Client
 {
 	private:
-		// Server *_matched_server; // Pointer to the config shared object
-		// const Location *_matched_location;
+		int				_fd;
+		unsigned short _server_port;
+		std::string	_request_buffer;
 
 	public:
 		Client();
@@ -31,10 +32,9 @@ class	Client
 		void	show() const;
 
 	private:
-		int				_fd;
-		unsigned short _server_port;
 		Request		_request;
-		std::string	_request_buffer;
+		Server			*_server;
+		const Location	*_location;
 };
 
 #endif

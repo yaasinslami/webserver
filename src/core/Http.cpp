@@ -7,10 +7,11 @@ void	Http::setup_servers( void )
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
 		_servers[i].init_server();
+		std::cout << "\n----------\n";
 
 		unsigned short port = ntohs(_servers[i].get_sockaddr().sin_port);
 		_servers_by_port[port].push_back(&_servers[i]);
-		std::cout << "port=" << port << std::endl;
+		// std::cout << "port=" << port << std::endl;
 	}
 
 	for (std::map<unsigned short, std::vector<Server*> >::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
@@ -107,9 +108,9 @@ void Http::handle_new_connection(int listener_fd)
 	Client new_client(client_fd, server_port);
 	_clients[client_fd] = new_client;
 
-	std::cout << "\n[" << client_fd << "] -> New connection from " << inet_ntoa(client_addr.sin_addr) 
-              << ":" << htons(client_addr.sin_port) 
-              << " on Server Port: " << server_port << std::endl;
+	std::cout << "\n[" << client_fd << "] -> New connection from " << inet_ntoa(client_addr.sin_addr)
+			  << ":" << htons(client_addr.sin_port)
+			  << " on Server Port: " << server_port << std::endl;
 }
 
 void Http::handle_client_request(int client_fd)
@@ -169,7 +170,7 @@ void Http::handle_client_request(int client_fd)
 					return ;
 				}
 				const Location*	location = server->findLocation(curr_client.getRequest().getPath());
-				(void)location;
+				// validate Request (allowed methods, alias, root ....)
 
 				// 3. Store in Client (State belongs to Client, not Server)
 				// curr_client.setConfig(server, location);

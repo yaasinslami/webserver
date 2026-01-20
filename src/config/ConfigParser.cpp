@@ -141,15 +141,26 @@ void	ConfigParser::parseServerBlock( void )
 			if (colonPos != std::string::npos)//possibly found both interface:port
 			{
 				server.setInterface(listenStr.substr(0, colonPos));
-				std::string	portStr = listenStr.substr(colonPos + 1);
-				server.setPort(portStr.c_str());
+				server.setPort(listenStr.substr(colonPos + 1));
 			}
-			else//we didnt find ":" => interfce or port ?
+			else
 			{
-				if (listenStr.find('.') != std::string::npos)// we found an interface
-					server.setInterface(listenStr);
-				else// we have a port
+				bool is_numeric = true;
+				for (size_t i = 0; i < listenStr.length(); ++i)
+				{
+					if (!std::isdigit(listenStr[i]))
+					{
+						is_numeric = false;
+						break;
+					}
+				}
+
+				if (is_numeric) {
 					server.setPort(listenStr);
+				}
+				else {
+					server.setInterface(listenStr);
+				}
 			}
 		}
 		else if (directive_type == DIR_SERVER_NAME) {
