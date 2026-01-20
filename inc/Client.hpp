@@ -20,7 +20,7 @@ class	Client
 
 		Client& operator=(const Client& other);
 
-		// void	setConfig(Server* s, const Location* l);
+		void	setContext(Server *s, const Location *l);
 
 		std::string& getRequestBuffer();
 		bool	isRequestReady() const;

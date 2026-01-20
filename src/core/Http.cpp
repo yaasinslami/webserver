@@ -170,10 +170,9 @@ void Http::handle_client_request(int client_fd)
 					return ;
 				}
 				const Location*	location = server->findLocation(curr_client.getRequest().getPath());
-				// validate Request (allowed methods, alias, root ....)
 
 				// 3. Store in Client (State belongs to Client, not Server)
-				// curr_client.setConfig(server, location);
+				curr_client.setContext(server, location);
 
 				std::cout << "---------\tSending Response..." << std::endl;
 				// Response response(curr_client.getRequest(), *server, *loc);

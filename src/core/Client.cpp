@@ -1,7 +1,11 @@
 #include "Client.hpp"
 #include <iostream>
 
-// void	Client::setConfig()
+void Client::setContext(Server *s, const Location *l)
+{
+	_server = s;
+	_location = l;
+}
 
 void	Client::show() const
 {
@@ -15,9 +19,9 @@ std::string& Client::getRequestBuffer()
 	return _request_buffer;
 }
 
-Client::Client() : _fd(-1), _server_port(0) {}
+Client::Client() : _fd(-1), _server_port(0), _server(NULL), _location(NULL) {}
 
-Client::Client(int fd, unsigned short server_port) : _fd(fd), _server_port(server_port) {}
+Client::Client(int fd, unsigned short server_port) : _fd(fd), _server_port(server_port), _server(NULL), _location(NULL) {}
 
 Client::Client(const Client& other) { *this = other; }
 
