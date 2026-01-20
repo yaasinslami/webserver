@@ -6,7 +6,8 @@
 class	Response
 {
 	private:
-		void	_processMethod(Client& client);
+		void			_processMethod(Client& client);
+		std::string		_translatePath(const std::string& path, const Location* loc);
 	public:
 		Response(Client &client);
 		~Response();

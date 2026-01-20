@@ -66,8 +66,6 @@ void	Server::init_server( void )
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	std::cout << "interface:" << _interface << "\nport:" << _port << std::endl;
-
 	status = getaddrinfo(getInterfaceStr().c_str(), getPortStr().c_str(), &hints, &result);
 
 	if (status != 0)
@@ -149,8 +147,12 @@ void Server::setServerName(const std::vector<std::string> &server_name)
 
 void	Server::addServerName(const std::string& server_name)
 {
+	std::string s_name(server_name);
+
 	++_server_table[S_NAME];
-	this->_server_name.push_back(server_name);
+	if (server_name == "localhost")
+		s_name = "127.0.0.1";
+	this->_server_name.push_back(s_name);
 }
 
 void Server::setLocations(const std::vector<Location> &locations)

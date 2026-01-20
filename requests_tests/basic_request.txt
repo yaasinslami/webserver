@@ -1,6 +1,6 @@
-POST /root/images HTTP/1.1
-Host:127.0.0.1:8001
-Content-length: 5
+POST /images/folder1 HTTP/1.1
+Host:127.0.0.1:8080
+Content-length: 10
 
-Hello
+HelloHello
 

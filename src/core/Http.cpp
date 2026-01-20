@@ -8,11 +8,9 @@ void	Http::setup_servers( void )
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
 		_servers[i].init_server();
-		std::cout << "\n----------\n";
 
 		unsigned short port = ntohs(_servers[i].get_sockaddr().sin_port);
 		_servers_by_port[port].push_back(&_servers[i]);
-		// std::cout << "port=" << port << std::endl;
 	}
 
 	for (std::map<unsigned short, std::vector<Server*> >::iterator it = _servers_by_port.begin(); it != _servers_by_port.end(); ++it)
