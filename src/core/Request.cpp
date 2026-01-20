@@ -621,9 +621,43 @@ Request::Request() :
 
 Request::~Request() {}
 
+std::string	Request::getMethod() const
+{
+	std::string	method;
+
+	switch (_method)
+	{
+		case GET:
+		{
+			method =  "GET";
+			break ;
+		}
+		case POST:
+		{
+			method =  "POST";
+			break ;
+		}
+		case DELETE	:
+		{
+			method =  "DELETE";
+			break ;
+		}
+		case NONE:
+		{
+			method = "";
+			break ;
+		}
+	}
+
+	return method;
+}
 std::string Request::getPath() const { return _uri_path; }
 std::string	Request::getHeader(const std::string& key) const { return _headers.at(key); }
 std::string	Request::getServerName() const { return _server_name; }
+const std::string& Request::getBody() const
+{
+	return _body;
+}
 
 Request::RequestException::RequestException(int code) : _status_code(code) {}
 int Request::RequestException::get_status_code() const { return _status_code; }

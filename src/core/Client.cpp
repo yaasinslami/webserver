@@ -1,6 +1,16 @@
 #include "Client.hpp"
 #include <iostream>
 
+const Location* Client::getLocation() const
+{
+	return _location;
+}
+
+const Server* Client::getServer() const
+{
+	return _server;
+}
+
 void Client::setContext(Server *s, const Location *l)
 {
 	_server = s;

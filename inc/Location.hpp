@@ -19,6 +19,7 @@ class	Location
 		void						setPath(const std::string& path);
 		void						setAlias(const std::string& alias);
 
+		bool						isMethodAllowed(const std::string&) const;
 		void						logs() const;
 
 	private:

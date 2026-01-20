@@ -48,6 +48,7 @@ struct	Directives
 
 		void	setDirective(const enum e_directive_type directve_type, ConfigParser& conf);
 
+		bool						isMethodAllowed(const std::string&) const;
 		void	logs() const;
 
 	private:

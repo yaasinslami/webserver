@@ -1,6 +1,7 @@
 #include "../../inc/Http.hpp"
 #include <vector>
 #include "Request.hpp"
+#include "Response.hpp"
 
 void	Http::setup_servers( void )
 {
@@ -157,12 +158,14 @@ void Http::handle_client_request(int client_fd)
 			// std::cout << curr_client.getRequestBuffer() << std::endl;
 			size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
 			std::cout << "terminating feeding...\n";
+
+			// erasing the previous request to keep what's left
 			curr_client.getRequestBuffer().erase(0, consumed);
+
 			if (curr_client.isRequestReady())
 			{
 				std::cout << "----------\tRequest Ready!" << std::endl;
 				curr_client.show();
-				// Process and Send Response
 
 				Server* server =  _find_best_match_server(curr_client);
 				if (server == NULL) {// an error occured
@@ -171,11 +174,11 @@ void Http::handle_client_request(int client_fd)
 				}
 				const Location*	location = server->findLocation(curr_client.getRequest().getPath());
 
-				// 3. Store in Client (State belongs to Client, not Server)
 				curr_client.setContext(server, location);
 
 				std::cout << "---------\tSending Response..." << std::endl;
-				// Response response(curr_client.getRequest(), *server, *loc);
+				Response response(curr_client);
+				// reponse.sentResponse();
 
 				// Logic for Keep-Alive
 				if (curr_client.getRequest().shouldKeepAlive()) {

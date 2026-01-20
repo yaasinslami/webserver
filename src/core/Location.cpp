@@ -1,6 +1,10 @@
 #include "../../inc/Location.hpp"
 #include <string>
 
+bool	Location::isMethodAllowed(const std::string& method) const
+{
+	return _directives.isMethodAllowed(method);
+}
 
 Location::~Location() {}
 

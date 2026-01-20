@@ -205,3 +205,8 @@ void	Directives::logs() const
 		}
 	}
 }
+
+bool	Directives::isMethodAllowed(const std::string& method) const
+{
+	return (std::find(_allowed_methods.begin(), _allowed_methods.end(), method) != _allowed_methods.end());
+}

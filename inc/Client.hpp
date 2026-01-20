@@ -31,6 +31,9 @@ class	Client
 
 		void	show() const;
 
+		const Location* getLocation() const;
+		const Server* getServer() const;
+
 	private:
 		Request		_request;
 		Server			*_server;

@@ -86,9 +86,11 @@ class	Request
 		Request();
 		~Request();
 
+		std::string	getMethod() const;
         std::string getPath() const;
 		std::string	getServerName()const;
         std::string	getHeader(const std::string& key) const;
+		const std::string	&getBody() const;
 		bool		requestCompleted() const;
 		bool		shouldKeepAlive() const;
 
