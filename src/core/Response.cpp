@@ -88,4 +88,11 @@ void	Response::_handleGet(const Client& client)
 }
 
 
+void	Response::_serveFile()
+{
+	std::ifstream file(_resource.c_str(), std::ios::binary);
+
+	
+}
+
 Response::~Response() {}
