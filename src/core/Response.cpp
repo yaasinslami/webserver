@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include "Response.hpp"
 
 Response::Response(Client& client) : _code(200)
@@ -23,8 +24,8 @@ Response::Response(Client& client) : _code(200)
 		return;
 	}
 
-	std::string path_on_disk = _translatePath(req.getPath(), loc);
-	std::cout << "path_on_disk:\t[" << path_on_disk << "]" << std::endl;
+	_translatePath(req.getPath(), loc);
+	std::cout << "-> Resource Path:\t[" << _resource << "]" << std::endl;
 
 	_processMethod(client);
 }
@@ -44,7 +45,7 @@ void Response::_processMethod(Client &client)
 	}
 }
 
-std::string	Response::_translatePath(const std::string& reqPath, const Location* loc)
+void	Response::_translatePath(const std::string& reqPath, const Location* loc)
 {
 	// reqPath can be : /home - www/home
 	std::string	alias = loc->getAlias();
@@ -59,13 +60,32 @@ std::string	Response::_translatePath(const std::string& reqPath, const Location*
 		if (reqPath.find(loc_path) == 0) {
 			std::string	reminder = reqPath.substr(loc_path.length());
 
-			return alias + reminder;
+			_resource = alias + reminder;
 		}
 	}
 
 	// 2nd priority: root (root never being empty)
 
-	return loc->getDirectives().getRoot() + reqPath;
+	_resource = loc->getDirectives().getRoot() + reqPath;
 }
+
+void	Response::_handleGet(const Client& client)
+{
+	struct stat file_info;
+
+	if (stat(_resource.c_str(), &file_info) != 0) {
+		_code = 404;
+		return;
+	}
+
+	if (S_ISDIR(file_info.st_mode)) {
+		// ... directory logic ...
+	}
+
+	if (S_ISREG(file_info.st_mode)) {
+		_serveFile();
+	}
+}
+
 
 Response::~Response() {}
