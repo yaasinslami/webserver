@@ -37,7 +37,11 @@ std::string Location::getAlias() const
 
 void Location::setPath(const std::string &path)
 {
-	this->_path = path;
+	if (path[0] != '/') {
+		_path = "/" + path;
+	}
+	else
+		_path = path;
 }
 
 void Location::setAlias(const std::string &alias)

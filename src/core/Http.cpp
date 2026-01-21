@@ -40,7 +40,7 @@ void	Http::setup_servers( void )
 
 		addto_poll(fd, POLLIN);
 
-		std::cout << "Listening on port " << ntohs(it->first) << " (FD: " << fd << ")" << std::endl;
+		std::cout << "Listening on port " << it->first << " (FD: " << fd << ")" << std::endl;
 	}
 }
 

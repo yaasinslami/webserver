@@ -18,27 +18,17 @@ size_t	Request::feed(const std::string& data)
 					++i;
 					continue ;
 				}
-				if (ch == 'G') _method = GET;
-				else if (ch == 'P') _method = POST;
-				else if (ch == 'D') _method = DELETE;
-				else {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(501);
-				}
 				_state = STATE_METHOD;
-				++i;
-				continue ;
+				break ;
 			}
 			case STATE_METHOD:
 			{
-				if (ch != _method_str[_method][++_m_index]) {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(501);
-				}
-				if ((size_t)_m_index == _method_str[_method].length() - 1)
+				if (!std::isalpha(ch)) {
 					_state = STATE_SPACE_BEFORE_URI;
-				++i;
-				continue ;
+					continue ;
+					i++;
+				}
+				break ;
 			}
 			case STATE_SPACE_BEFORE_URI:
 			{
@@ -46,6 +36,8 @@ size_t	Request::feed(const std::string& data)
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					throw RequestException(400);
 				}
+				_method = _tmp_buffer;
+				_tmp_buffer.clear();
 				_state = STATE_URI_START;
 				++i;
 				continue ;
@@ -613,43 +605,13 @@ Request::Request() :
 	_body_exist(false),
 	_chunk_state(START),
 	_keep_alive(true)
-{
-	_method_str[GET] = "GET";
-	_method_str[POST] = "POST";
-	_method_str[DELETE] = "DELETE";
-}
+{}
 
 Request::~Request() {}
 
 std::string	Request::getMethod() const
 {
-	std::string	method;
-
-	switch (_method)
-	{
-		case GET:
-		{
-			method =  "GET";
-			break ;
-		}
-		case POST:
-		{
-			method =  "POST";
-			break ;
-		}
-		case DELETE	:
-		{
-			method =  "DELETE";
-			break ;
-		}
-		case NONE:
-		{
-			method = "";
-			break ;
-		}
-	}
-
-	return method;
+	return _method;
 }
 std::string Request::getPath() const { return _uri_path; }
 std::string	Request::getHeader(const std::string& key) const { return _headers.at(key); }
@@ -678,22 +640,7 @@ void Request::show() const
 
 	// 1. Request Line Info
 	std::cout << YELLOW << "[Request Line]" << RESET << "\n";
-	std::cout << "  Method:       " << GREEN;
-	switch (_method)
-	{
-	case GET:
-		std::cout << "GET";
-		break;
-	case POST:
-		std::cout << "POST";
-		break;
-	case DELETE:
-		std::cout << "DELETE";
-		break;
-	default:
-		std::cout << "UNKNOWN";
-	}
-	std::cout << RESET << "\n";
+	std::cout << "  Method:       " << GREEN << _method << RESET << "\n";
 	std::cout << "  Sheme:         " << _uri_scheme << "\n";
 	std::cout << "  Auth:         " << _uri_auth << "\n";
 	std::cout << "  Path:         " << _uri_path << "\n";

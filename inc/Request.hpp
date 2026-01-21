@@ -6,14 +6,6 @@
 
 #define MAX_HEADER_SIZE 8192
 
-enum HttpMethod
-{
-	GET,
-	POST,
-	DELETE,
-	NONE
-};
-
 enum	ChunkState
 {
 	START,
@@ -69,8 +61,7 @@ class	Request
 		bool			_chunked_transfer;
 		size_t			_chunk_length;
 
-		HttpMethod							_method;
-		std::map<u_int8_t, std::string>		_method_str;
+		std::string							_method;
 		std::string							_uri_scheme;
 		std::string							_uri_auth;
 		std::string 						_uri_path;
@@ -120,6 +111,7 @@ class	Request
 		static bool	_is_query_char(unsigned char);
 		static bool	_is_token(unsigned char);
 		static bool	_is_valid_value(unsigned char);
+
 		void	_add_header();
 		void	__headers();
 

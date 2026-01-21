@@ -4,7 +4,7 @@ Response::Response(Client& client) : _code(200)
 {
 	const Request &req = client.getRequest();
 	const Location *loc = client.getLocation();
-	// const Server *serv = client.getServer();
+	// const Server *serv = client.getServer();0
 
 	// allowed methods
 	if (!loc->isMethodAllowed(req.getMethod()))
@@ -34,7 +34,7 @@ void Response::_processMethod(Client &client)
 	std::string method = client.getRequest().getMethod();
 
 	if (method == "GET") {
-		// _handleGet(client);
+		_handleGet(client);
 	}
 	else if (method == "POST") {
 		// _handlePost(client);
@@ -44,23 +44,28 @@ void Response::_processMethod(Client &client)
 	}
 }
 
-std::string	Response::_translatePath(const std::string& path, const Location* loc)
+std::string	Response::_translatePath(const std::string& reqPath, const Location* loc)
 {
+	// reqPath can be : /home - www/home
 	std::string	alias = loc->getAlias();
+
+	std::cout << "alias:[" << alias << "]" << std::endl;
 
 	// 1st priority: alias
 	if (!alias.empty()) {
+		std::cout << "\tAlias found. Using alias....\n";
 		std::string loc_path = loc->getPath();
 
-		if (path.find(loc_path) == 0) {
-			std::string	reminder = path.substr(loc_path.length());
+		if (reqPath.find(loc_path) == 0) {
+			std::string	reminder = reqPath.substr(loc_path.length());
 
 			return alias + reminder;
 		}
 	}
 
-	// 2nd priority: root
-	return loc->getDirectives().getRoot() + path;
+	// 2nd priority: root (root never being empty)
+
+	return loc->getDirectives().getRoot() + reqPath;
 }
 
 Response::~Response() {}

@@ -2,8 +2,8 @@
 #include  "../../inc/ConfigParser.hpp"
 
 Directives::Directives() :
-	_root("/www/html"),
-	_index("index.html"),
+	_root("www"),
+	_index(""),
 	_autoindex(false),
 	_client_max_body_size(MAX_CONTENT_LENGTH)
 {
@@ -66,12 +66,12 @@ const std::map<int, std::string>&	Directives::getErrorPages() const
 
 void	Directives::setRoot(const std::string& root)
 {
-	this->_root = root;
+	_root = root;
 }
 
 void	Directives::setIndex(const std::string& index)
 {
-	this->_index = index;
+	_index = index;
 }
 
 void	Directives::setAutoIndex(const bool& autoindex)

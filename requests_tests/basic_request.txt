@@ -1,4 +1,4 @@
-POST /images/folder1 HTTP/1.1
+POST /images/wall HTTP/1.1
 Host:127.0.0.1:8080
 Content-length: 10
 
