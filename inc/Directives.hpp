@@ -31,7 +31,7 @@ struct	Directives
 
 		/* Getters */
 		const std::string&					getRoot() const;
-		const std::string&					getIndex() const;
+		const std::vector<std::string>&		getIndex() const;
 		const bool&							getAutoIndex() const;
 		const std::vector<std::string>&		getAllowedMethods() const;
 		const unsigned long&				getMaxBodySize() const;
@@ -39,7 +39,8 @@ struct	Directives
 
 		/* Setters */
 		void	setRoot(const std::string& root);
-		void	setIndex(const std::string& index);
+		void	setIndex(const std::vector<std::string>& );
+		void	addIndex(const std::string&);
 		void	setAutoIndex(const bool& autoindex);
 		void	setAllowedMethods(const std::vector<std::string>& allowed_methods);
 		void	addMethod(const std::string& method);
@@ -53,7 +54,7 @@ struct	Directives
 
 	private:
 		std::string					_root;
-		std::string					_index;
+		std::vector<std::string>	_index;
 		bool						_autoindex;
 		std::vector<std::string>	_allowed_methods;
 		unsigned long				_client_max_body_size;

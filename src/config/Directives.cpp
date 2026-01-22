@@ -3,7 +3,6 @@
 
 Directives::Directives() :
 	_root("www"),
-	_index(""),
 	_autoindex(false),
 	_client_max_body_size(MAX_CONTENT_LENGTH)
 {
@@ -39,7 +38,7 @@ const std::string&	Directives::getRoot() const
 	return this->_root;
 }
 
-const std::string&	Directives::getIndex() const
+const std::vector<std::string>&	Directives::getIndex() const
 {
 	return this->_index;
 }
@@ -69,9 +68,14 @@ void	Directives::setRoot(const std::string& root)
 	_root = root;
 }
 
-void	Directives::setIndex(const std::string& index)
+void	Directives::setIndex(const std::vector<std::string>& index)
 {
 	_index = index;
+}
+
+void	Directives::addIndex(const std::string& value)
+{
+	_index.push_back(value);
 }
 
 void	Directives::setAutoIndex(const bool& autoindex)
@@ -105,7 +109,9 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 		setRoot(conf.consumeToken());
 	}
 	else if (directve_type == DIR_INDEX) {
-		setIndex(conf.consumeToken());
+		while (conf.peekToken() != ";") {
+			addIndex(conf.consumeToken());
+		}
 	}
 	else if (directve_type == DIR_AUTO_INDEX)
 	{
@@ -184,7 +190,14 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 void	Directives::logs() const
 {
 	std::cout << "root: \"" << getRoot() << "\"\n";
-	std::cout << "index: \"" << getIndex() << "\"\n";
+	// std::cout << "index: \"" << getIndex() << "\"\n";
+	std::cout << "index: \"";
+	for (size_t i = 0; i < _index.size(); ++i) {
+		std::cout << "[" << _index[i] << "]";
+		if (i + 1 < _index.size()) std::cout << " ";
+	}
+	std::cout << "\"\n";
+
 	std::cout << "autoindex: \"" << ((getAutoIndex() == true) ? "on" : "off")  << "\"\n";
 	std::cout << "client_max_body_size: \"" << getMaxBodySize() << "\"\n";
 

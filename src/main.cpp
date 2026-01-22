@@ -27,11 +27,11 @@ int main(int ac, char **av)
 		parser.parse();
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 		Http http = parser.getHttp();
-		// http.logs();
+		http.logs();
 
 		// lets start the real work
-		http.setup_servers();
-		http.run();
+		// http.setup_servers();
+		// http.run();
 
 	}
 	catch (const std::exception& e)

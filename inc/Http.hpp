@@ -35,10 +35,13 @@ class	Http
 
 		void	addto_poll(int fd, short events);
 		bool	isListeningSocket(int fd);
-		void	handle_new_connection(int);
-		void	handle_client_request(int);
+		void	_handle_new_connection(int);
+		void	_handle_client_request(int);
+		void	_handle_client_response(int);
 		void	remove_from_poll(int);
 		void	close_connection(int);
+
+		void	_modify_poll_event(int, short);
 
 		Server* _find_best_match_server(const Client& client);
 };

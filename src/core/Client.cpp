@@ -1,6 +1,34 @@
 #include "Client.hpp"
 #include <iostream>
 
+bool	Client::shouldClose() const
+{
+	return _should_close;
+}
+
+void	Client::setClose(bool closeFlag)
+{
+	_should_close = closeFlag;
+}
+
+bool	Client::shouldKeepAlive() const
+{
+	return _request.shouldKeepAlive();
+}
+
+bool Client::hasDataToSend() const
+{
+	return !_response_buffer.empty();
+}
+
+void Client::updateResponseBuffer(size_t n)
+{
+	if (n >= _response_buffer.length())
+		_response_buffer.clear();
+	else
+		_response_buffer = _response_buffer.substr(n);
+}
+
 int	Client::getFd()
 {
 	return _fd;
@@ -34,9 +62,19 @@ std::string& Client::getRequestBuffer()
 	return _request_buffer;
 }
 
-Client::Client() : _fd(-1), _server_port(0), _server(NULL), _location(NULL) {}
+const char* Client::getResponseBuffer() const
+{
+	return _response_buffer.c_str();
+}
 
-Client::Client(int fd, unsigned short server_port) : _fd(fd), _server_port(server_port), _server(NULL), _location(NULL) {}
+size_t	Client::getResponseSize() const
+{
+	return _response_buffer.length();
+}
+
+Client::Client() : _fd(-1), _server_port(0), _should_close(false),_server(NULL), _location(NULL) {}
+
+Client::Client(int fd, unsigned short server_port) : _fd(fd), _server_port(server_port), _should_close(false), _server(NULL), _location(NULL) {}
 
 Client::Client(const Client& other) { *this = other; }
 
@@ -65,4 +103,9 @@ const Request& Client::getRequest() const { return _request; }
 unsigned short	Client::getServerPort() const
 {
 	return _server_port;
+}
+
+void	Client::setResponseBuffer(const std::string& response_content)
+{
+	_response_buffer += response_content;
 }

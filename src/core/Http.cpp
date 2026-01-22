@@ -61,23 +61,30 @@ void	Http::run( void )
 
 		// loop over the Interest List
 		for (size_t i = 0; i < _poll_fds.size(); ++i) {
-			if (_poll_fds[i].revents & POLLIN) {
-				int	curr_fd = _poll_fds[i].fd;
-
+			int curr_fd = _poll_fds[i].fd;
+			if (_poll_fds[i].revents & POLLIN) {//POLLIN
 				// DECISION: Is this a "Listener" or a "Client"?
 				if (isListeningSocket(curr_fd)) {
-					handle_new_connection(curr_fd);
+					_handle_new_connection(curr_fd);
 				}
 				else {
-					handle_client_request(curr_fd);
+					_handle_client_request(curr_fd);
 				}
 			}
+			else if (_poll_fds[i].revents & POLLOUT) 
+			{
+				_handle_client_response(curr_fd);
+			}
+			// POLLOUT
+			// else if (_poll_fds[i].revents & POLLOUT) {
+			// 	handle_client_response();
+			// }
 		}
 	}
 	std::cout << "Server shutting down cleanly..." << std::endl;
 }
 
-void Http::handle_new_connection(int listener_fd)
+void Http::_handle_new_connection(int listener_fd)
 {
 	struct sockaddr_in client_addr;
 	socklen_t addr_len = sizeof(client_addr);
@@ -112,7 +119,7 @@ void Http::handle_new_connection(int listener_fd)
 			  << " on Server Port: " << server_port << std::endl;
 }
 
-void Http::handle_client_request(int client_fd)
+void Http::_handle_client_request(int client_fd)
 {
 	Client	&curr_client = _clients[client_fd];
 	bool	client_disconnected = false;
@@ -177,16 +184,15 @@ void Http::handle_client_request(int client_fd)
 				std::cout << "---------\tSending Response..." << std::endl;
 				Response response(curr_client);
 				response.generateResponse();
-				response.sendResponse(curr_client.getFd());
+				curr_client.setResponseBuffer(response.getResponseContent());
+				_modify_poll_event(client_fd, POLLOUT);
 
 				// Logic for Keep-Alive
-				if (curr_client.getRequest().shouldKeepAlive()) {
+				if (curr_client.shouldKeepAlive()) {
 					curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
 				}
 				else {
-					std::cout << "Connection: close requested. Closing.\n";
-					close_connection(client_fd);
-					return ;
+					curr_client.setClose(true);
 				}
 			}
 			else {
@@ -204,6 +210,30 @@ void Http::handle_client_request(int client_fd)
 	if (client_disconnected) {
 		std::cout << "Cleaning up disconnected client.\n";
 		close_connection(client_fd);
+	}
+}
+
+void	Http::_handle_client_response(int client_fd)
+{
+	Client& client = _clients[client_fd];
+
+	ssize_t	bytes_sent = send(client_fd, client.getResponseBuffer(), client.getResponseSize(), 0);
+	if (bytes_sent < 0) {
+		std::cerr << "Send error" << std::endl;
+		close_connection(client_fd);
+		return;
+	}
+
+	client.updateResponseBuffer(bytes_sent);
+
+	// check if we send full buffer
+	if (!client.hasDataToSend()) {
+		if (client.shouldClose()) {
+			close_connection(client_fd);
+		}
+		else {
+			_modify_poll_event(client_fd, POLLIN);
+		}
 	}
 }
 
@@ -265,6 +295,16 @@ bool	Http::isListeningSocket(int fd)
 		}
 	}
 	return false;
+}
+
+void	Http::_modify_poll_event(int fd, short new_events)
+{
+	for (size_t i = 0; i < _poll_fds.size(); ++i) {
+		if (_poll_fds[i].fd == fd) {
+			_poll_fds[i].events = new_events;
+			return;
+		}
+	}
 }
 
 void	Http::addto_poll(int fd, short events)

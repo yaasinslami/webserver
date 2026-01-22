@@ -201,6 +201,7 @@ void	Server::set_fd(int fd)
 void	Server::logs() const
 {
 
+	std::cout << "------------- Server --------------\n";
 	getDirectives().logs();
 	std::cout << "interface: \"" << getInterfaceStr() << "\"\n";
 	std::cout << "port: \"" << getPortStr() << "\"\n";

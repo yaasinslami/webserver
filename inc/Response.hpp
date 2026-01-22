@@ -20,7 +20,7 @@ class	Response
 		~Response();
 
 		void	generateResponse();
-		void	sendResponse(int);
+		const std::string& getResponseContent() const;
 
 	private:
 		std::string	_resource;

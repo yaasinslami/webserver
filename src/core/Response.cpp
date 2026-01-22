@@ -66,7 +66,6 @@ void	Response::_translatePath(const std::string& reqPath, const Location* loc)
 	}
 
 	// 2nd priority: root (Root can not be empty)
-
 	_resource = loc->getDirectives().getRoot() + reqPath;
 }
 
@@ -82,13 +81,13 @@ void	Response::_handleGet( void )
 
 	if (S_ISDIR(file_info.st_mode)) {
 		// ... directory logic ...
+		std::cout << "\t🚫🚫🚫Is A Directory\n";
 	}
 
 	if (S_ISREG(file_info.st_mode)) {
 		_serveFile();
 	}
 }
-
 
 void	Response::_serveFile()
 {
@@ -121,10 +120,7 @@ void	Response::generateResponse()
 	// Request Line (Version + Status Code)
 	_response_content = "HTTP/1.1 " + _toString(_code) + " " + _getStatusMsg(_code) + "\r\n";
 
-	// Headers
-	if (_headers.find("Connection") == _headers.end()) {
-		_headers["Connection"] = "keep-alive";
-	}
+	// /* Headers */
 
 	std::map<std::string, std::string>::iterator	it;
 	for (it = _headers.begin(); it != _headers.end(); std::advance(it, 1)) {
@@ -137,13 +133,6 @@ void	Response::generateResponse()
 	std::cout << "--------- Response Content -----------\n";
 	std::cout  << _response_content << std::endl;
 	std::cout << "---------------------------------------\n";
-}
-
-void	Response::sendResponse(int fd)
-{
-	if (send(fd, _response_content.c_str(), _response_content.length(), 0) == -1) {
-		std::cerr << "Error: Send failed." << std::endl;
-	}
 }
 
 std::string	Response::_getMimeType(std::string& path)
@@ -199,4 +188,9 @@ std::string	Response::_getStatusMsg(int code)
 
 		default:  return "Unknown Status";
 	}
+}
+
+const std::string& Response::getResponseContent() const
+{
+	return _response_content;
 }
