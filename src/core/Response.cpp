@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 #include "Response.hpp"
 
+Response::~Response() {}
 Response::Response(Client& client) : _code(200)
 {
 	const Request &req = client.getRequest();
@@ -35,7 +36,7 @@ void Response::_processMethod(Client &client)
 	std::string method = client.getRequest().getMethod();
 
 	if (method == "GET") {
-		_handleGet(client);
+		_handleGet();
 	}
 	else if (method == "POST") {
 		// _handlePost(client);
@@ -64,16 +65,17 @@ void	Response::_translatePath(const std::string& reqPath, const Location* loc)
 		}
 	}
 
-	// 2nd priority: root (root never being empty)
+	// 2nd priority: root (Root can not be empty)
 
 	_resource = loc->getDirectives().getRoot() + reqPath;
 }
 
-void	Response::_handleGet(const Client& client)
+void	Response::_handleGet( void )
 {
 	struct stat file_info;
 
 	if (stat(_resource.c_str(), &file_info) != 0) {
+		std::cerr << "Ma file Ma ta 9alwa\t[" << _resource.c_str() << "]\n";
 		_code = 404;
 		return;
 	}
@@ -92,7 +94,109 @@ void	Response::_serveFile()
 {
 	std::ifstream file(_resource.c_str(), std::ios::binary);
 
-	
+	if (!file.is_open()) {
+		_code = 403;
+		std::cerr << "Error: Permission denied or IO error for " << _resource << std::endl;
+		return;
+	}
+
+	std::ostringstream ss;
+	ss << file.rdbuf();
+	_body = ss.str();
+
+	file.close();// aywa endak tghlet
+
+	_code = 200;
+	_headers["Content-Type"] = _getMimeType(_resource);
+
+	_headers["Content-Length"] = _toString(_body.length());
 }
 
-Response::~Response() {}
+void	Response::generateResponse()
+{
+	if (_code >= 400 && _body.empty()) {
+		// _buildErrorPage();
+	}
+
+	// Request Line (Version + Status Code)
+	_response_content = "HTTP/1.1 " + _toString(_code) + " " + _getStatusMsg(_code) + "\r\n";
+
+	// Headers
+	if (_headers.find("Connection") == _headers.end()) {
+		_headers["Connection"] = "keep-alive";
+	}
+
+	std::map<std::string, std::string>::iterator	it;
+	for (it = _headers.begin(); it != _headers.end(); std::advance(it, 1)) {
+		_response_content += it->first + ": " + it->second + "\r\n";
+	}
+
+	_response_content += "\r\n";// headers are done - Body Begin
+
+	_response_content += _body;
+	std::cout << "--------- Response Content -----------\n";
+	std::cout  << _response_content << std::endl;
+	std::cout << "---------------------------------------\n";
+}
+
+void	Response::sendResponse(int fd)
+{
+	if (send(fd, _response_content.c_str(), _response_content.length(), 0) == -1) {
+		std::cerr << "Error: Send failed." << std::endl;
+	}
+}
+
+std::string	Response::_getMimeType(std::string& path)
+{
+	size_t	dotPos = path.find_last_of('.');
+
+	if (dotPos == std::string::npos) {
+		return "application/octet-stream";
+	}
+
+	std::string	type = path.substr(dotPos + 1);
+
+	if (type == "html" || type == "htm") return "text/html";
+	if (type == "css") return "text/css";
+	if (type == "js")  return "application/javascript";
+	if (type == "jpg" || type == "jpeg") return "image/jpeg";
+	if (type == "png") return "image/png";
+	if (type == "gif") return "image/gif";
+	if (type == "ico") return "image/x-icon";
+	if (type == "txt") return "text/plain";
+	if (type == "pdf") return "application/pdf";
+	if (type == "mp4") return "video/mp4";
+
+	return "application/octet-stream";
+}
+
+std::string	Response::_toString(int value) {
+	std::ostringstream os;
+	os << value;
+	return os.str();	
+}
+
+std::string	Response::_getStatusMsg(int code)
+{
+	switch (code)
+	{
+		case 200: return "OK";
+		case 201: return "Created";
+		case 204: return "No Content";
+
+		case 301: return "Moved Permanently";
+		case 302: return "Found";
+
+		case 400: return "Bad Request";
+		case 403: return "Forbidden";
+		case 404: return "Not Found";
+		case 405: return "Method Not Allowed";
+		case 413: return "Payload Too Large";
+
+		case 500: return "Internal Server Error";
+		case 501: return "Not Implemented";
+		case 502: return "Bad Gateway";
+
+		default:  return "Unknown Status";
+	}
+}

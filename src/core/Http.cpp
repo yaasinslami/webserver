@@ -176,7 +176,8 @@ void Http::handle_client_request(int client_fd)
 
 				std::cout << "---------\tSending Response..." << std::endl;
 				Response response(curr_client);
-				// reponse.sentResponse();
+				response.generateResponse();
+				response.sendResponse(curr_client.getFd());
 
 				// Logic for Keep-Alive
 				if (curr_client.getRequest().shouldKeepAlive()) {

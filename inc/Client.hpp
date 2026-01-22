@@ -22,6 +22,7 @@ class	Client
 
 		void	setContext(Server *s, const Location *l);
 
+		int			getFd();
 		std::string& getRequestBuffer();
 		bool	isRequestReady() const;
 		Request &getRequest();

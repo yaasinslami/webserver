@@ -1,6 +1,11 @@
 #include "Client.hpp"
 #include <iostream>
 
+int	Client::getFd()
+{
+	return _fd;
+}
+
 const Location* Client::getLocation() const
 {
 	return _location;
