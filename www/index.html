@@ -2,22 +2,119 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome to Webserv</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webserv Home</title>
     <style>
-        body { font-family: 'Courier New', monospace; text-align: center; background-color: #222; color: #fff; margin-top: 50px; }
-        .container { border: 2px solid #4CAF50; padding: 20px; display: inline-block; border-radius: 10px; }
-        h1 { color: #4CAF50; }
-        img { width: 300px; height: auto; border-radius: 5px; margin-top: 20px; }
+        body {
+            background-color: #ffffff;
+            color: #333;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        /* Header Section */
+        header {
+            background-color: #f8f9fa; /* Light grey header */
+            width: 100%;
+            padding: 40px 0;
+            text-align: center;
+            border-bottom: 1px solid #e1e4e8;
+            margin-bottom: 50px;
+        }
+        h1 { font-size: 3rem; margin: 0; color: #2d3436; }
+        p.subtitle { color: #636e72; font-size: 1.2rem; margin-top: 10px; }
+
+        /* Main Grid */
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive Grid */
+            gap: 30px;
+            padding-bottom: 50px;
+        }
+
+        /* Card Style */
+        .card {
+            background: white;
+            border: 1px solid #dfe6e9;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            border-color: #0984e3; /* Blue border on hover */
+        }
+        .card h2 { margin-top: 0; color: #2d3436; }
+        .card p { color: #636e72; line-height: 1.5; margin-bottom: 25px; }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #0984e3; /* The Blue Theme */
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 30px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #74b9ff; }
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid #0984e3;
+            color: #0984e3;
+        }
+        .btn-outline:hover { background-color: #0984e3; color: white; }
+
+        /* Footer */
+        footer { margin-top: auto; padding: 20px; color: #b2bec3; font-size: 0.9rem; }
     </style>
 </head>
 <body>
+
+    <header>
+        <h1>Webserv 1.0</h1>
+        <p class="subtitle">High Performance C++ 98 HTTP Server</p>
+    </header>
+
     <div class="container">
-        <h1>You have reached the Root!</h1>
-        <p>This page is served by your C++ 98 Server.</p>
         
-        <img src="n3as.JPG" alt="Server Logo">
-        
-        <p><i>(If you see the image above, binary mode is working!)</i></p>
+        <div class="card">
+            <h2>📂 Multi-Page Test</h2>
+            <p>Click below to navigate to a sub-page. This proves your server handles routing and file serving correctly.</p>
+            <a href="./about.html" class="btn">Visit About Page</a>
+        </div>
+
+        <div class="card">
+            <h2>🚀 Performance</h2>
+            <p>This page lists the technical features supported by your server (GET, POST, Non-Blocking I/O).</p>
+            <a href="features.html" class="btn">View Features</a>
+        </div>
+
+        <div class="card">
+            <h2>⚠️ 404 Test</h2>
+            <p>Click here to request a non-existent file. This tests your custom error page logic.</p>
+            <a href="/nowhere" class="btn btn-outline">Trigger 404</a>
+        </div>
+
+        <div class="card">
+            <h2>🖼️ Binary Data</h2>
+            <p>If you see the logo below, your binary reading mode is perfect.</p>
+            <img src="./n3as.JPG" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;">
+        </div>
+
     </div>
+
+    <footer>Server is running on 127.0.0.1:8080</footer>
+
 </body>
 </html>

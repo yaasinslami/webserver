@@ -6,10 +6,11 @@
 class	Response
 {
 	private:
-		void			_processMethod(Client& client);
-		void			_translatePath(const std::string& path, const Location* loc);
+		void			_processMethod();
+		void			_translatePath();
 		void			_handleGet();
 		void			_serveFile();
+		void			_buildErrorPage();
 		
 		static std::string		_getMimeType(std::string& path);
 		static std::string		_toString(int);
@@ -23,6 +24,7 @@ class	Response
 		const std::string& getResponseContent() const;
 
 	private:
+		Client&		_client;
 		std::string	_resource;
 		std::string	_body;
 		std::string	_response_content;

@@ -224,6 +224,7 @@ void	Http::_handle_client_response(int client_fd)
 		return;
 	}
 
+	std::cout << "Sifna chi baraka ~" << client.getResponseSize() << " Byte!\n"; 
 	client.updateResponseBuffer(bytes_sent);
 
 	// check if we send full buffer

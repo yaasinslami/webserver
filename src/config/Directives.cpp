@@ -139,7 +139,6 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 	else if (directve_type == DIR_ERROR_PAGES) {
 		std::vector<int> codes;
 		std::string path;
-		std::map<int, std::string> mp;
 
 		while (conf.getTokensIndex() < conf.getTokens().size() && std::isdigit(conf.peekToken()[0])) {
 			codes.push_back(std::atoi(conf.consumeToken().c_str()));
@@ -154,9 +153,8 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 		path = conf.consumeToken();
 
 		for (size_t i = 0; i < codes.size(); ++i) {
-			mp[codes[i]] = path;
+			_error_pages[codes[i]] = path;
 		}
-		setErrorPages(mp);
 	}
 }
 
@@ -176,7 +174,7 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 		directive_map["client_max_body_size"] = DIR_MAX_BODY_SIZE;
 		directive_map["allowed_methods"] = DIR_ALLOWED_METHODS;
 		directive_map["server_name"] = DIR_SERVER_NAME;
-		directive_map["error_pages"] = DIR_ERROR_PAGES;
+		directive_map["error_page"] = DIR_ERROR_PAGES;
 	}
 
 	std::map<std::string, e_directive_type>::iterator it = directive_map.find(directive_str);
@@ -189,6 +187,7 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 
 void	Directives::logs() const
 {
+	std::cout << "==== Directives ====\n";
 	std::cout << "root: \"" << getRoot() << "\"\n";
 	// std::cout << "index: \"" << getIndex() << "\"\n";
 	std::cout << "index: \"";

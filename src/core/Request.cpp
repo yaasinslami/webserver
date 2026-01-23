@@ -428,8 +428,6 @@ void	Request::_add_header()
 		throw RequestException(400);
 	}
 
-	// trim the space from the value
-	// Key:  value  \r\n
 	const std::string whitespace = " \t";
 	size_t start = value.find_first_not_of(whitespace);
 	size_t end = value.find_last_not_of(whitespace);
@@ -451,7 +449,6 @@ void	Request::_add_header()
 	else
 		_headers[key] = value;
 
-	std::cout << "Header Added: [" << key << "] -> [" << value << "]\n";
 	_tmp_buffer.clear();
 }
 
@@ -515,8 +512,7 @@ void	Request::__headers()
 		_keep_alive = false;
 	}
 
-	// handle Content-Type ...
-
+	// Content-Type Header Still ...
 	std::cout << "we finish parsing of headers\n";
 }
 

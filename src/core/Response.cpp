@@ -2,14 +2,13 @@
 #include "Response.hpp"
 
 Response::~Response() {}
-Response::Response(Client& client) : _code(200)
+Response::Response(Client& client) : _client(client), _code(200)
 {
-	const Request &req = client.getRequest();
-	const Location *loc = client.getLocation();
-	// const Server *serv = client.getServer();0
+	const Location* location = _client.getLocation();
+	const Request &req = _client.getRequest();
 
 	// allowed methods
-	if (!loc->isMethodAllowed(req.getMethod()))
+	if (!location->isMethodAllowed(req.getMethod()))
 	{
 		_code = 405;
 		std::cout << "Error 405: Method " << req.getMethod() << " not allowed.\n";
@@ -17,23 +16,22 @@ Response::Response(Client& client) : _code(200)
 	}
 
 	// max body size
-	size_t limit = loc->getDirectives().getMaxBodySize();
+	size_t limit = location->getDirectives().getMaxBodySize();
 	if (limit > 0 && req.getBody().length() > limit)
 	{
 		_code = 413;
-		std::cout << "Error 413: Body size " << req.getBody().length() << " > " << limit << "\n";
 		return;
 	}
 
-	_translatePath(req.getPath(), loc);
+	_translatePath();
 	std::cout << "-> Resource Path:\t[" << _resource << "]" << std::endl;
 
-	_processMethod(client);
+	_processMethod();
 }
 
-void Response::_processMethod(Client &client)
+void Response::_processMethod()
 {
-	std::string method = client.getRequest().getMethod();
+	std::string method = _client.getRequest().getMethod();
 
 	if (method == "GET") {
 		_handleGet();
@@ -46,30 +44,33 @@ void Response::_processMethod(Client &client)
 	}
 }
 
-void	Response::_translatePath(const std::string& reqPath, const Location* loc)
+void	Response::_translatePath()
 {
+	const Location* location = _client.getLocation();
+	const Request &req = _client.getRequest();
+
 	// reqPath can be : /home - www/home
-	std::string	alias = loc->getAlias();
+	std::string	alias = location->getAlias();
 
 	std::cout << "alias:[" << alias << "]" << std::endl;
 
 	// 1st priority: alias
 	if (!alias.empty()) {
 		std::cout << "\tAlias found. Using alias....\n";
-		std::string loc_path = loc->getPath();
+		std::string loc_path = location->getPath();
 
-		if (reqPath.find(loc_path) == 0) {
-			std::string	reminder = reqPath.substr(loc_path.length());
+		if (req.getPath().find(loc_path) == 0) {
+			std::string	reminder = req.getPath().substr(loc_path.length());
 
 			_resource = alias + reminder;
 		}
 	}
 
 	// 2nd priority: root (Root can not be empty)
-	_resource = loc->getDirectives().getRoot() + reqPath;
+	_resource = location->getDirectives().getRoot() + req.getPath();
 }
 
-void	Response::_handleGet( void )
+void	Response::_handleGet()
 {
 	struct stat file_info;
 
@@ -82,6 +83,36 @@ void	Response::_handleGet( void )
 	if (S_ISDIR(file_info.st_mode)) {
 		// ... directory logic ...
 		std::cout << "\t🚫🚫🚫Is A Directory\n";
+		const std::vector<std::string>& index_list = _client.getLocation()->getDirectives().getIndex();
+
+		bool index_found = false;
+		for (size_t i = 0; i < index_list.size(); ++i) {
+			std::string candidate = _resource;
+
+			if (candidate[candidate.length() - 1] != '/') candidate += "/";
+
+			candidate += index_list[i];
+
+			if (access(candidate.c_str(), F_OK) == 0) {
+				_resource = candidate;
+
+				index_found = true;
+				break ;
+			}
+		}
+
+		if (!index_found) {// we have directory at this point
+			if (_client.getLocation()->getDirectives().getAutoIndex()) {// if auto index enbled
+				// _generateAutoIndex();
+				std::cout << "auto index : On\tHandling DirectoryListing...\n";
+				return ;
+			}
+			else {// directory listening not allowed
+				_code = 403;
+				return;
+			}
+		}
+		stat(_resource.c_str(), &file_info);
 	}
 
 	if (S_ISREG(file_info.st_mode)) {
@@ -107,14 +138,13 @@ void	Response::_serveFile()
 
 	_code = 200;
 	_headers["Content-Type"] = _getMimeType(_resource);
-
 	_headers["Content-Length"] = _toString(_body.length());
 }
 
 void	Response::generateResponse()
 {
 	if (_code >= 400 && _body.empty()) {
-		// _buildErrorPage();
+		_buildErrorPage();
 	}
 
 	// Request Line (Version + Status Code)
@@ -127,12 +157,70 @@ void	Response::generateResponse()
 		_response_content += it->first + ": " + it->second + "\r\n";
 	}
 
-	_response_content += "\r\n";// headers are done - Body Begin
-
+	_response_content += "\r\n";// mark the end of headers
 	_response_content += _body;
-	std::cout << "--------- Response Content -----------\n";
-	std::cout  << _response_content << std::endl;
-	std::cout << "---------------------------------------\n";
+}
+
+void	Response::_buildErrorPage()
+{
+	// get the error_pages map
+	const std::map<int, std::string>& error_pages = _client.getLocation()->getDirectives().getErrorPages();
+
+	// we have one code, we excpect the config provide to us an error page path
+	if (error_pages.find(_code) != error_pages.end()) {
+		std::string error_page = error_pages.at(_code);
+
+		std::string root = _client.getLocation()->getDirectives().getRoot();
+
+		// Logic: "www" + "/404.html" -> "www/404.html"
+		std::string final_path = root + error_page;
+
+		std::cout << "Error Page Given:\t[" << error_page << "]\n";
+
+		// handle the path here (path still not trusted)
+		std::ifstream file(final_path.c_str(), std::ios::binary);
+		if (file.is_open()) {// Hadche li Bghina
+			std::ostringstream ss;
+			ss << file.rdbuf();
+			_body = ss.str();
+
+			// Set headers for the file we just read
+			_headers["Content-Type"] = "text/html";
+			_headers["Content-Length"] = _toString(_body.length());
+
+			std::cout << "Custom Error Page Served: [" << final_path << "]\n";
+			return;
+		}
+		else {
+			std::cerr << "Error: error_page Failed to Open. Using Fallback Error Page\n";
+		}
+	}
+	std::cout << "using fallback error page\n";
+	// FallBack Error Page
+	std::string color = "#ff6b6b";
+	std::string title = _toString(_code) + " " + _getStatusMsg(_code);
+	std::string message = "An error occurred.";
+
+	// Optional: Customize message based on code
+	if (_code == 404)
+		message = "The requested resource was not found.";
+	else if (_code == 403)
+		message = "Access to this resource is denied.";
+
+	std::ostringstream ss;
+	ss << "<!DOCTYPE html><html><head><title>" << title << "</title>"
+	   << "<style>body{font-family: sans-serif; text-align: center; padding: 50px; background: #222; color: #fff;}"
+	   << "h1{color:" << color << "; font-size: 3em; margin-bottom: 10px;}"
+	   << "p{color:#aaa; font-size: 1.2em;}</style></head>"
+	   << "<body>"
+	   << "<h1>" << _code << "</h1>"
+	   << "<h2>" << _getStatusMsg(_code) << "</h2>"
+	   << "<p>" << message << "</p>"
+	   << "</body></html>";
+
+	_body = ss.str();
+	_headers["Content-Type"] = "text/html";
+	_headers["Content-Length"] = _toString(_body.length());
 }
 
 std::string	Response::_getMimeType(std::string& path)
