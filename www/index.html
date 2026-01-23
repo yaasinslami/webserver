@@ -3,118 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webserv Home</title>
+    <title>Webserv Legends</title>
     <style>
-        body {
-            background-color: #ffffff;
-            color: #333;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
+        /* --- GLOBAL THEME --- */
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; color: #2d3436; }
         
-        /* Header Section */
-        header {
-            background-color: #f8f9fa; /* Light grey header */
-            width: 100%;
-            padding: 40px 0;
-            text-align: center;
-            border-bottom: 1px solid #e1e4e8;
-            margin-bottom: 50px;
+        /* --- NAVBAR --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 50px; background-color: #f8f9fa; border-bottom: 2px solid #e1e4e8;
         }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #0984e3; letter-spacing: 1px; }
+        .nav-btn {
+            text-decoration: none; color: #2d3436; font-weight: bold; padding: 10px 20px;
+            border: 2px solid #2d3436; border-radius: 30px; transition: 0.3s;
+        }
+        .nav-btn:hover { background-color: #2d3436; color: white; }
+
+        /* --- HERO SECTION --- */
+        header { text-align: center; padding: 60px 20px; }
         h1 { font-size: 3rem; margin: 0; color: #2d3436; }
         p.subtitle { color: #636e72; font-size: 1.2rem; margin-top: 10px; }
 
-        /* Main Grid */
-        .container {
-            width: 90%;
-            max-width: 1000px;
+        /* --- CARD GRID --- */
+        .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive Grid */
-            gap: 30px;
-            padding-bottom: 50px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive! */
+            gap: 40px; padding: 0 50px 80px 50px; max-width: 1200px; margin: 0 auto;
         }
 
-        /* Card Style */
+        /* --- CARD DESIGN --- */
         .card {
-            background: white;
-            border: 1px solid #dfe6e9;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            transition: transform 0.2s, box-shadow 0.2s;
+            background: white; border-radius: 15px; overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); border: 1px solid #eee;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center; display: flex; flex-direction: column;
         }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-            border-color: #0984e3; /* Blue border on hover */
+        .card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(9, 132, 227, 0.15); border-color: #74b9ff; }
+        
+        .card-img {
+            width: 100%; height: 250px; object-fit: cover; /* Crops image nicely */
+            border-bottom: 1px solid #eee;
         }
-        .card h2 { margin-top: 0; color: #2d3436; }
-        .card p { color: #636e72; line-height: 1.5; margin-bottom: 25px; }
+        
+        .card-content { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
+        .card h2 { margin: 0 0 10px 0; color: #0984e3; }
+        .card p { color: #636e72; line-height: 1.6; font-size: 0.95rem; margin-bottom: 20px; }
+        
+        .see-more {
+            margin-top: auto; /* Pushes button to bottom */
+            text-decoration: none; color: white; background-color: #0984e3;
+            padding: 10px 30px; border-radius: 20px; font-weight: bold; transition: 0.2s;
+        }
+        .see-more:hover { background-color: #74b9ff; }
 
-        /* Buttons */
-        .btn {
-            display: inline-block;
-            padding: 12px 25px;
-            background-color: #0984e3; /* The Blue Theme */
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-            border-radius: 30px;
-            transition: background 0.2s;
-        }
-        .btn:hover { background-color: #74b9ff; }
-        .btn-outline {
-            background-color: transparent;
-            border: 2px solid #0984e3;
-            color: #0984e3;
-        }
-        .btn-outline:hover { background-color: #0984e3; color: white; }
-
-        /* Footer */
-        footer { margin-top: auto; padding: 20px; color: #b2bec3; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
+    <nav>
+        <div class="logo">WEBSERV</div>
+        <a href="about.html" class="nav-btn">About Project</a>
+    </nav>
+
     <header>
-        <h1>Webserv 1.0</h1>
-        <p class="subtitle">High Performance C++ 98 HTTP Server</p>
+        <h1>Asatir lWeb</h1>
+        <!-- <p class="subtitle">The pioneers of computer science served by C++.</p> -->
     </header>
 
-    <div class="container">
-        
+    <div class="grid-container">
+
         <div class="card">
-            <h2>📂 Multi-Page Test</h2>
-            <p>Click below to navigate to a sub-page. This proves your server handles routing and file serving correctly.</p>
-            <a href="./about.html" class="btn">Visit About Page</a>
+            <img src="images/siraj_zit.jpg" alt="Alan Turing" class="card-img">
+            <div class="card-content">
+                <h2>Issam Siraj Eddine</h2>
+                <p>Laydwmha n3ma, L7wa o lma</p>
+                <a href="characters/alan.html" class="see-more">Read Biography</a>
+            </div>
         </div>
 
         <div class="card">
-            <h2>🚀 Performance</h2>
-            <p>This page lists the technical features supported by your server (GET, POST, Non-Blocking I/O).</p>
-            <a href="features.html" class="btn">View Features</a>
+            <img src="images/maya.jpg" alt="Dennis Ritchie" class="card-img">
+            <div class="card-content">
+                <h2>Dennis Ritchie</h2>
+                <p>The creator of the C programming language and Unix. Without him, this server wouldn't exist!</p>
+                <a href="characters/dennis.html" class="see-more">Read Biography</a>
+            </div>
         </div>
 
         <div class="card">
-            <h2>⚠️ 404 Test</h2>
-            <p>Click here to request a non-existent file. This tests your custom error page logic.</p>
-            <a href="/nowhere" class="btn btn-outline">Trigger 404</a>
-        </div>
-
-        <div class="card">
-            <h2>🖼️ Binary Data</h2>
-            <p>If you see the logo below, your binary reading mode is perfect.</p>
-            <img src="./n3as.JPG" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;">
+            <img src="images/char3.jpg" alt="Grace Hopper" class="card-img">
+            <div class="card-content">
+                <h2>Grace Hopper</h2>
+                <p>A pioneer of computer programming who invented one of the first linkers. She coined the term "bug".</p>
+                <a href="characters/grace.html" class="see-more">Read Biography</a>
+            </div>
         </div>
 
     </div>
-
-    <footer>Server is running on 127.0.0.1:8080</footer>
 
 </body>
 </html>
