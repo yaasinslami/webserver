@@ -9,6 +9,7 @@ class	Response
 		void			_processMethod();
 		void			_translatePath();
 		void			_handleGet();
+		void			_handlePost();
 		void			_serveFile();
 		void			_buildErrorPage();
 		

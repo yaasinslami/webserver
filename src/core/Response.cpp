@@ -37,10 +37,10 @@ void Response::_processMethod()
 		_handleGet();
 	}
 	else if (method == "POST") {
-		// _handlePost(client);
+		_handlePost();
 	}
 	else if (method == "DELETE") {
-		// _handleDelete(client);
+		// _handleDelete();
 	}
 }
 
@@ -281,4 +281,10 @@ std::string	Response::_getStatusMsg(int code)
 const std::string& Response::getResponseContent() const
 {
 	return _response_content;
+}
+
+void	Response::_handlePost()
+{
+	// check if upload in that path allowed (directory exist and have permissions to write in)
+
 }
