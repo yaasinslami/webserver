@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maya Dbaich - Profile</title>
+    <style>
+        /* --- SHARED THEME --- */
+        body {
+            background-color: #ffffff;
+            color: #333;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- CONTAINER --- */
+        .profile-card {
+            max-width: 800px;
+            width: 90%;
+            padding: 50px;
+            text-align: center;
+            /* Optional: Very subtle border to define the area */
+            border: 1px solid #f1f1f1;
+            border-radius: 20px;
+        }
+
+        /* --- IMAGE --- */
+        .avatar {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 30px;
+            
+            /* A subtle shadow to make it pop */
+            box-shadow: 0 10px 25px rgba(9, 132, 227, 0.2); 
+            border: 4px solid #ffffff; /* White ring */
+        }
+
+        /* --- TEXT --- */
+        h1 {
+            font-size: 3rem;
+            margin: 0 0 10px 0;
+            color: #2d3436;
+        }
+        
+        h2 {
+            font-size: 1.2rem;
+            color: #0984e3; /* The Theme Blue */
+            margin: 0 0 30px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #636e72;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+        }
+
+        /* --- STATS GRID (Optional clean details) --- */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 50px;
+            border-top: 1px solid #f1f1f1;
+            padding-top: 30px;
+        }
+        .stat-item strong { display: block; color: #2d3436; font-size: 1.1rem; }
+        .stat-item span { color: #b2bec3; font-size: 0.9rem; }
+
+        /* --- BUTTON --- */
+        .btn {
+            display: inline-block;
+            padding: 12px 35px;
+            background-color: #0984e3;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 30px;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #74b9ff;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="profile-card">
+        <img src="../images/maya1.png" alt="Maya" class="avatar">
+        
+        <h1>Maya Dbaich</h1>
+        <h2>Moroccan Feminist | Dancer</h2>
+		
+        <p>
+			Danseuse, libre penseuse et influenceuse sans filtre, Maya Dbaich secoue les normes avec aplomb. Entre franc-parler et sarcasme, elle invite ses consœurs à s’émanciper, corps et âme. 
+        </p>
+        <p>
+			Maya Dbaich n’a pas besoin de porte-voix pour faire entendre sa vérité. Elle la crache, brute, sans passer par les détours de la bienséance. Danseuse, mais surtout femme debout, elle revendique une liberté totale : de ton, de corps, de penser. Depuis ses premiers lives sur Facebook jusqu’à ses prises de parole enflammées sur les autres réseaux, elle refuse la soumission déguisée en tradition. Maya agace, fascine, dérange et tant mieux ! Car à travers ses mots, ses mouvements et sa colère maîtrisée, elle pousse certaines à tomber les œillères pour reprendre leurs vies en main.
+        </p>
+
+        <div class="stats">
+            <div class="stat-item">
+                <strong>1989</strong>
+                <span>Lifespan</span>
+            </div>
+            <div class="stat-item">
+                <strong>Danseuse</strong>
+                <span>Key Work</span>
+            </div>
+            <div class="stat-item">
+                <strong>MA</strong>
+                <span>Origin</span>
+            </div>
+        </div>
+
+        <a href="../index.html" class="btn">Back to Dashboard</a>
+    </div>
+
+</body>
+</html>
