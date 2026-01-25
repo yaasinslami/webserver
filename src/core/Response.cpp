@@ -285,6 +285,12 @@ const std::string& Response::getResponseContent() const
 
 void	Response::_handlePost()
 {
-	// check if upload in that path allowed (directory exist and have permissions to write in)
+	// Before doint anything, at that point i still handle any POST Content-Type header logic, it just stored there
+	// so i think here i should distunguish between the Content-types logic (application/x-www-form-urlencoded or multipart/form-data ....)
 
+	std::string content_type = _client.getRequest().getHeader("content-type");
+	// Dispatch based on Type
+	
+
+	// check the client_max_body_size here
 }

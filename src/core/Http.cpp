@@ -159,8 +159,10 @@ void Http::_handle_client_request(int client_fd)
 	while (!curr_client.getRequestBuffer().empty()) {
 		std::cout << "feeding...\n";
 		try {
-			// std::cout << "=== what will be parsed now ====\n";
-			// std::cout << curr_client.getRequestBuffer() << std::endl;
+			std::cout << "\n\n=== what will be parsed now ====\n";
+			std::cout << curr_client.getRequestBuffer() << std::endl;
+			std::cout << "=====================================================\n\n";
+
 			size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
 			std::cout << "terminating feeding...\n";
 
