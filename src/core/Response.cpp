@@ -282,6 +282,25 @@ const std::string& Response::getResponseContent() const
 	return _response_content;
 }
 
+std::string	Response::_extractFilename(std::string& headers)
+{
+	// Content-Type
+	// Content-Disposition
+
+	std::string filename = "";
+	std::string search = "filename=\"";
+
+	size_t pos = headers.find(search);
+	if (pos != std::string::npos) {
+		pos += search.length();
+		size_t end_pos = headers.find("\"", pos);
+		if (end_pos != std::string::npos) {
+			filename = headers.substr(pos, end_pos - pos);
+		}
+	}
+	return filename;
+}
+
 void	Response::_handlePost()
 {
 	std::cout << "\n\n--------_handlePost-------\n\n";
@@ -301,10 +320,12 @@ void	Response::_handlePost()
 	// _handlefile
 }
 
+
 void	Response::_handleMultiPart()
 {
 	// RULE: "--" + BOUNDARY
 	// read the bondary from the Header (parse)
+	std::string body = _client.getRequest().getBody();
 	std::string content_type = _client.getRequest().getHeader("content-type");
 
 	size_t boundary_pos = content_type.find("boundary=");
@@ -316,7 +337,7 @@ void	Response::_handleMultiPart()
 
 	std::string	boundary = "--" + content_type.substr(boundary_pos + 9);
 
-	size_t start_pos = _body.find(boundary);
+	size_t start_pos = body.find(boundary);
 	if (start_pos == std::string::npos) {
 		_code = 400;
 		return ;
@@ -325,25 +346,47 @@ void	Response::_handleMultiPart()
 	start_pos += boundary.length() + 2;
 
 	// headers end (\r\n\r\n)
-	size_t headers_end = _body.find("\r\n\r\n", start_pos);
+	size_t headers_end = body.find("\r\n\r\n", start_pos);
 	if (headers_end == std::string::npos) {
 		_code = 400; return ;
 	}
 
-	std::string part_headers = _body.substr(start_pos, headers_end - start_pos);
-	// std::string filename = _extractFilename(part_headers);
+	std::string part_headers = body.substr(start_pos, headers_end - start_pos);
+	std::string filename = _extractFilename(part_headers);
 
 	// If no filename found (e.g. it's just a text field), generate one
-	// if (filename.empty()) filename = "upload_" + _toString(clock()) + ".bin";
+	if (filename.empty()) filename = "upload_" + _toString(clock()) + ".bin";
 
 	size_t data_start = headers_end + 4;
 
-	size_t data_end = _body.find(boundary, data_start);
+	size_t data_end = body.find(boundary, data_start);
 	if (data_end == std::string::npos) {
 		_code = 400; return;
 	}
 	data_end -= 2;
 
-	std::string file_content = _body.substr(data_start, data_end - data_start);
+	std::string file_content = body.substr(data_start, data_end - data_start);
 	_saveFile(filename, file_content);
+}
+
+void	Response::_saveFile(std::string& filename, std::string& payload)
+{
+	std::string upload_path = "www/uploads";
+	std::string full_path = upload_path + "/" + filename;
+
+	std::ofstream outfile(full_path.c_str(), std::ios::binary);
+
+	if (outfile.is_open()) {
+		outfile << payload;
+		outfile.close();
+		
+		_code = 201;
+		_body = "<!DOCTYPE html><html><body><h1>File Uploaded Successfully!</h1></body></html>";
+		_headers["Location"] = full_path;
+		_headers["Content-Type"] = "text/html";
+	}
+	else {
+		_code = 500;
+		std::cerr << "Error: Could not save file to " << full_path << std::endl;
+	}
 }

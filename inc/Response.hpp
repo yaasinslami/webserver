@@ -13,10 +13,12 @@ class	Response
 		void			_serveFile();
 		void			_buildErrorPage();
 		void			_handleMultiPart();
+		void			_saveFile(std::string&, std::string&);
 		
 		static std::string		_getMimeType(std::string& path);
 		static std::string		_toString(int);
 		static std::string		_getStatusMsg(int);
+		static std::string		_extractFilename(std::string&);
 
 	public:
 		Response(Client &client);
