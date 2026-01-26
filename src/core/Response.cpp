@@ -151,7 +151,6 @@ void	Response::generateResponse()
 	_response_content = "HTTP/1.1 " + _toString(_code) + " " + _getStatusMsg(_code) + "\r\n";
 
 	// /* Headers */
-
 	std::map<std::string, std::string>::iterator	it;
 	for (it = _headers.begin(); it != _headers.end(); std::advance(it, 1)) {
 		_response_content += it->first + ": " + it->second + "\r\n";
@@ -285,12 +284,66 @@ const std::string& Response::getResponseContent() const
 
 void	Response::_handlePost()
 {
+	std::cout << "\n\n--------_handlePost-------\n\n";
 	// Before doint anything, at that point i still handle any POST Content-Type header logic, it just stored there
+	// check the client_max_body_size here
+
 	// so i think here i should distunguish between the Content-types logic (application/x-www-form-urlencoded or multipart/form-data ....)
 
 	std::string content_type = _client.getRequest().getHeader("content-type");
+	std::cout << "\nContent-Type:\t[" << content_type << "]\n\n";
 	// Dispatch based on Type
-	
 
-	// check the client_max_body_size here
+	if (content_type.find("multipart/form-data") != std::string::npos) {
+		_handleMultiPart();
+	}
+
+	// _handlefile
+}
+
+void	Response::_handleMultiPart()
+{
+	// RULE: "--" + BOUNDARY
+	// read the bondary from the Header (parse)
+	std::string content_type = _client.getRequest().getHeader("content-type");
+
+	size_t boundary_pos = content_type.find("boundary=");
+	if (boundary_pos == std::string::npos) {
+		std::cerr << "can't find the boundary\n";
+		_code = 400;
+		return ;
+	}
+
+	std::string	boundary = "--" + content_type.substr(boundary_pos + 9);
+
+	size_t start_pos = _body.find(boundary);
+	if (start_pos == std::string::npos) {
+		_code = 400;
+		return ;
+	}
+
+	start_pos += boundary.length() + 2;
+
+	// headers end (\r\n\r\n)
+	size_t headers_end = _body.find("\r\n\r\n", start_pos);
+	if (headers_end == std::string::npos) {
+		_code = 400; return ;
+	}
+
+	std::string part_headers = _body.substr(start_pos, headers_end - start_pos);
+	// std::string filename = _extractFilename(part_headers);
+
+	// If no filename found (e.g. it's just a text field), generate one
+	// if (filename.empty()) filename = "upload_" + _toString(clock()) + ".bin";
+
+	size_t data_start = headers_end + 4;
+
+	size_t data_end = _body.find(boundary, data_start);
+	if (data_end == std::string::npos) {
+		_code = 400; return;
+	}
+	data_end -= 2;
+
+	std::string file_content = _body.substr(data_start, data_end - data_start);
+	_saveFile(filename, file_content);
 }

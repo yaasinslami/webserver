@@ -186,6 +186,7 @@ void Http::_handle_client_request(int client_fd)
 				std::cout << "---------\tSending Response..." << std::endl;
 				Response response(curr_client);
 				response.generateResponse();
+				
 				curr_client.setResponseBuffer(response.getResponseContent());
 				_modify_poll_event(client_fd, POLLOUT);
 

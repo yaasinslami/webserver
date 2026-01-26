@@ -12,6 +12,7 @@ class	Response
 		void			_handlePost();
 		void			_serveFile();
 		void			_buildErrorPage();
+		void			_handleMultiPart();
 		
 		static std::string		_getMimeType(std::string& path);
 		static std::string		_toString(int);
