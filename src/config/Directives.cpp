@@ -1,108 +1,6 @@
 #include "../../inc/Directives.hpp"
 #include  "../../inc/ConfigParser.hpp"
 
-Directives::Directives() :
-	_root("www"),
-	_autoindex(false),
-	_client_max_body_size(MAX_CONTENT_LENGTH)
-{
-	_allowed_methods.push_back("GET");
-	_allowed_methods.push_back("POST");
-	_allowed_methods.push_back("DELETE");
-}
-
-Directives::~Directives() {}
-
-Directives::Directives(const Directives& dir)
-{
-	*this = dir;
-}
-
-Directives& Directives::operator=(const Directives& dir)
-{
-	if (this != &dir)
-	{
-		setRoot(dir.getRoot());
-		setIndex(dir.getIndex());
-		setAutoIndex(dir.getAutoIndex());
-		setAllowedMethods(dir.getAllowedMethods());
-		setMaxBodySize(dir.getMaxBodySize());
-		setErrorPages(dir.getErrorPages());
-	}
-
-	return *this;
-}
-
-const std::string&	Directives::getRoot() const
-{
-	return this->_root;
-}
-
-const std::vector<std::string>&	Directives::getIndex() const
-{
-	return this->_index;
-}
-
-const bool&	Directives::getAutoIndex() const
-{
-	return this->_autoindex;
-}
-
-const std::vector<std::string>&	Directives::getAllowedMethods() const
-{
-	return this->_allowed_methods;
-}
-
-const unsigned long&	Directives::getMaxBodySize() const
-{
-	return this->_client_max_body_size;
-}
-
-const std::map<int, std::string>&	Directives::getErrorPages() const
-{
-	return this->_error_pages;
-}
-
-void	Directives::setRoot(const std::string& root)
-{
-	_root = root;
-}
-
-void	Directives::setIndex(const std::vector<std::string>& index)
-{
-	_index = index;
-}
-
-void	Directives::addIndex(const std::string& value)
-{
-	_index.push_back(value);
-}
-
-void	Directives::setAutoIndex(const bool& autoindex)
-{
-	this->_autoindex = autoindex;
-}
-
-void	Directives::setAllowedMethods(const std::vector<std::string>& allowed_methods)
-{
-	this->_allowed_methods = allowed_methods;
-}
-
-void	Directives::addMethod(const std::string& method)
-{
-	this->_allowed_methods.push_back(method);
-}
-
-void	Directives::setMaxBodySize(const unsigned long& client_max_body_size)
-{
-	this->_client_max_body_size = client_max_body_size;
-}
-
-void	Directives::setErrorPages(const std::map<int, std::string>& error_pages)
-{
-	this->_error_pages = error_pages;
-}
-
 void	Directives::setDirective(const enum e_directive_type directve_type, ConfigParser& conf)
 {
 	if (directve_type == DIR_ROOT) {
@@ -156,7 +54,87 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 			_error_pages[codes[i]] = path;
 		}
 	}
+	else if (directve_type == DIR_UPLOAD) {
+		std::string	accept_upload = conf.consumeToken();
+		if (accept_upload == "on")
+			setUpload(true);
+		else if (accept_upload == "off")
+			setUpload(false);
+		else
+			throw std::runtime_error("Unknown or unexpected in 'upload' directive.");
+	}
+	else if (directve_type == DIR_UPLOAD_LOC) {
+		setUploadLoc(conf.consumeToken());
+	}
 }
+
+Directives::Directives() :
+	_root("www"),
+	_autoindex(false),
+	_client_max_body_size(MAX_CONTENT_LENGTH),
+	_upload(true)
+{
+	_allowed_methods.push_back("GET");
+	_allowed_methods.push_back("POST");
+	_allowed_methods.push_back("DELETE");
+}
+
+Directives::~Directives() {}
+
+Directives::Directives(const Directives& dir) { *this = dir; }
+
+Directives& Directives::operator=(const Directives& dir)
+{
+	if (this != &dir)
+	{
+		setRoot(dir.getRoot());
+		setIndex(dir.getIndex());
+		setAutoIndex(dir.getAutoIndex());
+		setAllowedMethods(dir.getAllowedMethods());
+		setMaxBodySize(dir.getMaxBodySize());
+		setErrorPages(dir.getErrorPages());
+	}
+
+	return *this;
+}
+
+const std::string&	Directives::getRoot() const { return this->_root; }
+
+const std::vector<std::string>&	Directives::getIndex() const { return this->_index; }
+
+const bool&	Directives::getAutoIndex() const { return this->_autoindex; }
+
+const std::vector<std::string>&	Directives::getAllowedMethods() const { return this->_allowed_methods; }
+
+const unsigned long&	Directives::getMaxBodySize() const { return this->_client_max_body_size; }
+
+const std::map<int, std::string>&	Directives::getErrorPages() const { return this->_error_pages; }
+
+bool	Directives::canUpload() const { return _upload; }
+
+std::string	Directives::getUploadPath() const { return _upload_loc; }
+
+void	Directives::setRoot(const std::string& root) { _root = root; }
+
+void	Directives::setIndex(const std::vector<std::string>& index) { _index = index; }
+
+void	Directives::addIndex(const std::string& value) { _index.push_back(value); }
+
+void	Directives::setAutoIndex(const bool& autoindex) { this->_autoindex = autoindex; }
+
+void	Directives::setAllowedMethods(const std::vector<std::string>& allowed_methods) { this->_allowed_methods = allowed_methods; }
+
+void	Directives::addMethod(const std::string& method) { this->_allowed_methods.push_back(method); }
+
+void	Directives::setMaxBodySize(const unsigned long& client_max_body_size) { this->_client_max_body_size = client_max_body_size; }
+
+void	Directives::setErrorPages(const std::map<int, std::string>& error_pages) { this->_error_pages = error_pages; }
+
+void	Directives::setUpload(bool accept_upload) { _upload = accept_upload; }
+
+void	Directives::setUploadLoc(const std::string& upload_loc) { _upload_loc = upload_loc; }
+
+bool	Directives::isMethodAllowed(const std::string& method) const { return (std::find(_allowed_methods.begin(), _allowed_methods.end(), method) != _allowed_methods.end()); }
 
 e_directive_type	getDirectiveType(const std::string &directive_str)
 {
@@ -175,6 +153,8 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 		directive_map["allowed_methods"] = DIR_ALLOWED_METHODS;
 		directive_map["server_name"] = DIR_SERVER_NAME;
 		directive_map["error_page"] = DIR_ERROR_PAGES;
+		directive_map["upload"] = DIR_UPLOAD;
+		directive_map["upload_loc"] = DIR_UPLOAD_LOC;
 	}
 
 	std::map<std::string, e_directive_type>::iterator it = directive_map.find(directive_str);
@@ -216,9 +196,4 @@ void	Directives::logs() const
 			std::cout << "\t" << it->first << ": \"" << it->second << "\"\n";
 		}
 	}
-}
-
-bool	Directives::isMethodAllowed(const std::string& method) const
-{
-	return (std::find(_allowed_methods.begin(), _allowed_methods.end(), method) != _allowed_methods.end());
 }

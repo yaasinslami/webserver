@@ -17,6 +17,8 @@ enum e_directive_type
 	DIR_ALLOWED_METHODS,
 	DIR_SERVER_NAME,
 	DIR_ERROR_PAGES,
+	DIR_UPLOAD,
+	DIR_UPLOAD_LOC,
 	DIR_UNKNOWN
 };
 
@@ -36,6 +38,8 @@ struct	Directives
 		const std::vector<std::string>&		getAllowedMethods() const;
 		const unsigned long&				getMaxBodySize() const;
 		const std::map<int, std::string>&	getErrorPages() const;
+		bool								canUpload() const;
+		std::string								getUploadPath() const;
 
 		/* Setters */
 		void	setRoot(const std::string& root);
@@ -46,6 +50,8 @@ struct	Directives
 		void	addMethod(const std::string& method);
 		void	setMaxBodySize(const unsigned long& client_max_body_size);
 		void	setErrorPages(const std::map<int, std::string>& error_pages);
+		void	setUpload(bool);
+		void	setUploadLoc(const std::string&);
 
 		void	setDirective(const enum e_directive_type directve_type, ConfigParser& conf);
 
@@ -59,6 +65,8 @@ struct	Directives
 		std::vector<std::string>	_allowed_methods;
 		unsigned long				_client_max_body_size;
 		std::map<int, std::string>	_error_pages;
+		bool						_upload;
+		std::string					_upload_loc;
 };
 
 e_directive_type getDirectiveType(const std::string& directive_str);

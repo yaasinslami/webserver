@@ -157,56 +157,52 @@ void Http::_handle_client_request(int client_fd)
 	}
 
 	while (!curr_client.getRequestBuffer().empty()) {
+		std::cout << "\n\n=== what will be parsed now ====\n";
+		std::cout << curr_client.getRequestBuffer() << std::endl;
+		std::cout << "=====================================================\n\n";
+
 		std::cout << "feeding...\n";
-		try {
-			std::cout << "\n\n=== what will be parsed now ====\n";
-			std::cout << curr_client.getRequestBuffer() << std::endl;
-			std::cout << "=====================================================\n\n";
+		size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
+		if (curr_client.badRequest()) {
+			Response::badRequest();// static one (edge case of a regular response)
+		}
+		// std::cout << "terminating feeding...\n";
 
-			size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
-			std::cout << "terminating feeding...\n";
+		// erasing the previous request to keep what's left
+		curr_client.getRequestBuffer().erase(0, consumed);
 
-			// erasing the previous request to keep what's left
-			curr_client.getRequestBuffer().erase(0, consumed);
+		if (curr_client.isRequestReady())
+		{
+			std::cout << "----------\tRequest Ready!" << std::endl;
+			curr_client.show();
 
-			if (curr_client.isRequestReady())
-			{
-				std::cout << "----------\tRequest Ready!" << std::endl;
-				curr_client.show();
+			Server* server =  _find_best_match_server(curr_client);
+			if (server == NULL) {
+				close_connection(client_fd);
+				return ;
+			}
+			const Location*	location = server->findLocation(curr_client.getRequest().getPath());
 
-				Server* server =  _find_best_match_server(curr_client);
-				if (server == NULL) {// an error occured
-					close_connection(client_fd);
-					return ;
-				}
-				const Location*	location = server->findLocation(curr_client.getRequest().getPath());
+			curr_client.setContext(server, location);
 
-				curr_client.setContext(server, location);
+			std::cout << "---------\tSending Response..." << std::endl;
+			Response response(curr_client);
+			response.generateResponse();
+			
+			curr_client.setResponseBuffer(response.getResponseContent());
+			_modify_poll_event(client_fd, POLLOUT);
 
-				std::cout << "---------\tSending Response..." << std::endl;
-				Response response(curr_client);
-				response.generateResponse();
-				
-				curr_client.setResponseBuffer(response.getResponseContent());
-				_modify_poll_event(client_fd, POLLOUT);
-
-				// Logic for Keep-Alive
-				if (curr_client.shouldKeepAlive()) {
-					curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
-				}
-				else {
-					curr_client.setClose(true);
-				}
+			// Logic for Keep-Alive
+			if (curr_client.shouldKeepAlive()) {
+				curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
 			}
 			else {
-				std::cout << "Request not ready yet, wait for more data\n";
-				break ;
+				curr_client.setClose(true);
 			}
 		}
-		catch (const std::exception& e) {
-			std::cerr << "🚫 Bad Request: " << e.what() << "\n";
-			close_connection(client_fd);
-			return ;
+		else {
+			std::cout << "Request not ready yet, wait for more data\n";
+			break ;
 		}
 	}
 	// curr_client.show();

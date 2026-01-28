@@ -34,7 +34,8 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != ' ') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					// throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_method = _tmp_buffer;
 				_tmp_buffer.clear();
@@ -51,7 +52,7 @@ size_t	Request::feed(const std::string& data)
 					_state = STATE_URI_SCHEME;
 				}
 				else {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break;
 			}
@@ -66,14 +67,14 @@ size_t	Request::feed(const std::string& data)
 					continue;
 				}
 				else if (!_is_scheme_char(ch)) {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break;
 			}
 			case STATE_SCHEME_FIRST_SLASH:
 			{
 				if (ch != '/') {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 
 				_state = STATE_SCHEME_SECOND_SLASH;
@@ -83,7 +84,7 @@ size_t	Request::feed(const std::string& data)
 			case STATE_SCHEME_SECOND_SLASH:
 			{
 				if (ch != '/') {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 
 				_state = STATE_URI_AUTH;
@@ -99,7 +100,7 @@ size_t	Request::feed(const std::string& data)
 					_state = STATE_URI_PATH;
 				}
 				else if (!_is_unreserved(ch) && !_is_sub_delim(ch) && ch != ':' && ch != '@' && ch != '[' && ch != ']' && ch != '%') {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break ;
 			}
@@ -130,7 +131,7 @@ size_t	Request::feed(const std::string& data)
 					continue;
 				}
 				else if (!_is_pchar(ch) && ch != '/') {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break;
 			}
@@ -152,7 +153,7 @@ size_t	Request::feed(const std::string& data)
 					continue;
 				}
 				else if (!_is_query_char(ch)) {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break ;
 			}
@@ -168,7 +169,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'H') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_PROTOCOL_HT;
 				++i;
@@ -178,7 +179,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'T') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_PROTOCOL_HTT;
 				++i;
@@ -188,7 +189,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'T') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_PROTOCOL_HTTP;
 				++i;
@@ -198,7 +199,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'P') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_PROTOCOL_SLASH;
 				++i;
@@ -208,7 +209,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '/') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_MAJOR_DIGIT;
 				++i;
@@ -218,7 +219,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '1') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_DOT_AFTER_DIGIT;
 				++i;
@@ -228,7 +229,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '.') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_MINOR_DIGIT;
 				++i;
@@ -238,7 +239,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '1') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_FIRST_CR;
 				++i;
@@ -248,7 +249,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '\r') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_FIRST_LF;
 				++i;
@@ -258,7 +259,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '\n') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				_state = STATE_FIELD_START;
 				++i;
@@ -266,14 +267,14 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_FIELD_START:
 			{
-				if (ch == '\r') throw RequestException(400);
+				if (ch == '\r') _state = STATE_ERROR; return ;
 
 				if (Request::_is_token(ch)) {
 					ch = tolower(ch);
 					_state = STATE_FIELD_NAME;
 				}
 				else {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break ;
 			}
@@ -289,7 +290,7 @@ size_t	Request::feed(const std::string& data)
 				}
 				else if (!Request::_is_token(ch)) {
 					std::cerr << "Bad Header Key at: `" << ch << "`\n";
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				// make ch lowercase
 				ch = tolower(ch);
@@ -298,19 +299,19 @@ size_t	Request::feed(const std::string& data)
 			case STATE_FIELD_VALUE:
 			{
 				if (ch == '\r') {
-					_add_header();
+					if (!_add_header()) return ;
 					_state = STATE_FIELD_LF;
 					++i;
 					continue ;
 				}
 				if (!_is_valid_value(ch)) {
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break ;
 			}
 			case STATE_FIELD_LF:
 			{
-				if (ch != '\n') throw RequestException(400);
+				if (ch != '\n') _state = STATE_ERROR; return ;
 
 				_state = STATE_FIELD_NAME;
 				++i;
@@ -318,9 +319,9 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_FIELD_END:
 			{
-				if (ch != '\n') throw RequestException(400);
+				if (ch != '\n') _state = STATE_ERROR; return ;
 
-				__headers();
+				if (!__headers()) return ;
 				if (_body_exist) {
 					if (_chunked_transfer) {
 						_state = STATE_CHUNK_LENGTH;
@@ -352,8 +353,9 @@ size_t	Request::feed(const std::string& data)
 					ss << _tmp_buffer;
 					_tmp_buffer.clear();
 					ss >> std::hex >> _chunk_length;
-					if (_chunk_length == 0 && _chunk_state == START)
-						throw RequestException(400);
+					if (_chunk_length == 0 && _chunk_state == START) {
+						_state = STATE_ERROR; return ;
+					}
 					else if (_chunk_length == 0) {
 						_state = STATE_COMPLETE;
 						++i;
@@ -366,7 +368,7 @@ size_t	Request::feed(const std::string& data)
 				}
 				else if (!isxdigit(ch)) {
 					std::cerr << "bad chunk-length" << std::endl;
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				}
 				break ;
 			}
@@ -380,12 +382,12 @@ size_t	Request::feed(const std::string& data)
 				}
 
 				if (_tmp_buffer.length() + 1 > _chunk_length)
-					throw RequestException(400);
+					_state = STATE_ERROR; return ;
 				break ;
 			}
 			case STATE_CHUNK_CR:
 			{
-				if (ch != '\r') throw RequestException(400);
+				if (ch != '\r') _state = STATE_ERROR; return ;
 
 				this->_state = STATE_CHUNK_LF;
 				++i;
@@ -393,7 +395,7 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_CHUNK_LF:
 			{
-				if (ch != '\n') throw RequestException(400);
+				if (ch != '\n') _state = STATE_ERROR; return ;
 
 				if (_chunk_state == PAYLOAD_BODY)
 					_state = STATE_CHUNK_FEED;
@@ -417,7 +419,7 @@ size_t	Request::feed(const std::string& data)
 	return i;
 }
 
-void	Request::_add_header()
+bool	Request::_add_header()
 {
 	size_t	delim = _tmp_buffer.find(':');
 	std::string	key = _tmp_buffer.substr(0, delim);
@@ -425,7 +427,7 @@ void	Request::_add_header()
 
 	if (key.empty()) {
 		std::cerr << "key or value can't be empty!" << std::endl;
-		throw RequestException(400);
+		_state = STATE_ERROR; return false;
 	}
 
 	const std::string whitespace = " \t";
@@ -441,7 +443,7 @@ void	Request::_add_header()
 	if (_headers.count(key)) {
 		if (key == "host" || key == "content-length") {
 			std::cerr << "Duplicated Header Not Allowed!\n";
-			throw RequestException(400);
+			_state = STATE_ERROR; return false;
 		}
 
 		_headers[key] += ", " + value;
@@ -450,13 +452,14 @@ void	Request::_add_header()
 		_headers[key] = value;
 
 	_tmp_buffer.clear();
+	return true;
 }
 
-void	Request::__headers()
+bool	Request::__headers()
 {
 	if (_headers.find("host") == _headers.end()) {
 		std::cerr << "Error: HTTP/1.1 request missing 'Host' header\n";
-		throw RequestException(400);
+		_state = STATE_ERROR; return false;
 	}
 
 	std::string	raw_host;
@@ -487,12 +490,12 @@ void	Request::__headers()
 		unsigned long len = std::strtoul(str, &endptr, 10);
 		if (errno == ERANGE) {
 			std::cerr << "content-length too large!";
-			throw RequestException(400);
+			_state = STATE_ERROR; return false;
 		}
 		
 		if (endptr == str || *endptr != '\0' || value.find('-') != std::string::npos) {
 			std::cerr << "bad content-length" << std::endl;
-			throw RequestException(400);
+			_state = STATE_ERROR; return false;
 		}
 
 		_content_length = (size_t)len;
@@ -514,6 +517,7 @@ void	Request::__headers()
 
 	// Content-Type Header Still ...
 	std::cout << "we finish parsing of headers\n";
+	return true;
 }
 
 bool Request::_is_scheme_char(unsigned char c)
@@ -616,11 +620,6 @@ const std::string& Request::getBody() const
 {
 	return _body;
 }
-
-Request::RequestException::RequestException(int code) : _status_code(code) {}
-int Request::RequestException::get_status_code() const { return _status_code; }
-const char* Request::RequestException::what() const throw() { return "Bad Request"; }
-
 
 #define RESET "\033[0m"
 #define RED "\033[31m"

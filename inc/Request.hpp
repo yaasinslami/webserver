@@ -48,6 +48,7 @@ enum RequestState
 	STATE_CHUNK_CR,
 	STATE_CHUNK_LF,
 	STATE_BODY,
+	STATE_ERROR,
 	STATE_COMPLETE
 };
 
@@ -85,17 +86,6 @@ class	Request
 		bool		requestCompleted() const;
 		bool		shouldKeepAlive() const;
 
-		class	RequestException : public std::exception
-		{
-			private:
-				int _status_code;
-
-			public:
-				RequestException(int code);
-				int get_status_code() const;
-
-				virtual const char *what() const throw();
-		};
 
 		// bool	parsingCompleted() const;
 		size_t	feed(const std::string&);
@@ -112,8 +102,8 @@ class	Request
 		static bool	_is_token(unsigned char);
 		static bool	_is_valid_value(unsigned char);
 
-		void	_add_header();
-		void	__headers();
+		bool	_add_header();
+		bool	__headers();
 
 };
 

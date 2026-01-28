@@ -303,21 +303,21 @@ std::string	Response::_extractFilename(std::string& headers)
 
 void	Response::_handlePost()
 {
-	std::cout << "\n\n--------_handlePost-------\n\n";
-	// Before doint anything, at that point i still handle any POST Content-Type header logic, it just stored there
 	// check the client_max_body_size here
 
 	// so i think here i should distunguish between the Content-types logic (application/x-www-form-urlencoded or multipart/form-data ....)
 
 	std::string content_type = _client.getRequest().getHeader("content-type");
 	std::cout << "\nContent-Type:\t[" << content_type << "]\n\n";
-	// Dispatch based on Type
 
 	if (content_type.find("multipart/form-data") != std::string::npos) {
+		if (_client.getLocation()->getDirectives().canUpload() == false) {
+			_code = 403;
+			return ;
+		}
 		_handleMultiPart();
 	}
-
-	// _handlefile
+	// else: It is a Login Form / CGI (x-www-form-urlencoded)
 }
 
 
@@ -371,13 +371,15 @@ void	Response::_handleMultiPart()
 
 void	Response::_saveFile(std::string& filename, std::string& payload)
 {
-	std::string upload_path = "www/uploads";
+	std::string upload_path = _client.getLocation()->getDirectives().getRoot() + _client.getLocation()->getDirectives().getUploadPath();
+	std::cout << "upload_path=[" << upload_path << "\n\n\n";
 	std::string full_path = upload_path + "/" + filename;
+	std::cout << "full_path=[" << full_path << "\n\n\n";
 
 	std::ofstream outfile(full_path.c_str(), std::ios::binary);
 
 	if (outfile.is_open()) {
-		outfile << payload;
+		outfile << payload;// Buffer Copying here
 		outfile.close();
 		
 		_code = 201;

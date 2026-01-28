@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>400 Bad Request</title>
+    <style>
+        body { background-color: #ffffff; color: #333333; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { display: flex; align-items: center; justify-content: center; gap: 50px; max-width: 900px; padding: 20px; }
+        .text-content { text-align: left; }
+        h1 { font-size: 8rem; margin: 0; line-height: 1; color: #2d3436; }
+        h2 { font-size: 2rem; margin: 10px 0 20px 0; font-weight: 300; color: #636e72; }
+        p { color: #7f8c8d; font-size: 1.1rem; margin-bottom: 30px; }
+        .meme-container img { max-width: 350px; height: auto; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .btn { display: inline-block; padding: 12px 30px; background-color: #0984e3; color: white; text-decoration: none; font-weight: bold; border-radius: 30px; transition: transform 0.2s, background-color 0.2s; }
+        .btn:hover { background-color: #74b9ff; transform: translateY(-2px); }
+        @media (max-width: 768px) { .container { flex-direction: column-reverse; text-align: center; } .text-content { text-align: center; } h1 { font-size: 5rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-content">
+            <h1>400</h1>
+            <h2>Bad Request</h2>
+            <p>Your browser sent a request that this server could not understand.<br>Check your syntax or try clearing your cache.</p>
+            <a href="/" class="btn">Back to Home</a>
+        </div>
+        <div class="meme-container">
+            <img src="../images/400.jpg" alt="400 Bad Request Meme">
+        </div>
+    </div>
+</body>
+</html>
