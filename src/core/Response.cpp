@@ -5,7 +5,13 @@ Response::~Response() {}
 Response::Response(Client& client) : _client(client), _code(200)
 {
 	const Location* location = _client.getLocation();
-	const Request &req = _client.getRequest();
+	const Request &req = _client.getRequest();// can be incompleted
+	// before doing anything -> check if it bad request -> just return
+	if (req.badRequest()) {
+		std::cerr << "->\tbad request lah lah lah\t<-\n\n";
+		_code = 400;
+		return ;
+	}
 
 	// allowed methods
 	if (!location->isMethodAllowed(req.getMethod()))
@@ -144,7 +150,7 @@ void	Response::_serveFile()
 void	Response::generateResponse()
 {
 	if (_code >= 400 && _body.empty()) {
-		_buildErrorPage();
+		_buildErrorPage();// bad request also !
 	}
 
 	// Request Line (Version + Status Code)

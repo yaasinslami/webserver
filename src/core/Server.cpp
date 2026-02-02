@@ -24,8 +24,8 @@ const Location*	Server::findLocation(const std::string& path) const
 	}
 
 	// if no location found - l3ab la baghi tl3b bel fallback one
-	std::cout << "No location matched. use Default Path (first location)\n";
-	return &_locations[0];
+	std::cout << "No location matched.\n";
+	return NULL;
 }
 
 Server::Server(const Directives& g_directives) :

@@ -93,7 +93,7 @@ Client::~Client() {}
 
 bool	Client::isRequestReady() const
 {
-	return _request.requestCompleted();
+	return _request.requestCompleted() || _request.badRequest();
 }
 
 Request& Client::getRequest() { return _request; }

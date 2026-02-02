@@ -84,6 +84,7 @@ class	Request
         std::string	getHeader(const std::string& key) const;
 		const std::string	&getBody() const;
 		bool		requestCompleted() const;
+		bool		badRequest() const;
 		bool		shouldKeepAlive() const;
 
 

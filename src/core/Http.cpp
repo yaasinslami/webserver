@@ -157,15 +157,13 @@ void Http::_handle_client_request(int client_fd)
 	}
 
 	while (!curr_client.getRequestBuffer().empty()) {
-		std::cout << "\n\n=== what will be parsed now ====\n";
-		std::cout << curr_client.getRequestBuffer() << std::endl;
-		std::cout << "=====================================================\n\n";
+		std::cout << "\n\n+++ A Request!!!\n\n";
+		// std::cout << "\n\n=== what will be parsed now ====\n";
+		// std::cout << curr_client.getRequestBuffer() << std::endl;
+		// std::cout << "=====================================================\n\n";
 
 		std::cout << "feeding...\n";
 		size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
-		if (curr_client.badRequest()) {
-			Response::badRequest();// static one (edge case of a regular response)
-		}
 		// std::cout << "terminating feeding...\n";
 
 		// erasing the previous request to keep what's left
@@ -176,8 +174,11 @@ void Http::_handle_client_request(int client_fd)
 			std::cout << "----------\tRequest Ready!" << std::endl;
 			curr_client.show();
 
-			Server* server =  _find_best_match_server(curr_client);
-			if (server == NULL) {
+			// check if we have bad request here and call just a Response static method that generate a response and return
+			// catch here the bad request and return imediatly
+
+			Server* server =  _find_best_match_server(curr_client);// should always find a default server
+			if (server == NULL) {// no-op condition
 				close_connection(client_fd);
 				return ;
 			}
@@ -186,18 +187,19 @@ void Http::_handle_client_request(int client_fd)
 			curr_client.setContext(server, location);
 
 			std::cout << "---------\tSending Response..." << std::endl;
-			Response response(curr_client);
+			Response response(curr_client);// check also if it bad request 400 -> return immediately
 			response.generateResponse();
-			
+
 			curr_client.setResponseBuffer(response.getResponseContent());
 			_modify_poll_event(client_fd, POLLOUT);
 
 			// Logic for Keep-Alive
-			if (curr_client.shouldKeepAlive()) {
+			if (curr_client.shouldKeepAlive() && !curr_client.getRequest().badRequest()) {
 				curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
 			}
 			else {
 				curr_client.setClose(true);
+				break ;
 			}
 		}
 		else {
@@ -205,7 +207,7 @@ void Http::_handle_client_request(int client_fd)
 			break ;
 		}
 	}
-	// curr_client.show();
+
 	if (client_disconnected) {
 		std::cout << "Cleaning up disconnected client.\n";
 		close_connection(client_fd);

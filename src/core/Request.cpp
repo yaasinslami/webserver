@@ -35,7 +35,7 @@ size_t	Request::feed(const std::string& data)
 				if (ch != ' ') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					// throw RequestException(400);
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_method = _tmp_buffer;
 				_tmp_buffer.clear();
@@ -52,7 +52,7 @@ size_t	Request::feed(const std::string& data)
 					_state = STATE_URI_SCHEME;
 				}
 				else {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break;
 			}
@@ -67,14 +67,14 @@ size_t	Request::feed(const std::string& data)
 					continue;
 				}
 				else if (!_is_scheme_char(ch)) {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break;
 			}
 			case STATE_SCHEME_FIRST_SLASH:
 			{
 				if (ch != '/') {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 
 				_state = STATE_SCHEME_SECOND_SLASH;
@@ -84,7 +84,7 @@ size_t	Request::feed(const std::string& data)
 			case STATE_SCHEME_SECOND_SLASH:
 			{
 				if (ch != '/') {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 
 				_state = STATE_URI_AUTH;
@@ -100,7 +100,7 @@ size_t	Request::feed(const std::string& data)
 					_state = STATE_URI_PATH;
 				}
 				else if (!_is_unreserved(ch) && !_is_sub_delim(ch) && ch != ':' && ch != '@' && ch != '[' && ch != ']' && ch != '%') {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break ;
 			}
@@ -131,7 +131,7 @@ size_t	Request::feed(const std::string& data)
 					continue;
 				}
 				else if (!_is_pchar(ch) && ch != '/') {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break;
 			}
@@ -153,7 +153,7 @@ size_t	Request::feed(const std::string& data)
 					continue;
 				}
 				else if (!_is_query_char(ch)) {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break ;
 			}
@@ -169,7 +169,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'H') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_PROTOCOL_HT;
 				++i;
@@ -179,7 +179,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'T') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_PROTOCOL_HTT;
 				++i;
@@ -189,7 +189,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'T') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_PROTOCOL_HTTP;
 				++i;
@@ -199,7 +199,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != 'P') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_PROTOCOL_SLASH;
 				++i;
@@ -209,7 +209,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '/') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_MAJOR_DIGIT;
 				++i;
@@ -219,7 +219,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '1') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_DOT_AFTER_DIGIT;
 				++i;
@@ -229,7 +229,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '.') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_MINOR_DIGIT;
 				++i;
@@ -239,7 +239,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '1') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_FIRST_CR;
 				++i;
@@ -249,7 +249,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '\r') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_FIRST_LF;
 				++i;
@@ -259,7 +259,7 @@ size_t	Request::feed(const std::string& data)
 			{
 				if (ch != '\n') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				_state = STATE_FIELD_START;
 				++i;
@@ -267,14 +267,16 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_FIELD_START:
 			{
-				if (ch == '\r') _state = STATE_ERROR; return ;
+				if (ch == '\r') {
+					_state = STATE_ERROR; continue ;
+				}
 
 				if (Request::_is_token(ch)) {
 					ch = tolower(ch);
 					_state = STATE_FIELD_NAME;
 				}
 				else {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break ;
 			}
@@ -290,7 +292,7 @@ size_t	Request::feed(const std::string& data)
 				}
 				else if (!Request::_is_token(ch)) {
 					std::cerr << "Bad Header Key at: `" << ch << "`\n";
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				// make ch lowercase
 				ch = tolower(ch);
@@ -299,19 +301,21 @@ size_t	Request::feed(const std::string& data)
 			case STATE_FIELD_VALUE:
 			{
 				if (ch == '\r') {
-					if (!_add_header()) return ;
+					if (!_add_header()) continue ;
 					_state = STATE_FIELD_LF;
 					++i;
 					continue ;
 				}
 				if (!_is_valid_value(ch)) {
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break ;
 			}
 			case STATE_FIELD_LF:
 			{
-				if (ch != '\n') _state = STATE_ERROR; return ;
+				if (ch != '\n') {
+					_state = STATE_ERROR; continue ;
+				}
 
 				_state = STATE_FIELD_NAME;
 				++i;
@@ -319,9 +323,11 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_FIELD_END:
 			{
-				if (ch != '\n') _state = STATE_ERROR; return ;
+				if (ch != '\n') {
+					_state = STATE_ERROR; continue ;
+				}
 
-				if (!__headers()) return ;
+				if (!__headers()) continue ;
 				if (_body_exist) {
 					if (_chunked_transfer) {
 						_state = STATE_CHUNK_LENGTH;
@@ -354,7 +360,7 @@ size_t	Request::feed(const std::string& data)
 					_tmp_buffer.clear();
 					ss >> std::hex >> _chunk_length;
 					if (_chunk_length == 0 && _chunk_state == START) {
-						_state = STATE_ERROR; return ;
+						_state = STATE_ERROR; continue ;
 					}
 					else if (_chunk_length == 0) {
 						_state = STATE_COMPLETE;
@@ -368,7 +374,7 @@ size_t	Request::feed(const std::string& data)
 				}
 				else if (!isxdigit(ch)) {
 					std::cerr << "bad chunk-length" << std::endl;
-					_state = STATE_ERROR; return ;
+					_state = STATE_ERROR; continue ;
 				}
 				break ;
 			}
@@ -381,13 +387,16 @@ size_t	Request::feed(const std::string& data)
 					continue ;
 				}
 
-				if (_tmp_buffer.length() + 1 > _chunk_length)
-					_state = STATE_ERROR; return ;
+				if (_tmp_buffer.length() + 1 > _chunk_length) {
+					_state = STATE_ERROR; continue ;
+				}
 				break ;
 			}
 			case STATE_CHUNK_CR:
 			{
-				if (ch != '\r') _state = STATE_ERROR; return ;
+				if (ch != '\r') {
+					_state = STATE_ERROR; continue ;
+				}
 
 				this->_state = STATE_CHUNK_LF;
 				++i;
@@ -395,7 +404,9 @@ size_t	Request::feed(const std::string& data)
 			}
 			case STATE_CHUNK_LF:
 			{
-				if (ch != '\n') _state = STATE_ERROR; return ;
+				if (ch != '\n') {
+					_state = STATE_ERROR; continue ;
+				}
 
 				if (_chunk_state == PAYLOAD_BODY)
 					_state = STATE_CHUNK_FEED;
@@ -407,6 +418,11 @@ size_t	Request::feed(const std::string& data)
 				}
 				++i;
 				continue ;
+			}
+			case STATE_ERROR:
+			{
+				std::cerr << "Feed Parse Error\n";
+				return i;
 			}
 			case STATE_COMPLETE:
 			{
@@ -512,6 +528,7 @@ bool	Request::__headers()
 
 
 	if (_headers.count("connection") && _headers["connection"].find("close")) {
+		std::cout << "--++---\texplicitly the client want to close the conection\n";
 		_keep_alive = false;
 	}
 
@@ -580,6 +597,11 @@ bool	Request::shouldKeepAlive() const
 bool	Request::requestCompleted() const
 {
 	return _state == STATE_COMPLETE;
+}
+
+bool	Request::badRequest() const
+{
+	return _state == STATE_ERROR;
 }
 
 void	Request::resetState()
