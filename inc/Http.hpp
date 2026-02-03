@@ -38,6 +38,7 @@ class	Http
 		void	_handle_new_connection(int);
 		void	_handle_client_request(int);
 		void	_handle_client_response(int);
+		void	_process_ready_request(int);
 		void	remove_from_poll(int);
 		void	close_connection(int);
 

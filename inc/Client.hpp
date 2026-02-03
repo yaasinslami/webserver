@@ -11,8 +11,8 @@ class	Client
 		int				_fd;
 		unsigned short	_server_port;
 		bool			_should_close;
-		std::string	_request_buffer;
-		std::string	_response_buffer;
+		std::string		_request_buffer;
+		std::string		_response_buffer;
 
 	public:
 		Client();
@@ -45,6 +45,8 @@ class	Client
 		void	setResponseBuffer(const std::string&);
 		void	updateResponseBuffer(size_t n);
 		bool	hasDataToSend() const;
+
+		std::string		_leftover_buffer;
 
 	private:
 		Request		_request;

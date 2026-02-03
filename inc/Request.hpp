@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <fstream>
 
 #define MAX_HEADER_SIZE 8192
 
@@ -69,6 +70,8 @@ class	Request
 		std::string 						_uri_query;
 		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
+
+		std::ofstream   _body_file;// file where the body will be stored
 		std::string			_body;
 		bool				_body_exist;
 		ChunkState			_chunk_state;
@@ -89,7 +92,7 @@ class	Request
 
 
 		// bool	parsingCompleted() const;
-		size_t	feed(const std::string&);
+		size_t	feed(const char*,size_t);
 		void	resetState();
 
 		void	show() const;

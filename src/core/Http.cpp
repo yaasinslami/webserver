@@ -71,14 +71,9 @@ void	Http::run( void )
 					_handle_client_request(curr_fd);
 				}
 			}
-			else if (_poll_fds[i].revents & POLLOUT) 
-			{
+			else if (_poll_fds[i].revents & POLLOUT)  {
 				_handle_client_response(curr_fd);
 			}
-			// POLLOUT
-			// else if (_poll_fds[i].revents & POLLOUT) {
-			// 	handle_client_response();
-			// }
 		}
 	}
 	std::cout << "Server shutting down cleanly..." << std::endl;
@@ -119,98 +114,101 @@ void Http::_handle_new_connection(int listener_fd)
 			  << " on Server Port: " << server_port << std::endl;
 }
 
+/*
+- Memory Bomb
+- Pipelining
+*/
+
 void Http::_handle_client_request(int client_fd)
 {
 	Client	&curr_client = _clients[client_fd];
-	bool	client_disconnected = false;
 
 	char	tmp_buffer[4096];
-	memset(tmp_buffer, 0, sizeof(tmp_buffer));
 	ssize_t	bytes_read = 0;
 
-	// loop over recv until request is done
-	while (true)
-	{
-		std::cout << "recv ...\n";
-		bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer) - 1, 0);
+	std::cout << "recv ...\n";
+	bytes_read = recv(client_fd, tmp_buffer, sizeof(tmp_buffer), 0);
 
-		if (bytes_read < 0)
-		{
-			if (errno == EWOULDBLOCK || errno == EAGAIN) {
-				std::cout << "errno == EWOULDBLOCK || errno == EAGAIN => break!\n";
-				break;
-			}
+	if (bytes_read < 0) {
+		std::cerr << "Recv Error (Fatal)\n";
+		close_connection(client_fd); return ;
+	}
+	else if (bytes_read == 0) {
+		std::cout << "Client " << client_fd << " disconnected (EOF).\n";
+		close_connection(client_fd); return ;
+	}
 
-			std::cerr << "Recv Error: " << strerror(errno) << std::endl;
-			close_connection(client_fd);
+	// Feed Parser (Streaming)
+	size_t consumed = curr_client.getRequest().feed(tmp_buffer, bytes_read);
+
+	// STEP 4: Store Excess Data (Pipelining)
+	if (consumed < (size_t)bytes_read) {
+		// "buffer + consumed" points to the start of the Next Request
+		curr_client._leftover_buffer.append(tmp_buffer + consumed, bytes_read - consumed);// here where leftover will no longer be empty
+	}
+
+	// Check if Done
+	if (curr_client.isRequestReady()) {
+		_process_ready_request(client_fd);
+	}
+
+	// should check for leftover here (sizeof(lefover) <= 4096)
+	if (!curr_client._leftover_buffer.empty()) {//we have lefover data that belong to a new request
+		size_t consumed = curr_client.getRequest().feed(curr_client._leftover_buffer.data(), curr_client._leftover_buffer.size());
+
+		// Remove what was eaten
+		curr_client._leftover_buffer.erase(0, consumed);
+
+		// If request finished using just leftovers? Great!
+		if (curr_client.isRequestReady()) {
+			_process_ready_request(client_fd);
+			// if lefover_buffer is empty continue
 			return ;
 		}
-		else if (bytes_read == 0)
-		{
-			std::cout << "Client " << client_fd << " disconnected (EOF)." << std::endl;
-			client_disconnected = true;
-			break ;
-		}
-		else {
-			curr_client.getRequestBuffer().append(tmp_buffer, bytes_read);
-		}
 	}
+}
 
-	while (!curr_client.getRequestBuffer().empty()) {
-		std::cout << "\n\n+++ A Request!!!\n\n";
-		// std::cout << "\n\n=== what will be parsed now ====\n";
-		// std::cout << curr_client.getRequestBuffer() << std::endl;
-		// std::cout << "=====================================================\n\n";
+void Http::_process_ready_request(int client_fd)
+{
+	Client &curr_client = _clients[client_fd];
 
-		std::cout << "feeding...\n";
-		size_t	consumed = curr_client.getRequest().feed(curr_client.getRequestBuffer());
-		// std::cout << "terminating feeding...\n";
+	std::cout << "----------\tRequest Ready!" << std::endl;
+	// curr_client.show(); // Optional debug
 
-		// erasing the previous request to keep what's left
-		curr_client.getRequestBuffer().erase(0, consumed);
-
-		if (curr_client.isRequestReady())
-		{
-			std::cout << "----------\tRequest Ready!" << std::endl;
-			curr_client.show();
-
-			// check if we have bad request here and call just a Response static method that generate a response and return
-			// catch here the bad request and return imediatly
-
-			Server* server =  _find_best_match_server(curr_client);// should always find a default server
-			if (server == NULL) {// no-op condition
-				close_connection(client_fd);
-				return ;
-			}
-			const Location*	location = server->findLocation(curr_client.getRequest().getPath());
-
-			curr_client.setContext(server, location);
-
-			std::cout << "---------\tSending Response..." << std::endl;
-			Response response(curr_client);// check also if it bad request 400 -> return immediately
-			response.generateResponse();
-
-			curr_client.setResponseBuffer(response.getResponseContent());
-			_modify_poll_event(client_fd, POLLOUT);
-
-			// Logic for Keep-Alive
-			if (curr_client.shouldKeepAlive() && !curr_client.getRequest().badRequest()) {
-				curr_client.getRequest().resetState();// reset state to STATE_READING_HEADERS
-			}
-			else {
-				curr_client.setClose(true);
-				break ;
-			}
-		}
-		else {
-			std::cout << "Request not ready yet, wait for more data\n";
-			break ;
-		}
-	}
-
-	if (client_disconnected) {
-		std::cout << "Cleaning up disconnected client.\n";
+	// Find Server (Virtual Host)
+	Server *server = _find_best_match_server(curr_client);
+	// Safety: If no server found, close immediately (should rarely happen)
+	if (server == NULL) {
 		close_connection(client_fd);
+		return;
+	}
+
+	// 2. Find Location
+	// Note: If request was 400 Bad Request, path might be invalid.
+	// Response class should handle a NULL location gracefully.
+	const Location *location = NULL;
+	if (!curr_client.getRequest().badRequest()) {
+		location = server->findLocation(curr_client.getRequest().getPath());
+	}
+
+	curr_client.setContext(server, location);
+	// Generate Response
+	std::cout << "---------\tSending Response..." << std::endl;
+	Response response(curr_client); // Constructor checks for 400/Bad Request automatically
+	response.generateResponse();
+
+	// 4. Update Client State
+	// curr_client.setResponseBuffer(response.getResponseContent());
+	_modify_poll_event(client_fd, POLLOUT); // Tell main loop we want to WRITE now
+
+	// 5. Handle Keep-Alive / Close / Bad Request
+	// If it was a Bad Request (400) or client wanted Close, we stop here.
+	if (curr_client.getRequest().badRequest() || !curr_client.shouldKeepAlive()) {
+		curr_client.setClose(true);
+	}
+	else {
+		// Prepare for the NEXT request in the pipeline
+		curr_client.getRequest().resetState();
 	}
 }
 

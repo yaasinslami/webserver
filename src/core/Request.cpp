@@ -4,10 +4,10 @@
 #include <iostream>
 
 /* FSM */
-size_t	Request::feed(const std::string& data)
+size_t	Request::feed(const char* data, size_t size)
 {
 	size_t	i = 0;
-	while (i < data.length())
+	while (i < size)
 	{
 		unsigned char ch = data[i];
 		switch (_state)
@@ -332,8 +332,10 @@ size_t	Request::feed(const std::string& data)
 					if (_chunked_transfer) {
 						_state = STATE_CHUNK_LENGTH;
 					}
-					else
+					else {
+						// here we decide to move to the body
 						_state = STATE_BODY;
+					}
 					++i;
 					continue ;
 				}
