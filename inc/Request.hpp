@@ -5,14 +5,20 @@
 #include <map>
 #include <fstream>
 
+#define RESET "\033[0m"
+#define RED "\033[31m"
+#define GREEN "\033[32m"
+#define YELLOW "\033[33m"
+#define BLUE "\033[34m"
+#define CYAN "\033[36m"
+
 #define MAX_HEADER_SIZE 8192
 
 enum	ChunkState
 {
-	START,
 	LENGTH,
 	PAYLOAD_BODY,
-	FINISH,
+	CHUNK_END,
 };
 
 enum RequestState
@@ -45,11 +51,12 @@ enum RequestState
 	// STATE_FIELD_CR,
 	STATE_FIELD_LF,
 	STATE_CHUNK_LENGTH,
-	STATE_CHUNK_FEED,
 	STATE_CHUNK_CR,
 	STATE_CHUNK_LF,
+	STATE_CHUNK_FINAL_CR,
+	STATE_CHUNK_FINAL_LF,
+	STATE_CHUNK_DATA,
 	STATE_BODY,
-	STATE_ERROR,
 	STATE_COMPLETE
 };
 
@@ -57,7 +64,6 @@ class	Request
 {
 	private:
 		RequestState	_state;
-		short			_m_index;
 		std::string		_tmp_buffer;
 		size_t			_content_length;
 		bool			_chunked_transfer;
@@ -71,30 +77,35 @@ class	Request
 		std::string							_server_name;
 		std::map<std::string, std::string>	_headers;
 
-		std::ofstream   _body_file;// file where the body will be stored
-		std::string			_body;
+		std::string		_body_file_path;
+		std::ofstream	_body_file;// file where the body will be stored
+		size_t			_chunk_bytes_written;
+		size_t			_body_bytes_written;
 		bool				_body_exist;
 		ChunkState			_chunk_state;
 		bool				_keep_alive;
+		bool				_bad_request;
+
 
 	public:
 		Request();
+		Request(const Request&);
 		~Request();
+		Request& operator=(const Request&);
 
 		std::string	getMethod() const;
         std::string getPath() const;
 		std::string	getServerName()const;
         std::string	getHeader(const std::string& key) const;
-		const std::string	&getBody() const;
-		bool		requestCompleted() const;
-		bool		badRequest() const;
+		bool		requestCompleted();
 		bool		shouldKeepAlive() const;
 
 
 		// bool	parsingCompleted() const;
-		size_t	feed(const char*,size_t);
+		ssize_t	feed(const char*,size_t);
 		void	resetState();
 
+		void	setBadRequest(bool);
 		void	show() const;
 
 	private:
@@ -109,6 +120,7 @@ class	Request
 		bool	_add_header();
 		bool	__headers();
 
+		static unsigned int _generate_random_id();
 };
 
 #endif

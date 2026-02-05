@@ -138,38 +138,60 @@ void Http::_handle_client_request(int client_fd)
 		close_connection(client_fd); return ;
 	}
 
-	// Feed Parser (Streaming)
-	size_t consumed = curr_client.getRequest().feed(tmp_buffer, bytes_read);
+	char *data_ptr = tmp_buffer;
+	size_t data_size = bytes_read;
+	bool leftover = false;
 
-	// STEP 4: Store Excess Data (Pipelining)
-	if (consumed < (size_t)bytes_read) {
-		// "buffer + consumed" points to the start of the Next Request
-		curr_client._leftover_buffer.append(tmp_buffer + consumed, bytes_read - consumed);// here where leftover will no longer be empty
+	if (!curr_client._leftover_buffer.empty()) {
+		curr_client._leftover_buffer.append(tmp_buffer, bytes_read);
+
+		data_ptr = (char *)curr_client._leftover_buffer.data();
+		data_size = curr_client._leftover_buffer.size();
+		leftover = true;
 	}
 
-	// Check if Done
-	if (curr_client.isRequestReady()) {
-		_process_ready_request(client_fd);
-	}
+	size_t g_consumed = 0;
 
-	// should check for leftover here (sizeof(lefover) <= 4096)
-	if (!curr_client._leftover_buffer.empty()) {//we have lefover data that belong to a new request
-		size_t consumed = curr_client.getRequest().feed(curr_client._leftover_buffer.data(), curr_client._leftover_buffer.size());
+	while (data_size > 0) {
+		ssize_t consumed = curr_client.getRequest().feed(data_ptr, data_size);
+		if (consumed == -1) {
+			std::cerr << "Bad Request Detected!\n";
+			curr_client.getRequest().setBadRequest(true);
+			_process_ready_request(client_fd);
+			return;
+		}
 
-		// Remove what was eaten
-		curr_client._leftover_buffer.erase(0, consumed);
+		data_ptr += consumed;
+		data_size -= consumed;
+		g_consumed += consumed;
 
-		// If request finished using just leftovers? Great!
 		if (curr_client.isRequestReady()) {
 			_process_ready_request(client_fd);
-			// if lefover_buffer is empty continue
-			return ;
+
+			if (curr_client.shouldClose()) return ;
+
+			curr_client.getRequest().resetState();
+
+			// Pipelining: Loop to process the next Request
+			continue ;
 		}
+
+		if (consumed == 0) break ;// (Request too large and we want other POLLIN Trigger)
+	}
+
+	if (leftover) {
+		curr_client._leftover_buffer.erase(0, g_consumed);
+	}
+	else if (data_size > 0) {
+		curr_client._leftover_buffer.append(data_ptr, data_size);
 	}
 }
 
 void Http::_process_ready_request(int client_fd)
 {
+	/*
+		Reminder the request can be Bad
+	*/
 	Client &curr_client = _clients[client_fd];
 
 	std::cout << "----------\tRequest Ready!" << std::endl;
@@ -183,13 +205,10 @@ void Http::_process_ready_request(int client_fd)
 		return;
 	}
 
-	// 2. Find Location
 	// Note: If request was 400 Bad Request, path might be invalid.
 	// Response class should handle a NULL location gracefully.
 	const Location *location = NULL;
-	if (!curr_client.getRequest().badRequest()) {
-		location = server->findLocation(curr_client.getRequest().getPath());
-	}
+	location = server->findLocation(curr_client.getRequest().getPath());
 
 	curr_client.setContext(server, location);
 	// Generate Response
@@ -203,7 +222,7 @@ void Http::_process_ready_request(int client_fd)
 
 	// 5. Handle Keep-Alive / Close / Bad Request
 	// If it was a Bad Request (400) or client wanted Close, we stop here.
-	if (curr_client.getRequest().badRequest() || !curr_client.shouldKeepAlive()) {
+	if (!curr_client.shouldKeepAlive()) {// i should add if it bad request
 		curr_client.setClose(true);
 	}
 	else {

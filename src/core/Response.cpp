@@ -23,11 +23,11 @@ Response::Response(Client& client) : _client(client), _code(200)
 
 	// max body size
 	size_t limit = location->getDirectives().getMaxBodySize();
-	if (limit > 0 && req.getBody().length() > limit)
-	{
-		_code = 413;
-		return;
-	}
+	// if (limit > 0 && req.getBody().length() > limit)
+	// {
+	// 	_code = 413;
+	// 	return;
+	// }
 
 	_translatePath();
 	std::cout << "-> Resource Path:\t[" << _resource << "]" << std::endl;
@@ -45,7 +45,7 @@ void Response::_processMethod()
 	else if (method == "POST") {
 		_handlePost();
 	}
-	else if (method == "DELETE") {
+ 	else if (method == "DELETE") {
 		// _handleDelete();
 	}
 }

@@ -11,8 +11,6 @@ class	Client
 		int				_fd;
 		unsigned short	_server_port;
 		bool			_should_close;
-		std::string		_request_buffer;
-		std::string		_response_buffer;
 
 	public:
 		Client();
@@ -29,7 +27,7 @@ class	Client
 		std::string& getRequestBuffer();
 		const char*	getResponseBuffer() const;
 		size_t	getResponseSize() const;
-		bool	isRequestReady() const;
+		bool	isRequestReady();
 		Request &getRequest();
 		const Request& getRequest() const;
 
@@ -49,7 +47,7 @@ class	Client
 		std::string		_leftover_buffer;
 
 	private:
-		Request		_request;
+		Request			_request;
 		Server			*_server;
 		const Location	*_location;
 };

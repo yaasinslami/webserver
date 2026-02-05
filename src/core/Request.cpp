@@ -4,20 +4,18 @@
 #include <iostream>
 
 /* FSM */
-size_t	Request::feed(const char* data, size_t size)
+ssize_t	Request::feed(const char* data, size_t size)
 {
 	size_t	i = 0;
-	while (i < size)
+	for (; i < size; ++i)
 	{
 		unsigned char ch = data[i];
 		switch (_state)
 		{
 			case STATE_START:
 			{
-				if (ch == '\r' || ch == '\n') {
-					++i;
+				if (ch == '\r' || ch == '\n')
 					continue ;
-				}
 				_state = STATE_METHOD;
 				break ;
 			}
@@ -26,7 +24,6 @@ size_t	Request::feed(const char* data, size_t size)
 				if (!std::isalpha(ch)) {
 					_state = STATE_SPACE_BEFORE_URI;
 					continue ;
-					i++;
 				}
 				break ;
 			}
@@ -35,12 +32,11 @@ size_t	Request::feed(const char* data, size_t size)
 				if (ch != ' ') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					// throw RequestException(400);
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_method = _tmp_buffer;
 				_tmp_buffer.clear();
 				_state = STATE_URI_START;
-				++i;
 				continue ;
 			}
 			case STATE_URI_START:
@@ -52,7 +48,7 @@ size_t	Request::feed(const char* data, size_t size)
 					_state = STATE_URI_SCHEME;
 				}
 				else {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break;
 			}
@@ -63,18 +59,18 @@ size_t	Request::feed(const char* data, size_t size)
 					_uri_scheme = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_SCHEME_FIRST_SLASH;
-					++i;
+
 					continue;
 				}
 				else if (!_is_scheme_char(ch)) {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break;
 			}
 			case STATE_SCHEME_FIRST_SLASH:
 			{
 				if (ch != '/') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 
 				_state = STATE_SCHEME_SECOND_SLASH;
@@ -84,7 +80,7 @@ size_t	Request::feed(const char* data, size_t size)
 			case STATE_SCHEME_SECOND_SLASH:
 			{
 				if (ch != '/') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 
 				_state = STATE_URI_AUTH;
@@ -100,7 +96,7 @@ size_t	Request::feed(const char* data, size_t size)
 					_state = STATE_URI_PATH;
 				}
 				else if (!_is_unreserved(ch) && !_is_sub_delim(ch) && ch != ':' && ch != '@' && ch != '[' && ch != ']' && ch != '%') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break ;
 			}
@@ -111,7 +107,7 @@ size_t	Request::feed(const char* data, size_t size)
 					_uri_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_PROTOCOL_H;
-					++i;
+
 					continue;
 				}
 				else if (ch == '?')
@@ -119,7 +115,7 @@ size_t	Request::feed(const char* data, size_t size)
 					_uri_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_QUERY;
-					++i;
+
 					continue;
 				}
 				else if (ch == '#')
@@ -127,11 +123,11 @@ size_t	Request::feed(const char* data, size_t size)
 					_uri_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_FRAGMENT;
-					++i;
+
 					continue;
 				}
 				else if (!_is_pchar(ch) && ch != '/') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break;
 			}
@@ -141,7 +137,7 @@ size_t	Request::feed(const char* data, size_t size)
 					_uri_query = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_PROTOCOL_H;
-					++i;
+
 					continue ;
 				}
 				else if (ch == '#')
@@ -149,11 +145,11 @@ size_t	Request::feed(const char* data, size_t size)
 					_uri_query = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_FRAGMENT;
-					++i;
+
 					continue;
 				}
 				else if (!_is_query_char(ch)) {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break ;
 			}
@@ -169,106 +165,96 @@ size_t	Request::feed(const char* data, size_t size)
 			{
 				if (ch != 'H') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_PROTOCOL_HT;
-				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_HT:
 			{
 				if (ch != 'T') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_PROTOCOL_HTT;
-				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_HTT:
 			{
 				if (ch != 'T') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_PROTOCOL_HTTP;
-				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_HTTP:
 			{
 				if (ch != 'P') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_PROTOCOL_SLASH;
-				++i;
 				continue ;
 			}
 			case STATE_PROTOCOL_SLASH:
 			{
 				if (ch != '/') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_MAJOR_DIGIT;
-				++i;
 				continue ;
 			}
 			case STATE_MAJOR_DIGIT:
 			{
 				if (ch != '1') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_DOT_AFTER_DIGIT;
-				++i;
 				continue ;
 			}
 			case STATE_DOT_AFTER_DIGIT:
 			{
 				if (ch != '.') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_MINOR_DIGIT;
-				++i;
 				continue ;
 			}
 			case STATE_MINOR_DIGIT:
 			{
 				if (ch != '1') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_FIRST_CR;
-				++i;
 				continue ;
 			}
 			case STATE_FIRST_CR:
 			{
 				if (ch != '\r') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_FIRST_LF;
-				++i;
 				continue ;
 			}
 			case STATE_FIRST_LF:
 			{
 				if (ch != '\n') {
 					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				_state = STATE_FIELD_START;
-				++i;
 				continue ;
 			}
 			case STATE_FIELD_START:
 			{
 				if (ch == '\r') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 
 				if (Request::_is_token(ch)) {
@@ -276,7 +262,7 @@ size_t	Request::feed(const char* data, size_t size)
 					_state = STATE_FIELD_NAME;
 				}
 				else {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break ;
 			}
@@ -284,7 +270,7 @@ size_t	Request::feed(const char* data, size_t size)
 			{
 				if (ch == '\r') {
 					_state = STATE_FIELD_END;
-					++i;
+
 					continue ;
 				}
 				if (ch == ':') {// we have key:value
@@ -292,7 +278,7 @@ size_t	Request::feed(const char* data, size_t size)
 				}
 				else if (!Request::_is_token(ch)) {
 					std::cerr << "Bad Header Key at: `" << ch << "`\n";
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				// make ch lowercase
 				ch = tolower(ch);
@@ -303,32 +289,41 @@ size_t	Request::feed(const char* data, size_t size)
 				if (ch == '\r') {
 					if (!_add_header()) continue ;
 					_state = STATE_FIELD_LF;
-					++i;
+
 					continue ;
 				}
 				if (!_is_valid_value(ch)) {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 				break ;
 			}
 			case STATE_FIELD_LF:
 			{
 				if (ch != '\n') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 
 				_state = STATE_FIELD_NAME;
-				++i;
 				continue ;
 			}
 			case STATE_FIELD_END:
 			{
 				if (ch != '\n') {
-					_state = STATE_ERROR; continue ;
+					return -1;
 				}
 
-				if (!__headers()) continue ;
+				if (!__headers()) return -1;
+				// Content-Length or Transfer-Encoding <=> Body existence
+				// Here, I should handle the ostream file to write to it my data as i know for the moment
 				if (_body_exist) {
+					_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
+
+					_body_file.open(_body_file_path.c_str(), std::ios::binary);
+					if (!_body_file.is_open()) {
+						std::cerr << "Error: Could not open temp file\n";
+						return -1;
+					}
+
 					if (_chunked_transfer) {
 						_state = STATE_CHUNK_LENGTH;
 					}
@@ -336,22 +331,31 @@ size_t	Request::feed(const char* data, size_t size)
 						// here we decide to move to the body
 						_state = STATE_BODY;
 					}
-					++i;
-					continue ;
 				}
-				else {
+				else
 					_state = STATE_COMPLETE;
-					++i;
-					continue ;
-				}
+				continue ;
 			}
 			case STATE_BODY:
 			{
-				if (_body.size() < _content_length)
-					_body += ch;
-				if (_body.size() == _content_length)
+				size_t  available_in_buffer = size - i;
+				size_t  needed_for_body     = _content_length - _body_bytes_written;
+
+				size_t  bytes_to_write      = std::min(available_in_buffer, needed_for_body);
+
+				if (_body_file.is_open()) {// before writing - checking b3da wach mefto7
+					_body_file.write(data + i, bytes_to_write);
+				}
+
+				_body_bytes_written += bytes_to_write;
+				if (bytes_to_write > 0)
+				i += bytes_to_write - 1;
+
+				if (_body_bytes_written >= _content_length) {
+					_body_file.close();
 					_state = STATE_COMPLETE;
-				++i;
+					return i + 1;
+				}
 				continue ;
 			}
 			case STATE_CHUNK_LENGTH:
@@ -361,73 +365,89 @@ size_t	Request::feed(const char* data, size_t size)
 					ss << _tmp_buffer;
 					_tmp_buffer.clear();
 					ss >> std::hex >> _chunk_length;
-					if (_chunk_length == 0 && _chunk_state == START) {
-						_state = STATE_ERROR; continue ;
-					}
-					else if (_chunk_length == 0) {
-						_state = STATE_COMPLETE;
-						++i;
+
+					_state = STATE_CHUNK_LF;
+
+					if (_chunk_length == 0) {
+						_chunk_state = CHUNK_END;
 						continue ;
-					}
-					this->_chunk_state = PAYLOAD_BODY;
-					this->_state = STATE_CHUNK_LF;
-					++i;
+					}					
+					_chunk_bytes_written = 0;
+					_chunk_state = PAYLOAD_BODY;
 					continue ;
 				}
 				else if (!isxdigit(ch)) {
-					std::cerr << "bad chunk-length" << std::endl;
-					_state = STATE_ERROR; continue ;
-				}
-				break ;
-			}
-			case STATE_CHUNK_FEED:
-			{
-				if (ch == '\r') {
-					_state = STATE_CHUNK_LF;
-					_chunk_state = LENGTH;
-					++i;
-					continue ;
-				}
-
-				if (_tmp_buffer.length() + 1 > _chunk_length) {
-					_state = STATE_ERROR; continue ;
+					std::cerr << RED << "Bad chunk-length" << RESET << std::endl; return -1 ;
 				}
 				break ;
 			}
 			case STATE_CHUNK_CR:
 			{
 				if (ch != '\r') {
-					_state = STATE_ERROR; continue ;
+					std::cerr << "Chunking Error: Expected CR after data, got: " << (int)ch << "\n";
+					return -1;
 				}
 
-				this->_state = STATE_CHUNK_LF;
-				++i;
+				_chunk_state = LENGTH;
+				_state = STATE_CHUNK_LF;
 				continue ;
 			}
 			case STATE_CHUNK_LF:
 			{
 				if (ch != '\n') {
-					_state = STATE_ERROR; continue ;
+					std::cerr << "Chunking Error: Expected LF, got: " << (int)ch << "\n";
+					return -1;
 				}
-
+				// switcher, switches between Length and body chunk
 				if (_chunk_state == PAYLOAD_BODY)
-					_state = STATE_CHUNK_FEED;
-				
-				if (_chunk_state == LENGTH) {
-					this->_body += _tmp_buffer;
-					_tmp_buffer.clear();
+					_state = STATE_CHUNK_DATA;
+				else if (_chunk_state == LENGTH)
 					_state = STATE_CHUNK_LENGTH;
+				else if (_chunk_state == CHUNK_END) {
+					_state = STATE_CHUNK_FINAL_CR;
 				}
-				++i;
 				continue ;
 			}
-			case STATE_ERROR:
+			case STATE_CHUNK_FINAL_CR:
 			{
-				std::cerr << "Feed Parse Error\n";
-				return i;
+				if (ch != '\r')
+					return -1; // Expected final empty line
+				_state = STATE_CHUNK_FINAL_LF;
+				continue;
+			}
+			case STATE_CHUNK_FINAL_LF:
+			{
+				if (ch != '\n') return -1;
+
+				if (_body_file.is_open()) {
+					_body_file.close();
+				}
+				_state = STATE_COMPLETE;
+				return i + 1;
+			}
+			case STATE_CHUNK_DATA:
+			{
+				size_t  available_in_buffer = size - i;				
+				size_t  needed_for_chunk    = _chunk_length - _chunk_bytes_written;
+
+				size_t  bytes_to_write      = std::min(available_in_buffer, needed_for_chunk);
+
+				if (_body_file.is_open()) {
+					_body_file.write(data + i, bytes_to_write);
+				}
+
+				_chunk_bytes_written += bytes_to_write;
+				if (bytes_to_write > 0)
+					i += bytes_to_write;
+
+				if (_chunk_bytes_written >= _chunk_length) {
+					_state = STATE_CHUNK_CR;
+				}
+				continue ;
 			}
 			case STATE_COMPLETE:
 			{
+				std::cout << GREEN << "✅\t---> Request Completed" << RESET << std::endl;
 				return i;
 			}
 		}
@@ -445,7 +465,7 @@ bool	Request::_add_header()
 
 	if (key.empty()) {
 		std::cerr << "key or value can't be empty!" << std::endl;
-		_state = STATE_ERROR; return false;
+		return false;
 	}
 
 	const std::string whitespace = " \t";
@@ -461,7 +481,7 @@ bool	Request::_add_header()
 	if (_headers.count(key)) {
 		if (key == "host" || key == "content-length") {
 			std::cerr << "Duplicated Header Not Allowed!\n";
-			_state = STATE_ERROR; return false;
+			return false;
 		}
 
 		_headers[key] += ", " + value;
@@ -477,7 +497,7 @@ bool	Request::__headers()
 {
 	if (_headers.find("host") == _headers.end()) {
 		std::cerr << "Error: HTTP/1.1 request missing 'Host' header\n";
-		_state = STATE_ERROR; return false;
+		return false;
 	}
 
 	std::string	raw_host;
@@ -508,12 +528,12 @@ bool	Request::__headers()
 		unsigned long len = std::strtoul(str, &endptr, 10);
 		if (errno == ERANGE) {
 			std::cerr << "content-length too large!";
-			_state = STATE_ERROR; return false;
+			return false;
 		}
 		
 		if (endptr == str || *endptr != '\0' || value.find('-') != std::string::npos) {
 			std::cerr << "bad content-length" << std::endl;
-			_state = STATE_ERROR; return false;
+			return false;
 		}
 
 		_content_length = (size_t)len;
@@ -596,42 +616,75 @@ bool	Request::shouldKeepAlive() const
 	return this->_keep_alive;
 }
 
-bool	Request::requestCompleted() const
+bool	Request::requestCompleted()
 {
-	return _state == STATE_COMPLETE;
-}
-
-bool	Request::badRequest() const
-{
-	return _state == STATE_ERROR;
+	if (_state == STATE_COMPLETE) {
+		resetState();
+		return true;
+	}
+	return false;
 }
 
 void	Request::resetState()
 {
 	_state = STATE_START;
-	_m_index = 0;
 	_content_length = 0;
-	_chunked_transfer = false;
 	_chunk_length = 0;
+	_body_bytes_written = 0;
+	_chunk_bytes_written = 0;
+	_chunked_transfer = false;
 	_body_exist = false;
-	_chunk_state = START;
+	_chunk_state = LENGTH;
 	_keep_alive = true;
 	_tmp_buffer.clear();
 	_headers.clear();
+
+	if (_body_file.is_open()) {
+		_body_file.close();
+	}
+	setBadRequest(false);
 }
+
+void	Request::setBadRequest(bool state) { _bad_request = state; }
 
 Request::Request() :
 	_state(STATE_START),
-	_m_index(0),
 	_content_length(0),
 	_chunked_transfer(false),
 	_chunk_length(0),
+	_chunk_bytes_written(0),
+	_body_bytes_written(0),
 	_body_exist(false),
-	_chunk_state(START),
-	_keep_alive(true)
+	_chunk_state(LENGTH),
+	_keep_alive(true),
+	_bad_request(false)
 {}
 
 Request::~Request() {}
+
+Request::Request(const Request& other) { *this = other; }
+
+Request& Request::operator=(const Request& other)
+{
+	_state = other._state;
+	_tmp_buffer = other._tmp_buffer;
+	_content_length = other._content_length;
+	_chunked_transfer = other._chunked_transfer;
+	_chunk_length = other._chunk_length;
+	_method = other._method;
+	_uri_scheme = other._uri_scheme;
+	_uri_auth = other._uri_auth;
+	_uri_path = other._uri_path;
+	_uri_query = other._uri_query;
+	_server_name = other._server_name;
+	_headers = other._headers;
+	_body_file_path = other._body_file_path;
+	_chunk_bytes_written = other._chunk_bytes_written;
+	_body_bytes_written = other._body_bytes_written;
+	_body_exist = other._body_exist;
+	_chunk_state = other._chunk_state;
+	_keep_alive = other._keep_alive;
+}
 
 std::string	Request::getMethod() const
 {
@@ -640,17 +693,6 @@ std::string	Request::getMethod() const
 std::string Request::getPath() const { return _uri_path; }
 std::string	Request::getHeader(const std::string& key) const { return _headers.at(key); }
 std::string	Request::getServerName() const { return _server_name; }
-const std::string& Request::getBody() const
-{
-	return _body;
-}
-
-#define RESET "\033[0m"
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define YELLOW "\033[33m"
-#define BLUE "\033[34m"
-#define CYAN "\033[36m"
 
 void Request::show() const
 {
@@ -690,41 +732,22 @@ void Request::show() const
 		if (_chunked_transfer)
 		{
 			std::cout << "  Mode:         " << RED << "Chunked Transfer Encoding" << RESET << "\n";
-			std::cout << "  Decoded Size: " << _body.length() << " bytes\n";
+			// std::cout << "  Decoded Size: " << _body.length() << " bytes\n";
 		}
 		else
 		{
 			std::cout << "  Mode:         " << GREEN << "Content-Length" << RESET << "\n";
 			std::cout << "  Header Value: " << _content_length << "\n";
-			std::cout << "  Actual Read:  " << _body.length() << " bytes\n";
+			// std::cout << "  Actual Read:  " << _body.length() << " bytes\n";
 
 			// Safety Warning if they don't match
-			if (_content_length != _body.length()) {
-				std::cout << RED << "  WARNING: Body size mismatch!" << RESET << "\n";
-			}
+			// if (_content_length != _body.length()) {
+			// 	std::cout << RED << "  WARNING: Body size mismatch!" << RESET << "\n";
+			// }
 		}
 	}
 	else
-	{
 		std::cout << "  (No Body Present)\n";
-	}
-
-	// 4. The Actual Body Content
-	// Only print if not empty, and maybe truncate if it's too huge
-	if (_body_exist && !_body.empty())
-	{
-		std::cout << "\n"
-				  << YELLOW << "[Body Content Preview]" << RESET << "\n";
-		if (_body.length() > 1000)
-		{
-			std::cout << _body.substr(0, 1000) << "\n"
-					  << RED << "...(truncated " << _body.length() - 1000 << " bytes)..." << RESET << "\n";
-		}
-		else
-		{
-			std::cout << _body << "\n";
-		}
-	}
 
 	std::cout << CYAN << "===============================" << RESET << "\n"
 			  << std::endl;
