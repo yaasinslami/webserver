@@ -4,6 +4,7 @@
 #include <string>
 #include "Request.hpp"
 #include "Server.hpp"
+#include "Directives.hpp"
 
 class	Client
 {
@@ -49,8 +50,8 @@ class	Client
 	private:
 		Request			_request;
 		// instead of Server and Location separately i will have Directive 
-		Server			*_server;
-		const Location	*_location;
+		// Directive config
+		const Directives* _config;
 };
 
 #endif
