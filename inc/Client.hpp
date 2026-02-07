@@ -48,6 +48,7 @@ class	Client
 
 	private:
 		Request			_request;
+		// instead of Server and Location separately i will have Directive 
 		Server			*_server;
 		const Location	*_location;
 };

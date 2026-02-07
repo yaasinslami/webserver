@@ -114,6 +114,10 @@ bool	Directives::canUpload() const { return _upload; }
 
 std::string	Directives::getUploadPath() const { return _upload_loc; }
 
+std::string Directives::getPath() const { return _path; }
+
+std::string Directives::getAlias() const { return _alias; }
+
 void	Directives::setRoot(const std::string& root) { _root = root; }
 
 void	Directives::setIndex(const std::vector<std::string>& index) { _index = index; }
@@ -135,6 +139,10 @@ void	Directives::setUpload(bool accept_upload) { _upload = accept_upload; }
 void	Directives::setUploadLoc(const std::string& upload_loc) { _upload_loc = upload_loc; }
 
 bool	Directives::isMethodAllowed(const std::string& method) const { return (std::find(_allowed_methods.begin(), _allowed_methods.end(), method) != _allowed_methods.end()); }
+
+void	Directives::setPath(const std::string& path) { _path = path; }
+
+void	Directives::setAlias(const std::string& alias) { _alias = alias; }
 
 e_directive_type	getDirectiveType(const std::string &directive_str)
 {

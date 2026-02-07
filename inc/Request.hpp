@@ -64,27 +64,28 @@ class	Request
 {
 	private:
 		RequestState	_state;
-		std::string		_tmp_buffer;
-		size_t			_content_length;
-		bool			_chunked_transfer;
-		size_t			_chunk_length;
+		std::string	_tmp_buffer;
+		size_t	_content_length;
+		bool	_chunked_transfer;
+		size_t	_chunk_length;
 
-		std::string							_method;
-		std::string							_uri_scheme;
-		std::string							_uri_auth;
-		std::string 						_uri_path;
-		std::string 						_uri_query;
-		std::string							_server_name;
+		std::string	_method;
+		std::string	_uri_scheme;
+		std::string	_uri_auth;
+		std::string _uri_path;
+		std::string _uri_query;
+		std::string	_server_name;
 		std::map<std::string, std::string>	_headers;
 
-		std::string		_body_file_path;
+		std::string	_body_file_path;
 		std::ofstream	_body_file;// file where the body will be stored
-		size_t			_chunk_bytes_written;
-		size_t			_body_bytes_written;
-		bool				_body_exist;
-		ChunkState			_chunk_state;
-		bool				_keep_alive;
-		bool				_bad_request;
+		size_t	_chunk_bytes_written;
+		size_t	_total_body_bytes;
+		bool	_body_exist;
+		ChunkState	_chunk_state;
+		bool	_keep_alive;
+		bool	_bad_request;
+		bool	_headers_finished;
 
 
 	public:
@@ -97,8 +98,11 @@ class	Request
         std::string getPath() const;
 		std::string	getServerName()const;
         std::string	getHeader(const std::string& key) const;
+		size_t		getBodySize() const;
+
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;
+		bool		headersFinished() const;
 
 
 		// bool	parsingCompleted() const;
@@ -106,6 +110,7 @@ class	Request
 		void	resetState();
 
 		void	setBadRequest(bool);
+		bool	isBadRequest() const;
 		void	show() const;
 
 	private:

@@ -4,33 +4,35 @@
 Response::~Response() {}
 Response::Response(Client& client) : _client(client), _code(200)
 {
-	const Location* location = _client.getLocation();
-	const Request &req = _client.getRequest();// can be incompleted
-	// before doing anything -> check if it bad request -> just return
-	if (req.badRequest()) {
-		std::cerr << "->\tbad request lah lah lah\t<-\n\n";
+	if (_client.getRequest().isBadRequest()) {
 		_code = 400;
-		return ;
+		std::cout << "Error 400: Bad Request detected.\n";
+		return;
 	}
 
+	const Location* location = _client.getLocation();
+	const Server* server   = _client.getServer();
+	const Request &req = _client.getRequest();// can be incompleted
+
 	// allowed methods
-	if (!location->isMethodAllowed(req.getMethod()))
-	{
+	if (location && !location->isMethodAllowed(req.getMethod())) {
 		_code = 405;
 		std::cout << "Error 405: Method " << req.getMethod() << " not allowed.\n";
 		return ;
 	}
+	// if it NULL no matched Location ?
 
 	// max body size
-	size_t limit = location->getDirectives().getMaxBodySize();
-	// if (limit > 0 && req.getBody().length() > limit)
-	// {
-	// 	_code = 413;
-	// 	return;
-	// }
+	size_t limit = (location != NULL) ? location->getDirectives().getMaxBodySize() : server->getDirectives().getMaxBodySize();
+	if (req.getBodySize() > limit) {
+		_code = 413;
+		return;
+	}
 
 	_translatePath();
 	std::cout << "-> Resource Path:\t[" << _resource << "]" << std::endl;
+
+	// redirecting happen here
 
 	_processMethod();
 }
@@ -53,27 +55,36 @@ void Response::_processMethod()
 void	Response::_translatePath()
 {
 	const Location* location = _client.getLocation();
+	const Server* server   = _client.getServer();
 	const Request &req = _client.getRequest();
 
-	// reqPath can be : /home - www/home
-	std::string	alias = location->getAlias();
+	std::string	req_path = req.getPath();
 
-	std::cout << "alias:[" << alias << "]" << std::endl;
+	// ALIAS (Location Only)
+	if (location != NULL && !location->getAlias().empty()) {
+		std::string alias = location->getAlias();
+		std::string	loc_path = location->getPath();
 
-	// 1st priority: alias
-	if (!alias.empty()) {
-		std::cout << "\tAlias found. Using alias....\n";
-		std::string loc_path = location->getPath();
+		if (req_path.find(loc_path) == 0) {
+			std::string remainder = req_path.substr(loc_path.length());
 
-		if (req.getPath().find(loc_path) == 0) {
-			std::string	reminder = req.getPath().substr(loc_path.length());
+			// 2. Prepend alias -> "/var/www/photos/cat.png"
+			_resource = alias + remainder;
 
-			_resource = alias + reminder;
+			std::cout << "-> Using Alias: " << _resource << std::endl;
+			return ;
 		}
 	}
 
-	// 2nd priority: root (Root can not be empty)
-	_resource = location->getDirectives().getRoot() + req.getPath();
+	std::string	root;
+	if (location != NULL && !location->getDirectives().getRoot().empty()) {
+		root = location->getDirectives().getRoot();
+	}
+	else {
+		root = server->getDirectives().getRoot();
+	}
+
+	_resource = root + req_path;
 }
 
 void	Response::_handleGet()

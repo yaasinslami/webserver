@@ -154,11 +154,25 @@ void Http::_handle_client_request(int client_fd)
 
 	while (data_size > 0) {
 		ssize_t consumed = curr_client.getRequest().feed(data_ptr, data_size);
-		if (consumed == -1) {
+		if (consumed == -1) {// bad request
 			std::cerr << "Bad Request Detected!\n";
 			curr_client.getRequest().setBadRequest(true);
-			_process_ready_request(client_fd);
+			_process_ready_request(client_fd);// it handle the close connection
 			return;
+		}
+
+		/* if headers finished:
+			- Safe ra hna khass n3rfo ay haja ela request
+			- tkon request msalya wla la dber kerha
+			- find a server and location 
+			- use one Directive object
+			- a request darori tkon endha path to match in
+		*/
+
+		if ( curr_client.getRequest().headersFinished() && !curr_client.hasContext() ) {// the second check for one time check
+			// here i should chose the best config (one Directive object , it is easy)
+
+			// getConfig()
 		}
 
 		data_ptr += consumed;
@@ -176,7 +190,7 @@ void Http::_handle_client_request(int client_fd)
 			continue ;
 		}
 
-		if (consumed == 0) break ;// (Request too large and we want other POLLIN Trigger)
+		// if (consumed == 0) break ;// (Request too large and we want other POLLIN Trigger)
 	}
 
 	if (leftover) {
@@ -189,40 +203,31 @@ void Http::_handle_client_request(int client_fd)
 
 void Http::_process_ready_request(int client_fd)
 {
-	/*
-		Reminder the request can be Bad
-	*/
 	Client &curr_client = _clients[client_fd];
-
 	std::cout << "----------\tRequest Ready!" << std::endl;
-	// curr_client.show(); // Optional debug
+	// curr_client.show();
 
-	// Find Server (Virtual Host)
+	// get here Directives object directly instead
+
 	Server *server = _find_best_match_server(curr_client);
-	// Safety: If no server found, close immediately (should rarely happen)
-	if (server == NULL) {
-		close_connection(client_fd);
-		return;
-	}
-
-	// Note: If request was 400 Bad Request, path might be invalid.
-	// Response class should handle a NULL location gracefully.
 	const Location *location = NULL;
-	location = server->findLocation(curr_client.getRequest().getPath());
-
+	if (!curr_client.getRequest().isBadRequest()) {
+		location = server->findLocation(curr_client.getRequest().getPath());// l path hna ghatje men Directive nichan
+	}
+	
+	// now, NULL location  means two things; a bad request or technically no location found for regular request
 	curr_client.setContext(server, location);
-	// Generate Response
-	std::cout << "---------\tSending Response..." << std::endl;
+
+	// Response needs request and a Directieve object to based on
+
 	Response response(curr_client); // Constructor checks for 400/Bad Request automatically
+	// here i should impliment the IO logic , instead of stroring to a std::string
 	response.generateResponse();
 
-	// 4. Update Client State
 	// curr_client.setResponseBuffer(response.getResponseContent());
 	_modify_poll_event(client_fd, POLLOUT); // Tell main loop we want to WRITE now
 
-	// 5. Handle Keep-Alive / Close / Bad Request
-	// If it was a Bad Request (400) or client wanted Close, we stop here.
-	if (!curr_client.shouldKeepAlive()) {// i should add if it bad request
+	if (!curr_client.shouldKeepAlive() || curr_client.getRequest().isBadRequest()) {
 		curr_client.setClose(true);
 	}
 	else {
@@ -337,10 +342,7 @@ void	Http::addto_poll(int fd, short events)
 	_poll_fds.push_back(p);
 }
 
-
-Http::Http() :
-	_directives()
-{}
+Http::Http() {}
 
 Http::~Http()
 {
@@ -352,57 +354,33 @@ Http::~Http()
 	}
 }
 
-Http::Http(const Http& other)
-{
-	*this = other;
-}
+Http::Http(const Http& other) { *this = other; }
 
 Http&	Http::operator=(const Http& other)
 {
-	if (this != &other)
-	{
+	if (this != &other) {
 		setDirective(other.getDirectives());
 		setServers(other.getServers());
 	}
 	return *this;
 }
 
-Directives&	Http::getDirectives()
-{
-	return this->_directives;
-}
+Directives&	Http::getDirectives() { return this->_directives; }
 
-const Directives&	Http::getDirectives() const
-{
-	return this->_directives;
-}
+const Directives&	Http::getDirectives() const { return this->_directives; }
 
-const std::vector<Server>&	Http::getServers() const
-{
-	return this->_servers;
-}
+const std::vector<Server>&	Http::getServers() const { return this->_servers; }
 
-void	Http::setDirective(const Directives& directves)
-{
-	this->_directives = directves;
-}
+void	Http::setDirective(const Directives& directves) { this->_directives = directves; }
 
-void	Http::setServers(const std::vector<Server>& servers)
-{
-	this->_servers = servers;
-}
+void	Http::setServers(const std::vector<Server>& servers) { this->_servers = servers; }
 
-void	Http::addServer(const Server& server)
-{
-	this->_servers.push_back(server);
-}
+void	Http::addServer(const Server& server) { this->_servers.push_back(server); }
 
 void	Http::logs() const
 {
 	std::cout << "----------------------------------\n";
-
 	getDirectives().logs();
-
 	for (std::vector<Server>::const_iterator it = _servers.begin(); it != _servers.end(); std::advance(it, 1)) {
 		it->logs();
 	}

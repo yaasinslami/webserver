@@ -8,24 +8,14 @@ const Location*	Server::findLocation(const std::string& path) const
 	for (size_t i = 0; i < _locations.size(); ++i)
 	{
 		const std::string &loc_path = _locations[i].getPath();
-		std::cout << "- loc_path->" << loc_path << std::endl;
-		if (path.compare(0, loc_path.length(), loc_path) == 0)
-		{
-			std::cout << "- found a good path" << std::endl;
+		if (path.compare(0, loc_path.length(), loc_path) == 0) {
 			if (loc_path.length() > best_len) {
 				best_match = &_locations[i];
 				best_len = loc_path.length();
 			}
 		}
 	}
-	if (best_match) {
-		std::cout << "Location found[" << best_match->getPath() << "]" << std::endl;
-		return best_match;
-	}
-
-	// if no location found - l3ab la baghi tl3b bel fallback one
-	std::cout << "No location matched.\n";
-	return NULL;
+	return best_match;
 }
 
 Server::Server(const Directives& g_directives) :
@@ -43,8 +33,7 @@ Server::~Server() {}
 
 Server& Server::operator=(const Server& other)
 {
-	if (this != &other)
-	{
+	if (this != &other) {
 		setDirectives(other.getDirectives());
 		setInterface(other.getInterfaceStr());
 		setPort(other.getPortStr());

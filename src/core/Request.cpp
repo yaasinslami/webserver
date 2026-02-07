@@ -107,7 +107,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_uri_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_PROTOCOL_H;
-
 					continue;
 				}
 				else if (ch == '?')
@@ -115,7 +114,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_uri_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_QUERY;
-
 					continue;
 				}
 				else if (ch == '#')
@@ -123,7 +121,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_uri_path = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_FRAGMENT;
-
 					continue;
 				}
 				else if (!_is_pchar(ch) && ch != '/') {
@@ -313,8 +310,11 @@ ssize_t	Request::feed(const char* data, size_t size)
 				}
 
 				if (!__headers()) return -1;
-				// Content-Length or Transfer-Encoding <=> Body existence
-				// Here, I should handle the ostream file to write to it my data as i know for the moment
+
+				// here means we finish headers
+				_headers_finished = true;
+				// set headers_completed flag or call a helper function here that search for the correct config
+
 				if (_body_exist) {
 					_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
 
@@ -328,7 +328,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 						_state = STATE_CHUNK_LENGTH;
 					}
 					else {
-						// here we decide to move to the body
 						_state = STATE_BODY;
 					}
 				}
@@ -339,7 +338,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_BODY:
 			{
 				size_t  available_in_buffer = size - i;
-				size_t  needed_for_body     = _content_length - _body_bytes_written;
+				size_t  needed_for_body     = _content_length - _total_body_bytes;
 
 				size_t  bytes_to_write      = std::min(available_in_buffer, needed_for_body);
 
@@ -347,14 +346,15 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_body_file.write(data + i, bytes_to_write);
 				}
 
-				_body_bytes_written += bytes_to_write;
+				_total_body_bytes += bytes_to_write;
 				if (bytes_to_write > 0)
-				i += bytes_to_write - 1;
+					i += bytes_to_write - 1;
 
-				if (_body_bytes_written >= _content_length) {
+				if (_total_body_bytes >= _content_length) {
 					_body_file.close();
 					_state = STATE_COMPLETE;
 					return i + 1;
+					// return i + 1
 				}
 				continue ;
 			}
@@ -369,6 +369,8 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_state = STATE_CHUNK_LF;
 
 					if (_chunk_length == 0) {
+						std::cerr << "Hello World\n";
+						size_t
 						_chunk_state = CHUNK_END;
 						continue ;
 					}					
@@ -437,6 +439,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 				}
 
 				_chunk_bytes_written += bytes_to_write;
+				_total_body_bytes += bytes_to_write;
 				if (bytes_to_write > 0)
 					i += bytes_to_write;
 
@@ -611,10 +614,7 @@ bool Request::_is_valid_value(unsigned char c)
 	return false;
 }
 
-bool	Request::shouldKeepAlive() const
-{
-	return this->_keep_alive;
-}
+bool	Request::shouldKeepAlive() const { return this->_keep_alive; }
 
 bool	Request::requestCompleted()
 {
@@ -625,13 +625,16 @@ bool	Request::requestCompleted()
 	return false;
 }
 
+bool	Request::headersFinished() const { return _headers_finished; }
+
 void	Request::resetState()
 {
 	_state = STATE_START;
 	_content_length = 0;
 	_chunk_length = 0;
-	_body_bytes_written = 0;
+	// _body_bytes_written = 0;
 	_chunk_bytes_written = 0;
+	_total_body_bytes = 0;
 	_chunked_transfer = false;
 	_body_exist = false;
 	_chunk_state = LENGTH;
@@ -643,9 +646,12 @@ void	Request::resetState()
 		_body_file.close();
 	}
 	setBadRequest(false);
+	_headers_finished = false;
 }
 
 void	Request::setBadRequest(bool state) { _bad_request = state; }
+
+bool	Request::isBadRequest() const { return _bad_request == true; }
 
 Request::Request() :
 	_state(STATE_START),
@@ -653,11 +659,13 @@ Request::Request() :
 	_chunked_transfer(false),
 	_chunk_length(0),
 	_chunk_bytes_written(0),
-	_body_bytes_written(0),
+	// _body_bytes_written(0),
+	_total_body_bytes(0),
 	_body_exist(false),
 	_chunk_state(LENGTH),
 	_keep_alive(true),
-	_bad_request(false)
+	_bad_request(false),
+	_headers_finished(false)
 {}
 
 Request::~Request() {}
@@ -680,19 +688,19 @@ Request& Request::operator=(const Request& other)
 	_headers = other._headers;
 	_body_file_path = other._body_file_path;
 	_chunk_bytes_written = other._chunk_bytes_written;
-	_body_bytes_written = other._body_bytes_written;
+	// _body_bytes_written = other._body_bytes_written;
+	_total_body_bytes = other._total_body_bytes;
 	_body_exist = other._body_exist;
 	_chunk_state = other._chunk_state;
 	_keep_alive = other._keep_alive;
+	_headers_finished = other._headers_finished;
 }
 
-std::string	Request::getMethod() const
-{
-	return _method;
-}
+std::string	Request::getMethod() const { return _method; }
 std::string Request::getPath() const { return _uri_path; }
 std::string	Request::getHeader(const std::string& key) const { return _headers.at(key); }
 std::string	Request::getServerName() const { return _server_name; }
+size_t		Request::getBodySize() const { return _total_body_bytes; }
 
 void Request::show() const
 {

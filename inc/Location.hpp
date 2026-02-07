@@ -24,6 +24,4 @@ class	Location
 
 	private:
 		Directives					_directives;
-		std::string					_path;
-		std::string					_alias;
 };

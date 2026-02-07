@@ -39,7 +39,9 @@ struct	Directives
 		const unsigned long&				getMaxBodySize() const;
 		const std::map<int, std::string>&	getErrorPages() const;
 		bool								canUpload() const;
-		std::string								getUploadPath() const;
+		std::string							getUploadPath() const;
+		std::string							getPath() const;
+		std::string							getAlias() const;
 
 		/* Setters */
 		void	setRoot(const std::string& root);
@@ -52,6 +54,8 @@ struct	Directives
 		void	setErrorPages(const std::map<int, std::string>& error_pages);
 		void	setUpload(bool);
 		void	setUploadLoc(const std::string&);
+		void	setPath(const std::string&);
+		void	setAlias(const std::string&);
 
 		void	setDirective(const enum e_directive_type directve_type, ConfigParser& conf);
 
@@ -67,6 +71,8 @@ struct	Directives
 		std::map<int, std::string>	_error_pages;
 		bool						_upload;
 		std::string					_upload_loc;
+		std::string					_path;
+		std::string					_alias;
 };
 
 e_directive_type getDirectiveType(const std::string& directive_str);
