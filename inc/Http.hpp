@@ -15,10 +15,9 @@ class	Http
 		void	_process_ready_request(int);
 		void	remove_from_poll(int);
 		void	close_connection(int);
-
 		void	_modify_poll_event(int, short);
-
 		Server* _find_best_match_server(const Client& client);
+		void	_resolve_request_context(Client&);
 
 	public:
 		Http();

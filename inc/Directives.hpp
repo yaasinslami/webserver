@@ -71,6 +71,7 @@ struct	Directives
 		std::map<int, std::string>	_error_pages;
 		bool						_upload;
 		std::string					_upload_loc;
+		// for location
 		std::string					_path;
 		std::string					_alias;
 };

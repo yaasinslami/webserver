@@ -156,23 +156,43 @@ void Http::_handle_client_request(int client_fd)
 		ssize_t consumed = curr_client.getRequest().feed(data_ptr, data_size);
 		if (consumed == -1) {// bad request
 			std::cerr << "Bad Request Detected!\n";
-			curr_client.getRequest().setBadRequest(true);
-			_process_ready_request(client_fd);// it handle the close connection
+			// curr_client.getRequest().setBadRequest(true);
+			curr_client.setStatus(400);// i think it is better than setBadRequest
+
+			// what is the config that  reponse class will have
+			_process_ready_request(client_fd);
 			return;
 		}
 
-		/* if headers finished:
-			- Safe ra hna khass n3rfo ay haja ela request
-			- tkon request msalya wla la dber kerha
-			- find a server and location 
-			- use one Directive object
-			- a request darori tkon endha path to match in
-		*/
+		if (curr_client.getRequest().headersFinished() && !curr_client.hasContext())
+		{
+			_resolve_request_context(curr_client);
 
-		if ( curr_client.getRequest().headersFinished() && !curr_client.hasContext() ) {// the second check for one time check
-			// here i should chose the best config (one Directive object , it is easy)
+			// A. CHECK HEADER (The Promise)
+			// "Did they say they are sending 10GB?" -> Fail Immediately.
+			size_t limit = curr_client.getConfig().getMaxBodySize();
+			size_t declared_len = curr_client.getRequest().getContentLength();
 
-			// getConfig()
+			if (limit > 0 && declared_len > limit)
+			{
+				curr_client.setStatus(413);
+				_process_ready_request(client_fd);
+				return;
+			}
+		}
+		// check if headers finished
+		if ( curr_client.getRequest().headersFinished() && !curr_client.hasContext() ) {// why here we will check it one time
+
+			size_t limit = curr_client.getConfig()->getMaxBodySize();
+			size_t len = curr_client.getRequest().getBodySize();
+
+			if (limit > 0 && len > limit) {
+				std::cerr << "Error: Content-Length (" << len << ") exceeds limit (" << limit << ")\n";
+				curr_client.setStatus(413);
+				_process_ready_request(client_fd);
+				return ;
+
+			}
 		}
 
 		data_ptr += consumed;
@@ -190,7 +210,7 @@ void Http::_handle_client_request(int client_fd)
 			continue ;
 		}
 
-		// if (consumed == 0) break ;// (Request too large and we want other POLLIN Trigger)
+		if (consumed == 0) break ;// (Request too large and we want other POLLIN Trigger)
 	}
 
 	if (leftover) {
@@ -206,22 +226,14 @@ void Http::_process_ready_request(int client_fd)
 	Client &curr_client = _clients[client_fd];
 	std::cout << "----------\tRequest Ready!" << std::endl;
 	// curr_client.show();
-
-	// get here Directives object directly instead
-
-	Server *server = _find_best_match_server(curr_client);
-	const Location *location = NULL;
-	if (!curr_client.getRequest().isBadRequest()) {
-		location = server->findLocation(curr_client.getRequest().getPath());// l path hna ghatje men Directive nichan
-	}
 	
-	// now, NULL location  means two things; a bad request or technically no location found for regular request
-	curr_client.setContext(server, location);
+	// check if the client has Context or no
 
-	// Response needs request and a Directieve object to based on
+	if (!curr_client.hasContext()) {// Usually bad Request -> it will get the default server config listening to the curr port
+		_resolve_request_context(curr_client);
+	}
 
 	Response response(curr_client); // Constructor checks for 400/Bad Request automatically
-	// here i should impliment the IO logic , instead of stroring to a std::string
 	response.generateResponse();
 
 	// curr_client.setResponseBuffer(response.getResponseContent());
@@ -290,6 +302,32 @@ Server* Http::_find_best_match_server(const Client& client)
 	// FALLBACK
 	std::cout << "No Server match. Using default server for port " << port << std::endl;
 	return candidates[0];
+}
+
+void	Http::_resolve_request_context(Client& client)
+{
+	// now we have headers, we need just to find a macthed location if found, if no n probleme cause Directive of the server already have values
+
+	// Find the Virtual Host (Server) from Host Header
+	Server *server = _find_best_match_server(client);
+	if (server == NULL) {
+		// This is a safeguard. It implies the listening socket map is broken.
+		std::cerr << "Critical Error: Client connected but no Server found.\n";
+		close_connection(client.getFd());
+		return;
+	}
+
+	// Find the Location Block
+	// We only search if the request parsed successfully. -> if bad request or not matched one -> use default ones from server
+	const Location *location = NULL;
+	if (!client.getRequest().isBadRequest()) {
+		location = server->findLocation(client.getRequest().getPath());
+	}
+
+	// 3. Bind the Context
+	// This updates the Client's internal pointers (_server, _location, _config).
+	// Now client.getConfig() will return the correct rules!
+	client.setContext(server, location);
 }
 
 void	Http::close_connection(int client_fd)

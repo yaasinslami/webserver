@@ -32,7 +32,7 @@ class	Response
 		std::string	_resource;
 		std::string	_body;
 		std::string	_response_content;
-		int 		_code;
+		int			&_status_code;
 		std::map<std::string, std::string>	_headers;
 };
 

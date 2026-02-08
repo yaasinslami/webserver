@@ -12,6 +12,7 @@ class	Client
 		int				_fd;
 		unsigned short	_server_port;
 		bool			_should_close;
+		int				_status_code;
 
 	public:
 		Client();
@@ -23,35 +24,30 @@ class	Client
 
 		void	setContext(Server *s, const Location *l);
 
-		int			getFd();
-		bool		shouldClose() const;
-		std::string& getRequestBuffer();
-		const char*	getResponseBuffer() const;
-		size_t	getResponseSize() const;
-		bool	isRequestReady();
-		Request &getRequest();
-		const Request& getRequest() const;
-
+		int				getFd();
+		bool			shouldClose() const;
+		bool			shouldKeepAlive() const;
+		bool			isRequestReady();
+		bool			hasContext() const;
+		Request 		&getRequest();
+		const Request& 	getRequest() const;
+		const Directives* getConfig() const;
+		const Server* 	getServer() const;
 		unsigned short	getServerPort() const;
 
+		void	setStatus(int);
+		int&		getStatus();
+
+
 		void	show() const;
-
-		const Location* getLocation() const;
-		const Server* getServer() const;
-
 		void	setClose(bool);
-		bool	shouldKeepAlive() const;
-		void	setResponseBuffer(const std::string&);
-		void	updateResponseBuffer(size_t n);
-		bool	hasDataToSend() const;
 
 		std::string		_leftover_buffer;
 
 	private:
-		Request			_request;
-		// instead of Server and Location separately i will have Directive 
-		// Directive config
-		const Directives* _config;
+		Request				_request;
+		Server				*_server;
+		const Directives	*_config;
 };
 
 #endif

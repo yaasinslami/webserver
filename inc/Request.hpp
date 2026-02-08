@@ -84,7 +84,6 @@ class	Request
 		bool	_body_exist;
 		ChunkState	_chunk_state;
 		bool	_keep_alive;
-		bool	_bad_request;
 		bool	_headers_finished;
 
 
@@ -98,6 +97,7 @@ class	Request
         std::string getPath() const;
 		std::string	getServerName()const;
         std::string	getHeader(const std::string& key) const;
+		size_t		getContentLength() const;
 		size_t		getBodySize() const;
 
 		bool		requestCompleted();
@@ -108,9 +108,6 @@ class	Request
 		// bool	parsingCompleted() const;
 		ssize_t	feed(const char*,size_t);
 		void	resetState();
-
-		void	setBadRequest(bool);
-		bool	isBadRequest() const;
 		void	show() const;
 
 	private:

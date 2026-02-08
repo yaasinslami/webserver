@@ -627,6 +627,8 @@ bool	Request::requestCompleted()
 
 bool	Request::headersFinished() const { return _headers_finished; }
 
+size_t	Request::getContentLength() const { return _content_length; }
+
 void	Request::resetState()
 {
 	_state = STATE_START;
@@ -645,13 +647,8 @@ void	Request::resetState()
 	if (_body_file.is_open()) {
 		_body_file.close();
 	}
-	setBadRequest(false);
 	_headers_finished = false;
 }
-
-void	Request::setBadRequest(bool state) { _bad_request = state; }
-
-bool	Request::isBadRequest() const { return _bad_request == true; }
 
 Request::Request() :
 	_state(STATE_START),
@@ -664,7 +661,6 @@ Request::Request() :
 	_body_exist(false),
 	_chunk_state(LENGTH),
 	_keep_alive(true),
-	_bad_request(false),
 	_headers_finished(false)
 {}
 

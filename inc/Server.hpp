@@ -28,8 +28,8 @@ class	Server
 		const Directives&				getDirectives() const;
 		Directives&						getDirectives();
 		const std::string&				getInterfaceStr() const;
-		const std::string&					getPortStr() const;
-		const std::vector<std::string>&				getServerNames() const;
+		const std::string&				getPortStr() const;
+		const std::vector<std::string>&	getServerNames() const;
 		const std::vector<Location>&	getLocation() const;
 		struct sockaddr_in&				get_sockaddr();
 		int								get_fd( void );

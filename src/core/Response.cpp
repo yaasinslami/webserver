@@ -2,13 +2,9 @@
 #include "Response.hpp"
 
 Response::~Response() {}
-Response::Response(Client& client) : _client(client), _code(200)
+Response::Response(Client& client) : _client(client), _status_code(client.getStatus())
 {
-	if (_client.getRequest().isBadRequest()) {
-		_code = 400;
-		std::cout << "Error 400: Bad Request detected.\n";
-		return;
-	}
+	// if it already (>= 400 -> just) return
 
 	const Location* location = _client.getLocation();
 	const Server* server   = _client.getServer();
@@ -16,7 +12,7 @@ Response::Response(Client& client) : _client(client), _code(200)
 
 	// allowed methods
 	if (location && !location->isMethodAllowed(req.getMethod())) {
-		_code = 405;
+		_status_code = 405;
 		std::cout << "Error 405: Method " << req.getMethod() << " not allowed.\n";
 		return ;
 	}
@@ -25,7 +21,7 @@ Response::Response(Client& client) : _client(client), _code(200)
 	// max body size
 	size_t limit = (location != NULL) ? location->getDirectives().getMaxBodySize() : server->getDirectives().getMaxBodySize();
 	if (req.getBodySize() > limit) {
-		_code = 413;
+		_status_code = 413;
 		return;
 	}
 
