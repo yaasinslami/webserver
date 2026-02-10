@@ -1,5 +1,5 @@
-#include "../../inc/Directives.hpp"
-#include  "../../inc/ConfigParser.hpp"
+#include "Directives.hpp"
+#include  "ConfigParser.hpp"
 #include <iostream>
 
 void	Directives::setDirective(const enum e_directive_type directve_type, ConfigParser& conf)

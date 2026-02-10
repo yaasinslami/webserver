@@ -1,4 +1,4 @@
-#include "../../inc/Server.hpp"
+#include "Server.hpp"
 #include <iostream>
 
 Server::Server(const Directives& g_directives) :

@@ -1,8 +1,8 @@
-#include "../../inc/ConfigParser.hpp"
-#include "../../inc/Server.hpp"
-#include "../../inc/Location.hpp"
-#include "../../inc/Http.hpp"
-#include "../../inc/Directives.hpp"
+#include "ConfigParser.hpp"
+#include "Server.hpp"
+#include "Location.hpp"
+#include "Http.hpp"
+#include "Directives.hpp"
 #include <stdexcept>
 
 static bool reg_directive(const enum e_directive_type directive_type)
