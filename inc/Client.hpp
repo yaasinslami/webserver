@@ -1,58 +1,68 @@
-#ifndef CLIENT_HPP
-# define CLIENT_HPP
+#pragma once
 
 #include <string>
+#include <iostream>
+#include <fstream>
+
 #include "Request.hpp"
 #include "Server.hpp"
 #include "Directives.hpp"
 
-class	Client
+#define BUFFER_SIZE 4096
+
+enum ClientState
 {
-	private:
-		int				_fd;
-		unsigned short	_server_port;
-		bool			_should_close;
-		int				_status_code;
-
-		// For responding
-		std::ifstream	_file_stream;
-		size_t			_bytes_sent;//Track progress
-		// size of the file (for get or post)
-
-	public:
-		Client();
-		Client(int fd, unsigned short server_port);
-		Client(const Client& other);
-		~Client();
-
-		Client& operator=(const Client& other);
-
-		void	setContext(Server *s, const Location *l);
-
-		int				getFd();
-		bool			shouldClose() const;
-		bool			shouldKeepAlive() const;
-		bool			isRequestReady();
-		bool			hasContext() const;
-		Request 		&getRequest();
-		const Request& 	getRequest() const;
-		const Directives* getConfig() const;
-		const Server* 	getServer() const;
-		unsigned short	getServerPort() const;
-
-		void	setStatus(int);
-		int&		getStatus();
-
-
-		void	show() const;
-		void	setClose(bool);
-
-		std::string		_leftover_buffer;
-
-	private:
-		Request				_request;
-		Server				*_server;
-		const Directives	*_config;
+	READING,
+	PROCESSING,
+	WRITING,
+	CLOSING
 };
 
-#endif
+class Client
+{
+	private:
+		int             _fd;
+		ClientState     _state;
+		std::string     _read_buf;
+		std::string     _write_buf;
+		bool            _closed;
+
+		Server*             _server;
+		const Directives*   _config;
+		Request             _request;
+		int                 _status_code;
+
+	public:
+		Client(int fd, Server* owner_server);
+		~Client();
+
+
+		int					getFd() const;
+		bool				isClosed() const;
+		void				onReadable();
+		void				onWritable();
+
+		void				markProcessing();
+		void				markWriting();
+		void				setWriteBuf(const std::string &s);
+		void				scheduleClose();
+
+		void				setContext(Server *s, const Location *l);
+		bool				hasContext() const;
+		
+		Request&			getRequest();
+		const Directives*	getConfig() const;
+		Server*				getServer() const;
+		
+		int&				getStatus();
+		void				setStatus(int status);
+
+		bool				isRequestReady();
+
+		// i will remove this
+		const std::string&	get_read_buf() const;
+		const std::string&	get_write_buf() const;
+		void				set_write_buf(const std::string &s);
+
+		std::string		_leftover_buffer;
+};

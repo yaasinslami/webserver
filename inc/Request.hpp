@@ -118,7 +118,7 @@ class	Request
 		bool	_add_header();
 		bool	__headers();
 
-		static unsigned int _generate_random_id();// need implimentation (generalize the file_name)
+		// static unsigned int _generate_random_id();// need implimentation (generalize the file_name)
 };
 
 #endif

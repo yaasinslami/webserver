@@ -15,7 +15,8 @@ class	Http
 
 		Directives&			getDirectives();
 		const Directives&	getDirectives() const;
-		const std::vector<Server>&			getServers() const;
+		std::vector<Server>&			getServers();
+		const std::vector<Server>&		getServers() const;
 
 		void	setDirective(const Directives& directves);
 		void	setServers(const std::vector<Server>& servers);

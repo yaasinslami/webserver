@@ -4,6 +4,9 @@ EpollManager::EpollManager(int timeout)
 	: timeout_ms(timeout), running(false)
 {
 	epfd = epoll_create1(0);
+
+	cout << "epoll instance : " << epfd << endl;
+
 	if (epfd == -1)
 	{
 		throw std::runtime_error("Failed to create epoll instance");
@@ -46,7 +49,7 @@ bool	EpollManager::remove_listener(Server* srv)
 	if (!srv)
 		return (false);
 	
-	int fd = srv->get_listen_fd();
+	int fd = srv->get_fd();
 	if (!listeners.count(fd))
 		return (false);
 
@@ -61,7 +64,7 @@ bool	EpollManager::add_client(Client* conn)
 	if (!conn)
 		return (false);
 
-	int fd = conn->get_fd();
+	int fd = conn->getFd();
 	if (fd < 0 || clients.count(fd))
 		return (false);
 
@@ -132,22 +135,22 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 
 	if (events & (EPOLLERR | EPOLLHUP))
 	{
-		conn->schedule_for_close();
+		conn->scheduleClose();
 		return ;
 	}
 
 	if (events & EPOLLIN)
-		conn->on_readable();
+		conn->onReadable();
 
-	if (conn->is_closed())
+	if (conn->isClosed())
 	{
 		remove_client(fd);
 		return ;
 	}
 
-	if (conn->has_complete_request())
+	if (conn->isRequestReady())
 	{
-		conn->mark_processing();
+		conn->markProcessing();
 
 		std::string response =
 				"HTTP/1.1 200 OK\r\n"
@@ -156,20 +159,20 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				"Hello World\n";
 
 		conn->set_write_buf(response);
-		conn->mark_writing();
+		conn->markWriting();
 		set_events(fd, EPOLLOUT);
 	}
 
 	if (events & EPOLLOUT)
 	{
-		conn->on_writable();
+		conn->onWritable();
 		if (!conn->get_write_buf().empty())
 			return;
 
 		set_events(fd, EPOLLIN);
 	}
 
-	if (conn->is_closed())
+	if (conn->isClosed())
 		remove_client(fd);
 }
 
@@ -182,6 +185,7 @@ void	EpollManager::run_loop()
 
 	while (running)
 	{
+		// cout << "call epoll_wait" << endl;
 		int n = epoll_wait(epfd, event_list, MAX_EVENTS, timeout_ms);
 
 		if (n < 0)
@@ -191,6 +195,8 @@ void	EpollManager::run_loop()
 			perror("epoll_wait");
 			break;
 		}
+
+		cout << "current n is : " << n << endl;
 
 		for (int i = 0; i < n; i++)
 		{

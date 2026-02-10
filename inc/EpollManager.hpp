@@ -5,7 +5,7 @@
 #include <sys/epoll.h>
 
 #include "Server.hpp"
-// #include "Client.hpp"
+#include "Client.hpp"
 
 using namespace std;
 
@@ -16,7 +16,7 @@ class EpollManager
 		int		timeout_ms;
 		bool	running;
 
-		map<int, Client*>	clients;
+		map<int, Client*>		clients;
 		map<int, Server*>		listeners;
 
 		void	handle_listener_event(int fd);

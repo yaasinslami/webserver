@@ -1,7 +1,7 @@
 NAME        :=  webserv
 CONTAINER   :=  webserv_dev
 CC          :=  c++
-CFLAGS      :=  -Wall -Wextra -Werror -std=c++98
+CFLAGS      :=  -std=c++98
 INCLUDES    :=  -Iinc
 
 SRC_DIR     :=  src

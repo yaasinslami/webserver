@@ -21,7 +21,8 @@ Directives&	Http::getDirectives() { return this->_directives; }
 
 const Directives&	Http::getDirectives() const { return this->_directives; }
 
-const std::vector<Server>&	Http::getServers() const { return this->_servers; }
+std::vector<Server>&	Http::getServers() { return _servers; }
+const std::vector<Server>&	Http::getServers() const { return _servers; }
 
 void	Http::setDirective(const Directives& directves) { this->_directives = directves; }
 

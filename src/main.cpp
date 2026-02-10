@@ -1,56 +1,72 @@
 #include "ConfigParser.hpp"
 #include "EpollManager.hpp"
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
-int main(int ac, char **av) 
+static string get_config_path(int ac, char **av) 
 {
 	if (ac > 2)
+		throw runtime_error("Usage: ./webserver [path/to/configuration_file.conf]");
+	
+	return (ac == 2 ? av[1] : "config/default.conf");
+}
+
+static int start_servers(vector<Server>& servers, EpollManager& poller)
+{
+	int started_count = 0;
+
+	for (size_t i = 0; i < servers.size(); ++i)
 	{
-		std::cerr << "Error: Too many arguments." << std::endl;
-		std::cerr << "Usage: ./webserver [path/to/configuration_file.conf]" << std::endl;
-		return 1;
+		if (servers[i].init()) 
+		{
+			if (poller.add_listener(&servers[i]))
+				started_count++;
+		}
+		else
+		{
+			cerr << "Warning: Failed to start server on port " 
+				 << servers[i].getPortStr() << endl;
+		}
 	}
+	return started_count;
+}
 
-	std::string config_filename = ac == 2 ? av[1] : "config/default.conf";
-
-	try {
-		ConfigParser	parser(config_filename);
+int main(int ac, char **av) 
+{
+	try 
+	{
+		string config_file = get_config_path(ac, av);
+		ConfigParser parser(config_file);
 		
 		parser.parse();
-		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
+		cout << "Configuration '" << config_file << "' loaded successfully." << endl;
 
 		Http http = parser.getHttp();
-		const vector<Server>& servers = http.getServers();
-        EpollManager poller;
-        bool         server_started = false;
 
-        for (size_t i = 0; i < servers.size(); ++i)
-        {
-            if (servers[i].init()) 
-            {
-                if (poller.add_listener(&servers[i]))
-                    server_started = true;
-            }
-            else
-                std::cerr << "Failed to start server on port " 
-                          << servers[i].getPortStr() << std::endl;
-        }
+		// http.logs();
 
-        if (!server_started)
-        {
-            std::cerr << "No servers could be started. Exiting." << std::endl;
-            return 1;
-        }
+		vector<Server>& servers = http.getServers(); 
 
-        std::cout << "Starting Event Loop..." << std::endl;
-        poller.run_loop();
+		EpollManager poller;
+		
+		if (start_servers(servers, poller) == 0)
+		{
+			cerr << "Error: No servers could be started. Exiting." << endl;
+			return 1;
+		}
+		else
+			cout << "ALL Server started" << endl;
 
+		cout << "Starting Event Loop..." << endl;
+		poller.run_loop();
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << "Error: " << e.what() << std::endl;
+		cerr << "Error: " << e.what() << endl;
 		return 1;
 	}
+
+	return 0;
 }

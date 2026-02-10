@@ -2,6 +2,7 @@
 #include <sstream>
 #include <vector>
 #include <iostream>
+#include <cstdlib>
 
 /* FSM */
 ssize_t	Request::feed(const char* data, size_t size)
@@ -316,7 +317,8 @@ ssize_t	Request::feed(const char* data, size_t size)
 				// set headers_completed flag or call a helper function here that search for the correct config
 
 				if (_body_exist) {
-					_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
+					// _body_file_path = "/tmp/webserv_req_" + _generate_random_id();
+					_body_file_path = "/tmp/webserv_req";
 
 					_body_file.open(_body_file_path.c_str(), std::ios::binary);
 					if (!_body_file.is_open()) {
@@ -456,6 +458,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 		_tmp_buffer += ch;
 		++i;
 	}
+	(void)_chunk_state;
 	return i;
 }
 
@@ -492,6 +495,7 @@ bool	Request::_add_header()
 		_headers[key] = value;
 
 	_tmp_buffer.clear();
+
 	return true;
 }
 
@@ -686,6 +690,8 @@ Request& Request::operator=(const Request& other)
 	_chunk_state = other._chunk_state;
 	_keep_alive = other._keep_alive;
 	_headers_finished = other._headers_finished;
+
+	return (*this);
 }
 
 std::string	Request::getMethod() const { return _method; }
@@ -728,7 +734,7 @@ void Request::show() const
 	std::cout << "\n"
 			  << YELLOW << "[Body Metadata]" << RESET << "\n";
 	if (_body_exist) {
-		"Body Eixst\n";
+		std::cout << "Body Eixst\n";
 	}
 	else
 		std::cout << "  (No Body Present)\n";

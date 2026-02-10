@@ -1,62 +1,153 @@
 #include "Client.hpp"
-#include <iostream>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <cerrno>
+#include <cstring>
 
-bool	Client::shouldClose() const { return _should_close; }
+Client::Client(int fd, Server* owner_server)
+    : _fd(fd), 
+      _state(READING), 
+      _closed(false),
+      _server(owner_server), 
+      _config(NULL), 
+      _status_code(200)
+{
+    std::cout << "🟢 New Client fd=" << _fd << std::endl;
+    if (_server)
+        _config = &_server->getDirectives();
+}
 
-void	Client::setClose(bool closeFlag) { _should_close = closeFlag; }
+Client::~Client()
+{
+    std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
+    if (_fd != -1)
+        close(_fd);
+}
 
-bool	Client::shouldKeepAlive() const { return _request.shouldKeepAlive(); }
+void Client::onReadable()
+{
+    char buf[BUFFER_SIZE];
 
-bool	Client::hasContext() const { return _server != NULL; }
+    while (true)
+    {
+        ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 
-int	Client::getFd() { return _fd; }
+        if (bytes > 0)
+        {
+            _read_buf.append(buf, bytes);
 
-const Server* Client::getServer() const { return _server; }
+            ssize_t consumed = _request.feed(buf, bytes);
 
+            if (consumed == -1)
+            {
+                cerr << "Bad Request" << endl;
+                setStatus(400);
+                markProcessing();
+                return ;
+            }
+    
+            // try {
+            //     // If your teammate's parser expects to pull from a string, 
+            //     // you might need to pass _read_buf to it here.
+            //     // Example: _request.parse(_read_buf);
+            // } catch (const std::exception& e) {
+            //     std::cerr << "Parsing Error: " << e.what() << std::endl;
+            //     _status_code = 400;
+            //     _state = PROCESSING;
+            // }
+        }
+        else if (bytes == 0)
+        {
+            std::cout << "Client closed fd=" << _fd << std::endl;
+            _closed = true;
+            break;
+        }
+        else
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) // i will remove this
+                break;
+
+            std::cerr << "recv() error: " << strerror(errno) << std::endl;
+            _closed = true;
+            break;
+        }
+    }
+}
+
+void Client::onWritable()
+{
+    while (!_write_buf.empty())
+    {
+        ssize_t sent = send(_fd, _write_buf.c_str(), _write_buf.size(), 0);
+
+        if (sent > 0)
+            _write_buf.erase(0, sent);
+        else
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) // i will remove this
+                return;
+            
+            std::cerr << "send() error: " << strerror(errno) << std::endl;
+            _closed = true;
+            return;
+        }
+    }
+    
+    if (_write_buf.empty() && !_request.shouldKeepAlive())
+    {
+         _closed = true;
+    }
+    else if (_write_buf.empty())
+    {
+        _state = READING;
+        _request.resetState();
+    }
+}
+
+
+int Client::getFd() const { return _fd; }
+bool Client::isClosed() const { return _closed; }
+
+Request& Client::getRequest() { return _request; }
 const Directives* Client::getConfig() const { return _config; }
+Server* Client::getServer() const { return _server; }
+
+int& Client::getStatus() { return _status_code; }
+void Client::setStatus(int status) { _status_code = status; }
 
 void Client::setContext(Server *s, const Location *l)
 {
-	_server = s;
-	if (l != NULL)
-		_config = &l->getDirectives();
-	else
-	_config = &s->getDirectives();
+    _server = s;
+    if (l != NULL)
+        _config = &l->getDirectives();
+    else if (s != NULL)
+        _config = &s->getDirectives();
 }
 
-int&	Client::getStatus() { return _status_code; }
+bool Client::hasContext() const { return _server != NULL; }
 
-void	Client::setStatus(int status_code) { _status_code = status_code; }
-
-void	Client::show() const
+bool Client::isRequestReady() 
 {
-	std::cout << "------ Client (" << _fd << ") ------\n";
-	_request.show();
+    return _request.requestCompleted(); 
 }
 
-Client::Client() : _fd(-1), _server_port(0), _should_close(false), _status_code(200), _server(NULL), _config(NULL)
-{}
 
-Client::Client(int fd, unsigned short server_port) : _fd(fd), _server_port(server_port), _should_close(false), _status_code(200), _server(NULL), _config(NULL) {}
+void Client::markProcessing() { _state = PROCESSING; }
+void Client::markWriting() { _state = WRITING; }
+void Client::setWriteBuf(const std::string &s) { _write_buf = s; }
+void Client::scheduleClose() { _closed = true; }
 
-Client::Client(const Client& other) { *this = other; }
-
-Client& Client::operator=(const Client& other)
+const std::string& Client::get_read_buf() const
 {
-	if (this != &other) {
-		_fd = other._fd;
-		_server_port = other._server_port;
-		_request = other._request;
-	}
-	return *this;
+	return _read_buf;
 }
 
-Client::~Client() {}
+const std::string& Client::get_write_buf() const
+{
+	return _write_buf;
+}
 
-bool	Client::isRequestReady() { return _request.requestCompleted(); }
-
-Request& Client::getRequest() { return _request; }
-
-const Request& Client::getRequest() const { return _request; }
-
-unsigned short	Client::getServerPort() const { return _server_port; }
+void Client::set_write_buf(const std::string &s)
+{
+	_write_buf = s;
+}
