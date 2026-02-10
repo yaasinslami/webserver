@@ -155,7 +155,8 @@ void Http::_handle_client_request(int client_fd)
 			curr_client.setStatus(400);// i think it is better than setBadRequest
 
 			// what is the config that  reponse class will have
-			_process_ready_request(client_fd);
+			
+			+(client_fd);
 			return;
 		}
 

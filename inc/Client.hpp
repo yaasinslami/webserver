@@ -5,6 +5,7 @@
 #include "Request.hpp"
 #include "Server.hpp"
 #include "Directives.hpp"
+#include "Response.hpp"
 
 class	Client
 {
@@ -34,7 +35,8 @@ class	Client
 		bool			shouldKeepAlive() const;
 		bool			isRequestReady();
 		bool			hasContext() const;
-		Request 		&getRequest();
+		Request&	getRequest();
+		Response&	getResponse();
 		const Request& 	getRequest() const;
 		const Directives* getConfig() const;
 		const Server* 	getServer() const;
@@ -51,6 +53,8 @@ class	Client
 
 	private:
 		Request				_request;
+		Response			_response;
+		
 		Server				*_server;
 		const Directives	*_config;
 };

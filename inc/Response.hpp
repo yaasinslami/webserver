@@ -21,6 +21,7 @@ class	Response
 		// static std::string		_extractFilename(std::string&);
 
 	public:
+		Response();
 		Response(Client &client);
 		~Response();
 

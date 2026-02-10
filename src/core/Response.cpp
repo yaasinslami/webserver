@@ -4,9 +4,8 @@
 Response::~Response() {}
 Response::Response(Client& client) : _client(client), _status_code(client.getStatus())
 {
-	if (_status_code >= 400) return ;
+	if (_status_code >= 400) return ;// khroj t9awad rak deja m3tob
 
-	// check allowed methods
 	if (_client.getConfig()->isMethodAllowed(_client.getRequest().getMethod())) {
 		_status_code = 405;
 		std::cout << "Error 405: Method " << _client.getRequest().getMethod() << " not allowed.\n";
@@ -15,7 +14,7 @@ Response::Response(Client& client) : _client(client), _status_code(client.getSta
 
 	_translatePath();
 	std::cout << "-> Resource Path:\t[" << _resource_path << "]" << std::endl;
-	// As far as I know, the redirection should happen here.
+	// As far as I know, the redirection should happen after that line.
 
 	// Distinguish between GET,POST,DELETE
 	_processMethod();
@@ -98,7 +97,7 @@ void	Response::_handleGet()
 				return;
 			}
 		}
-		stat(_resource_path.c_str(), &file_info);
+		stat(_resource_path.c_str(), &file_info);// refreshi tbnmha file_info struct
 	}
 	
 	if (S_ISREG(file_info.st_mode)) {
