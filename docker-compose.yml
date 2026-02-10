@@ -1,0 +1,12 @@
+services:
+  webserv:
+    build: .
+    container_name: webserv_dev
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8080"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined

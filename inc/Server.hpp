@@ -1,8 +1,20 @@
 #pragma once
 
 #include "Location.hpp"
+#include "Utils.hpp"
+
 #include <vector>
 #include <map>
+#include <cstdlib>
+#include <cerrno>
+#include <cstring>
+
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <netdb.h>
+
 
 enum	ServerTypes
 {
@@ -11,6 +23,8 @@ enum	ServerTypes
 	S_NAME,
 	LOCATION
 };
+
+#define BACKLOG 10
 
 class	Server
 {
@@ -45,6 +59,10 @@ class	Server
 
 		void						validate() const;
 		void						logs() const;
+
+		bool						init();
+		int							accept_client();
+
 
 	private:
 		Directives					_directives;

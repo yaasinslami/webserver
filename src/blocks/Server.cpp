@@ -69,10 +69,12 @@ void Server::setInterface(const std::string &interface)
 
 void Server::setPort(const std::string &port)
 {
-	_server_table[PORT]++;
-	// if (port < 1 || port > 65636)
-	// 	throw std::runtime_error("Wrong syntax: port");
-	this->_port = port;
+    int p = std::atoi(port.c_str());
+
+    if (p < 1 || p > 65535)
+        throw std::runtime_error("Port out of range (1-65535): " + port);
+
+    this->_port = port;
 }
 
 void Server::setServerName(const std::vector<std::string> &server_name)
@@ -141,4 +143,105 @@ void	Server::logs() const
 		it->logs();
 	}
 	std::cout << std::endl;
+}
+
+bool Server::init(void)
+{
+    struct addrinfo hints;
+    struct addrinfo *res;
+    int fd = -1;
+    int opt = 1;
+
+    Utils::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    int status = getaddrinfo(_interface.c_str(), _port.c_str(), &hints, &res);
+    if (status != 0)
+    {
+        std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
+        return false;
+    }
+
+    for (struct addrinfo *p = res; p; p = p->ai_next)
+    {
+        fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if (fd == -1)
+        {
+            std::cerr << "socket(): " << strerror(errno) << std::endl;
+            continue;
+        }
+
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+        {
+            std::cerr << "setsockopt(SO_REUSEADDR): " << strerror(errno) << std::endl;
+            close(fd);
+            fd = -1;
+            continue;
+        }
+
+        if (bind(fd, p->ai_addr, p->ai_addrlen) == 0)
+        {
+            std::cout << "Socket " << fd << " bound to " << _interface << ":" << _port << std::endl;
+            // Utils::printAddr(p, _port);
+            break;
+        }
+
+        close(fd);
+        fd = -1;
+    }
+
+    freeaddrinfo(res);
+
+    if (fd == -1)
+    {
+        std::cerr << "Failed to bind any address on port " << _port << std::endl;
+        return false;
+    }
+
+    if (!Utils::set_nonblocking(fd))
+    {
+        std::cerr << "Failed to set socket to non-blocking" << std::endl;
+        close(fd);
+        return false;
+    }
+
+    if (listen(fd, BACKLOG) == -1)
+    {
+        std::cerr << "listen(): " << strerror(errno) << std::endl;
+        close(fd);
+        return false;
+    }
+
+    _listen_fd = fd;
+    return true;
+}
+
+int Server::accept_client(void)
+{
+    struct sockaddr_storage clientAddr;
+    socklen_t               addrSize;
+    int                     clientFd;
+    
+    addrSize = sizeof(clientAddr);
+
+    clientFd = accept(_listen_fd, (struct sockaddr*)&clientAddr, &addrSize);
+    if (clientFd == -1)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return (-1);
+        std::cerr << "accept(): " << strerror(errno) << std::endl;
+        return (-1);
+    }
+
+    if (!Utils::set_nonblocking(clientFd))
+    {
+        std::cerr << "Failed to set client socket to non-blocking" << std::endl;
+        close(clientFd);
+        return (-1);
+    }
+
+    std::cout << "New client accepted: fd=" << clientFd << std::endl;
+    return (clientFd);
 }

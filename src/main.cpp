@@ -1,5 +1,8 @@
 #include "ConfigParser.hpp"
+#include "EpollManager.hpp"
 #include <iostream>
+
+using namespace std;
 
 int main(int ac, char **av) 
 {
@@ -19,6 +22,31 @@ int main(int ac, char **av)
 		std::cout << "Configuration '" << config_filename << "' loaded successfully." << std::endl;
 
 		Http http = parser.getHttp();
+		const vector<Server>& servers = http.getServers();
+        EpollManager poller;
+        bool         server_started = false;
+
+        for (size_t i = 0; i < servers.size(); ++i)
+        {
+            if (servers[i].init()) 
+            {
+                if (poller.add_listener(&servers[i]))
+                    server_started = true;
+            }
+            else
+                std::cerr << "Failed to start server on port " 
+                          << servers[i].getPortStr() << std::endl;
+        }
+
+        if (!server_started)
+        {
+            std::cerr << "No servers could be started. Exiting." << std::endl;
+            return 1;
+        }
+
+        std::cout << "Starting Event Loop..." << std::endl;
+        poller.run_loop();
+
 	}
 	catch (const std::exception& e)
 	{
