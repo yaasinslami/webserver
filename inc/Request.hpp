@@ -75,6 +75,7 @@ class	Request
 		std::string _uri_path;
 		std::string _uri_query;
 		std::string	_server_name;
+
 		std::map<std::string, std::string>	_headers;
 
 		std::string	_body_file_path;

@@ -114,11 +114,6 @@ void Http::_handle_new_connection(int listener_fd)
 			  << " on Server Port: " << server_port << std::endl;
 }
 
-/*
-- Memory Bomb
-- Pipelining
-*/
-
 void Http::_handle_client_request(int client_fd)
 {
 	Client	&curr_client = _clients[client_fd];
@@ -170,18 +165,15 @@ void Http::_handle_client_request(int client_fd)
 
 			// A. CHECK HEADER (The Promise)
 			// "Did they say they are sending 10GB?" -> Fail Immediately.
-			size_t limit = curr_client.getConfig().getMaxBodySize();
+			size_t limit = curr_client.getConfig()->getMaxBodySize();
 			size_t declared_len = curr_client.getRequest().getContentLength();
-
-			if (limit > 0 && declared_len > limit)
-			{
+			if (limit > 0 && declared_len > limit) {
 				curr_client.setStatus(413);
 				_process_ready_request(client_fd);
 				return;
 			}
 		}
-		// check if headers finished
-		if ( curr_client.getRequest().headersFinished() && !curr_client.hasContext() ) {// why here we will check it one time
+		else if (curr_client.hasContext()) {
 
 			size_t limit = curr_client.getConfig()->getMaxBodySize();
 			size_t len = curr_client.getRequest().getBodySize();
@@ -236,7 +228,7 @@ void Http::_process_ready_request(int client_fd)
 	Response response(curr_client); // Constructor checks for 400/Bad Request automatically
 	response.generateResponse();
 
-	// curr_client.setResponseBuffer(response.getResponseContent());
+	// stealing Response's metadata
 	_modify_poll_event(client_fd, POLLOUT); // Tell main loop we want to WRITE now
 
 	if (!curr_client.shouldKeepAlive() || curr_client.getRequest().isBadRequest()) {
@@ -252,25 +244,23 @@ void	Http::_handle_client_response(int client_fd)
 {
 	Client& client = _clients[client_fd];
 
-	ssize_t	bytes_sent = send(client_fd, client.getResponseBuffer(), client.getResponseSize(), 0);
+	// there might be levels here to send
+	ssize_t	bytes_sent = send(client_fd, , 0);
 	if (bytes_sent < 0) {
 		std::cerr << "Send error" << std::endl;
 		close_connection(client_fd);
 		return;
 	}
 
-	std::cout << "Sifna chi baraka ~" << client.getResponseSize() << " Byte!\n"; 
-	client.updateResponseBuffer(bytes_sent);
-
-	// check if we send full buffer
-	if (!client.hasDataToSend()) {
-		if (client.shouldClose()) {
-			close_connection(client_fd);
-		}
-		else {
-			_modify_poll_event(client_fd, POLLIN);
-		}
-	}
+	// client.updateResponseBuffer(bytes_sent);
+	// if (!client.hasDataToSend()) {
+	// 	if (client.shouldClose()) {
+	// 		close_connection(client_fd);
+	// 	}
+	// 	else {
+	// 		_modify_poll_event(client_fd, POLLIN);
+	// 	}
+	// }
 }
 
 Server* Http::_find_best_match_server(const Client& client)

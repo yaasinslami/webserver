@@ -14,6 +14,11 @@ class	Client
 		bool			_should_close;
 		int				_status_code;
 
+		// For responding
+		std::ifstream	_file_stream;
+		size_t			_bytes_sent;//Track progress
+		// size of the file (for get or post)
+
 	public:
 		Client();
 		Client(int fd, unsigned short server_port);

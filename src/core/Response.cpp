@@ -4,32 +4,20 @@
 Response::~Response() {}
 Response::Response(Client& client) : _client(client), _status_code(client.getStatus())
 {
-	// if it already (>= 400 -> just) return
+	if (_status_code >= 400) return ;
 
-	const Location* location = _client.getLocation();
-	const Server* server   = _client.getServer();
-	const Request &req = _client.getRequest();// can be incompleted
-
-	// allowed methods
-	if (location && !location->isMethodAllowed(req.getMethod())) {
+	// check allowed methods
+	if (_client.getConfig()->isMethodAllowed(_client.getRequest().getMethod())) {
 		_status_code = 405;
-		std::cout << "Error 405: Method " << req.getMethod() << " not allowed.\n";
+		std::cout << "Error 405: Method " << _client.getRequest().getMethod() << " not allowed.\n";
 		return ;
-	}
-	// if it NULL no matched Location ?
-
-	// max body size
-	size_t limit = (location != NULL) ? location->getDirectives().getMaxBodySize() : server->getDirectives().getMaxBodySize();
-	if (req.getBodySize() > limit) {
-		_status_code = 413;
-		return;
 	}
 
 	_translatePath();
-	std::cout << "-> Resource Path:\t[" << _resource << "]" << std::endl;
+	std::cout << "-> Resource Path:\t[" << _resource_path << "]" << std::endl;
+	// As far as I know, the redirection should happen here.
 
-	// redirecting happen here
-
+	// Distinguish between GET,POST,DELETE
 	_processMethod();
 }
 
@@ -41,7 +29,7 @@ void Response::_processMethod()
 		_handleGet();
 	}
 	else if (method == "POST") {
-		_handlePost();
+		// _handlePost();
 	}
  	else if (method == "DELETE") {
 		// _handleDelete();
@@ -50,64 +38,49 @@ void Response::_processMethod()
 
 void	Response::_translatePath()
 {
-	const Location* location = _client.getLocation();
 	const Server* server   = _client.getServer();
 	const Request &req = _client.getRequest();
 
 	std::string	req_path = req.getPath();
 
-	// ALIAS (Location Only)
-	if (location != NULL && !location->getAlias().empty()) {
-		std::string alias = location->getAlias();
-		std::string	loc_path = location->getPath();
+	// Plan A : Alias
+	std::string	alias = _client.getConfig()->getAlias();
+	std::string	loc_path = _client.getConfig()->getPath();
+	if (!alias.empty() && req_path.find(loc_path) == 0) {
 
-		if (req_path.find(loc_path) == 0) {
-			std::string remainder = req_path.substr(loc_path.length());
-
-			// 2. Prepend alias -> "/var/www/photos/cat.png"
-			_resource = alias + remainder;
-
-			std::cout << "-> Using Alias: " << _resource << std::endl;
-			return ;
-		}
+		std::string remainder = req_path.substr(loc_path.length());
+		_resource_path = alias + remainder;
+		return ;
 	}
-
-	std::string	root;
-	if (location != NULL && !location->getDirectives().getRoot().empty()) {
-		root = location->getDirectives().getRoot();
-	}
-	else {
-		root = server->getDirectives().getRoot();
-	}
-
-	_resource = root + req_path;
+	// Plan B : Root
+	std::string	root = _client.getConfig()->getRoot();
+	_resource_path = root + req_path;
 }
 
 void	Response::_handleGet()
 {
 	struct stat file_info;
 
-	if (stat(_resource.c_str(), &file_info) != 0) {
-		std::cerr << "Ma file Ma ta 9alwa\t[" << _resource.c_str() << "]\n";
-		_code = 404;
+	if (stat(_resource_path.c_str(), &file_info) != 0) {
+		std::cerr << "Ma file Ma ta 9alwa\t[" << _resource_path.c_str() << "]\n";
+		_status_code = 404;
 		return;
 	}
 
 	if (S_ISDIR(file_info.st_mode)) {
-		// ... directory logic ...
 		std::cout << "\t🚫🚫🚫Is A Directory\n";
-		const std::vector<std::string>& index_list = _client.getLocation()->getDirectives().getIndex();
+		const std::vector<std::string>& index_list = _client.getConfig()->getIndex();
 
 		bool index_found = false;
 		for (size_t i = 0; i < index_list.size(); ++i) {
-			std::string candidate = _resource;
+			std::string candidate = _resource_path;
 
 			if (candidate[candidate.length() - 1] != '/') candidate += "/";
 
 			candidate += index_list[i];
 
 			if (access(candidate.c_str(), F_OK) == 0) {
-				_resource = candidate;
+				_resource_path = candidate;
 
 				index_found = true;
 				break ;
@@ -115,19 +88,19 @@ void	Response::_handleGet()
 		}
 
 		if (!index_found) {// we have directory at this point
-			if (_client.getLocation()->getDirectives().getAutoIndex()) {// if auto index enbled
+			if (_client.getConfig()->getAutoIndex()) {// if auto index enbled
 				// _generateAutoIndex();
 				std::cout << "auto index : On\tHandling DirectoryListing...\n";
 				return ;
 			}
 			else {// directory listening not allowed
-				_code = 403;
+				_status_code = 403;
 				return;
 			}
 		}
-		stat(_resource.c_str(), &file_info);
+		stat(_resource_path.c_str(), &file_info);
 	}
-
+	
 	if (S_ISREG(file_info.st_mode)) {
 		_serveFile();
 	}
@@ -135,54 +108,54 @@ void	Response::_handleGet()
 
 void	Response::_serveFile()
 {
-	std::ifstream file(_resource.c_str(), std::ios::binary);
-
+	std::ifstream file(_resource_path.c_str(), std::ios::binary | std::ios::ate);
 	if (!file.is_open()) {
-		_code = 403;
-		std::cerr << "Error: Permission denied or IO error for " << _resource << std::endl;
+		_status_code = 403;
+		std::cerr << "Error: Permission denied or IO error for " << _resource_path << std::endl;
 		return;
 	}
 
-	std::ostringstream ss;
-	ss << file.rdbuf();
-	_body = ss.str();
+	// file.seekg(0, std::ios::end)
+	std::streamsize size = file.tellg();
 
-	file.close();// aywa endak tghlet
-
-	_code = 200;
-	_headers["Content-Type"] = _getMimeType(_resource);
-	_headers["Content-Length"] = _toString(_body.length());
+	_headers["Content-Type"] = _getMimeType(_resource_path);
+	_headers["Content-Length"] = _toString(size);
+	file.close();
 }
 
-void	Response::generateResponse()
+void	Response::generateResponse()// ma function ma  tala3ba
 {
-	if (_code >= 400 && _body.empty()) {
+	if (_status_code >= 400) {
 		_buildErrorPage();// bad request also !
 	}
 
+
 	// Request Line (Version + Status Code)
-	_response_content = "HTTP/1.1 " + _toString(_code) + " " + _getStatusMsg(_code) + "\r\n";
+	// hadche tal secnding response stage
+	// _response_content = "HTTP/1.1 " + _toString(_code) + " " + _getStatusMsg(_code) + "\r\n";
 
 	// /* Headers */
-	std::map<std::string, std::string>::iterator	it;
-	for (it = _headers.begin(); it != _headers.end(); std::advance(it, 1)) {
-		_response_content += it->first + ": " + it->second + "\r\n";
-	}
+	// std::map<std::string, std::string>::iterator	it;
+	// for (it = _headers.begin(); it != _headers.end(); std::advance(it, 1)) {
+	// 	// tal sending response
+	// 	_response_content += it->first + ": " + it->second + "\r\n";
+	// }
 
-	_response_content += "\r\n";// mark the end of headers
-	_response_content += _body;
+	// tal sending response stage
+	// _response_content += "\r\n";// mark the end of headers
+	// _response_content += _body;
 }
 
 void	Response::_buildErrorPage()
 {
 	// get the error_pages map
-	const std::map<int, std::string>& error_pages = _client.getLocation()->getDirectives().getErrorPages();
+	const std::map<int, std::string>& error_pages = _client.getConfig()->getErrorPages();
 
 	// we have one code, we excpect the config provide to us an error page path
-	if (error_pages.find(_code) != error_pages.end()) {
-		std::string error_page = error_pages.at(_code);
+	if (error_pages.find(_status_code) != error_pages.end()) {
+		std::string error_page = error_pages.at(_status_code);
 
-		std::string root = _client.getLocation()->getDirectives().getRoot();
+		std::string root = _client.getConfig()->getRoot();
 
 		// Logic: "www" + "/404.html" -> "www/404.html"
 		std::string final_path = root + error_page;
@@ -194,11 +167,11 @@ void	Response::_buildErrorPage()
 		if (file.is_open()) {// Hadche li Bghina
 			std::ostringstream ss;
 			ss << file.rdbuf();
-			_body = ss.str();
+			// _body = ss.str();
 
 			// Set headers for the file we just read
 			_headers["Content-Type"] = "text/html";
-			_headers["Content-Length"] = _toString(_body.length());
+			_headers["Content-Length"] = _toString(_file_size);
 
 			std::cout << "Custom Error Page Served: [" << final_path << "]\n";
 			return;
@@ -210,13 +183,13 @@ void	Response::_buildErrorPage()
 	std::cout << "using fallback error page\n";
 	// FallBack Error Page
 	std::string color = "#ff6b6b";
-	std::string title = _toString(_code) + " " + _getStatusMsg(_code);
+	std::string title = _toString(_status_code) + " " + _getStatusMsg(_status_code);
 	std::string message = "An error occurred.";
 
 	// Optional: Customize message based on code
-	if (_code == 404)
+	if (_status_code == 404)
 		message = "The requested resource was not found.";
-	else if (_code == 403)
+	else if (_status_code == 403)
 		message = "Access to this resource is denied.";
 
 	std::ostringstream ss;
@@ -225,14 +198,13 @@ void	Response::_buildErrorPage()
 	   << "h1{color:" << color << "; font-size: 3em; margin-bottom: 10px;}"
 	   << "p{color:#aaa; font-size: 1.2em;}</style></head>"
 	   << "<body>"
-	   << "<h1>" << _code << "</h1>"
-	   << "<h2>" << _getStatusMsg(_code) << "</h2>"
+	   << "<h1>" << _status_code << "</h1>"
+	   << "<h2>" << _getStatusMsg(_status_code) << "</h2>"
 	   << "<p>" << message << "</p>"
 	   << "</body></html>";
 
-	_body = ss.str();
 	_headers["Content-Type"] = "text/html";
-	_headers["Content-Length"] = _toString(_body.length());
+	_headers["Content-Length"] = _toString();
 }
 
 std::string	Response::_getMimeType(std::string& path)
@@ -290,11 +262,7 @@ std::string	Response::_getStatusMsg(int code)
 	}
 }
 
-const std::string& Response::getResponseContent() const
-{
-	return _response_content;
-}
-
+/*
 std::string	Response::_extractFilename(std::string& headers)
 {
 	// Content-Type
@@ -313,6 +281,7 @@ std::string	Response::_extractFilename(std::string& headers)
 	}
 	return filename;
 }
+
 
 void	Response::_handlePost()
 {
@@ -405,3 +374,4 @@ void	Response::_saveFile(std::string& filename, std::string& payload)
 		std::cerr << "Error: Could not save file to " << full_path << std::endl;
 	}
 }
+*/

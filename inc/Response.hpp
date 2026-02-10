@@ -9,16 +9,16 @@ class	Response
 		void			_processMethod();
 		void			_translatePath();
 		void			_handleGet();
-		void			_handlePost();
-		void			_serveFile();
+		// void			_handlePost();
+		void			_serveFile();// GET
 		void			_buildErrorPage();
-		void			_handleMultiPart();
-		void			_saveFile(std::string&, std::string&);
+		// void			_handleMultiPart();// POST
+		// void			_saveFile(std::string&, std::string&);
 		
 		static std::string		_getMimeType(std::string& path);
 		static std::string		_toString(int);
 		static std::string		_getStatusMsg(int);
-		static std::string		_extractFilename(std::string&);
+		// static std::string		_extractFilename(std::string&);
 
 	public:
 		Response(Client &client);
@@ -29,10 +29,9 @@ class	Response
 
 	private:
 		Client&		_client;
-		std::string	_resource;
-		std::string	_body;
-		std::string	_response_content;
+		std::string	_resource_path;
 		int			&_status_code;
+
 		std::map<std::string, std::string>	_headers;
 };
 
