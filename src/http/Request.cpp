@@ -7,8 +7,8 @@
 /* FSM */
 ssize_t	Request::feed(const char* data, size_t size)
 {
-	size_t	i = 0;
-	while (i < size)
+	size_t i = 0;
+	for (; i < size; ++i)
 	{
 		unsigned char ch = data[i];
 		switch (_state)
@@ -22,23 +22,19 @@ ssize_t	Request::feed(const char* data, size_t size)
 			}
 			case STATE_METHOD:
 			{
-				if (!std::isalpha(ch)) {
-					_state = STATE_SPACE_BEFORE_URI;
-					continue ;
+				if (ch == ' ') {
+					if (_tmp_buffer.empty())
+						return -1;
+
+					_method = _tmp_buffer;
+					_tmp_buffer.clear();
+					_state = STATE_URI_START;
+					continue;
 				}
-				break ;
-			}
-			case STATE_SPACE_BEFORE_URI:
-			{
-				if (ch != ' ') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
-					// throw RequestException(400);
+				if (!std::isalpha(ch)) {
 					return -1;
 				}
-				_method = _tmp_buffer;
-				_tmp_buffer.clear();
-				_state = STATE_URI_START;
-				continue ;
+				break ;
 			}
 			case STATE_URI_START:
 			{
@@ -55,12 +51,10 @@ ssize_t	Request::feed(const char* data, size_t size)
 			}
 			case STATE_URI_SCHEME:
 			{
-				// Reading "http","https",...
 				if (ch == ':') {
 					_uri_scheme = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_SCHEME_FIRST_SLASH;
-
 					continue;
 				}
 				else if (!_is_scheme_char(ch)) {
@@ -75,7 +69,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 				}
 
 				_state = STATE_SCHEME_SECOND_SLASH;
-				i++;
 				continue;
 			}
 			case STATE_SCHEME_SECOND_SLASH:
@@ -83,9 +76,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 				if (ch != '/') {
 					return -1;
 				}
-
 				_state = STATE_URI_AUTH;
-				i++;
 				continue;
 			}
 			case STATE_URI_AUTH:
@@ -135,7 +126,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_uri_query = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_PROTOCOL_H;
-
 					continue ;
 				}
 				else if (ch == '#')
@@ -143,7 +133,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_uri_query = _tmp_buffer;
 					_tmp_buffer.clear();
 					_state = STATE_URI_FRAGMENT;
-
 					continue;
 				}
 				else if (!_is_query_char(ch)) {
@@ -156,13 +145,11 @@ ssize_t	Request::feed(const char* data, size_t size)
 				if (ch == ' ') {
 					_state = STATE_PROTOCOL_H;
 				}
-				i++;
 				continue;
 			}
 			case STATE_PROTOCOL_H:
 			{
 				if (ch != 'H') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_PROTOCOL_HT;
@@ -171,7 +158,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_PROTOCOL_HT:
 			{
 				if (ch != 'T') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_PROTOCOL_HTT;
@@ -180,7 +166,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_PROTOCOL_HTT:
 			{
 				if (ch != 'T') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_PROTOCOL_HTTP;
@@ -189,7 +174,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_PROTOCOL_HTTP:
 			{
 				if (ch != 'P') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_PROTOCOL_SLASH;
@@ -198,7 +182,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_PROTOCOL_SLASH:
 			{
 				if (ch != '/') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_MAJOR_DIGIT;
@@ -207,7 +190,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_MAJOR_DIGIT:
 			{
 				if (ch != '1') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_DOT_AFTER_DIGIT;
@@ -216,7 +198,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_DOT_AFTER_DIGIT:
 			{
 				if (ch != '.') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_MINOR_DIGIT;
@@ -225,7 +206,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_MINOR_DIGIT:
 			{
 				if (ch != '1') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_FIRST_CR;
@@ -234,7 +214,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_FIRST_CR:
 			{
 				if (ch != '\r') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_FIRST_LF;
@@ -243,7 +222,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 			case STATE_FIRST_LF:
 			{
 				if (ch != '\n') {
-					std::cerr << "Bad Request Line at: " << ch << std::endl;
 					return -1;
 				}
 				_state = STATE_FIELD_START;
@@ -286,6 +264,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 			{
 				if (ch == '\r') {
 					if (!_add_header()) continue ;
+					_tmp_buffer.clear();
 					_state = STATE_FIELD_LF;
 
 					continue ;
@@ -333,8 +312,10 @@ ssize_t	Request::feed(const char* data, size_t size)
 						_state = STATE_BODY;
 					}
 				}
-				else
+				else {
 					_state = STATE_COMPLETE;
+					return i + 1;
+				}
 				continue ;
 			}
 			case STATE_BODY:
@@ -370,8 +351,6 @@ ssize_t	Request::feed(const char* data, size_t size)
 					_state = STATE_CHUNK_LF;
 
 					if (_chunk_length == 0) {
-						std::cerr << "Hello World\n";
-						size_t
 						_chunk_state = CHUNK_END;
 						continue ;
 					}					
@@ -442,7 +421,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 				_chunk_bytes_written += bytes_to_write;
 				_total_body_bytes += bytes_to_write;
 				if (bytes_to_write > 0)
-					i += bytes_to_write;
+					i += bytes_to_write - 1;
 
 				if (_chunk_bytes_written >= _chunk_length) {
 					_state = STATE_CHUNK_CR;
@@ -455,8 +434,9 @@ ssize_t	Request::feed(const char* data, size_t size)
 				return i;
 			}
 		}
-		_tmp_buffer += ch;
-		++i;
+		if (_state < STATE_BODY) {
+			_tmp_buffer += ch;
+		}
 	}
 
 	(void)_chunk_state;
@@ -743,3 +723,5 @@ void Request::show() const
 	std::cout << CYAN << "===============================" << RESET << "\n"
 			  << std::endl;
 }
+
+RequestState Request::getState() const { return _state; }

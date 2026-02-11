@@ -23,7 +23,6 @@ enum RequestState
 {
 	STATE_START,
 	STATE_METHOD,
-	STATE_SPACE_BEFORE_URI,
 	STATE_URI_START,
 	STATE_URI_SCHEME,
 	STATE_SCHEME_FIRST_SLASH,
@@ -91,6 +90,7 @@ class	Request
 		~Request();
 		Request& operator=(const Request&);
 
+		RequestState getState() const;
 		std::string	getMethod() const;
         std::string getPath() const;
 		std::string	getServerName()const;
