@@ -67,7 +67,7 @@ bool	EpollManager::add_client(Client* conn)
 		return (false);
 
 	struct epoll_event ev;
-	ev.events = EPOLLIN | EPOLLET;
+	ev.events = EPOLLIN;
 	ev.data.fd = fd;
 
 	if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
@@ -98,7 +98,7 @@ bool	EpollManager::remove_client(int fd)
 void	EpollManager::set_events(int fd, uint32_t events)
 {
 	struct epoll_event ev;
-	ev.events = events | EPOLLET;
+	ev.events = events;
 	ev.data.fd = fd;
 
 	epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &ev);

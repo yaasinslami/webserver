@@ -8,7 +8,7 @@
 #include "Server.hpp"
 #include "Directives.hpp"
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 65536
 
 enum ClientState
 {

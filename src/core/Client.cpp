@@ -28,8 +28,6 @@ void Client::onReadable()
 {
     char buf[BUFFER_SIZE];
 
-    while (true)
-    {
         ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
         if (bytes > 0)
         {
@@ -48,40 +46,17 @@ void Client::onReadable()
         {
             std::cout << "Client closed fd=" << _fd << std::endl;
             _closed = true;
-            break;
         }
-        else
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) // i will remove this
-                break;
-
-            std::cerr << "recv() error: " << strerror(errno) << std::endl;
-            _closed = true;
-            break;
-        }
-    }
-
-    cout << "onReadable is done" << endl;
 }
 
 void Client::onWritable()
 {
-    while (!_write_buf.empty())
-    {
-        ssize_t sent = send(_fd, _write_buf.c_str(), _write_buf.size(), 0);
+    ssize_t sent = send(_fd, _write_buf.c_str(), _write_buf.size(), 0);
 
-        if (sent > 0)
-            _write_buf.erase(0, sent);
-        else
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) // i will remove this
-                return;
-            
-            std::cerr << "send() error: " << strerror(errno) << std::endl;
-            _closed = true;
-            return;
-        }
-    }
+    if (sent > 0)
+        _write_buf.erase(0, sent);
+    else
+        return;
     
     if (_write_buf.empty() && !_request.shouldKeepAlive())
     {
