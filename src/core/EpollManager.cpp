@@ -140,7 +140,10 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 	}
 
 	if (events & EPOLLIN)
+	{
+		cout << "EPOLLIN Event accured" << endl;
 		conn->onReadable();
+	}
 
 	if (conn->isClosed())
 	{
@@ -185,7 +188,6 @@ void	EpollManager::run_loop()
 
 	while (running)
 	{
-		// cout << "call epoll_wait" << endl;
 		int n = epoll_wait(epfd, event_list, MAX_EVENTS, timeout_ms);
 
 		if (n < 0)
@@ -196,17 +198,25 @@ void	EpollManager::run_loop()
 			break;
 		}
 
-		cout << "current n is : " << n << endl;
-
 		for (int i = 0; i < n; i++)
 		{
 			int fd = event_list[i].data.fd;
 			uint32_t events = event_list[i].events;
 
+			cout << "Process fd : " << fd << endl;
+
 			if (listeners.count(fd))
+			{
+				cout << "call handle_listener_event" << endl;
 				handle_listener_event(fd);
+			}
 			else
+			{
+				cout << "call handle_client_event" << endl;
 				handle_client_event(fd, events);
+			}
+
+			cout << "-------------------------" << endl;
 		}
 	}
 }

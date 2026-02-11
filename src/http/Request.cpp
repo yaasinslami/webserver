@@ -8,6 +8,8 @@
 ssize_t	Request::feed(const char* data, size_t size)
 {
 	size_t	i = 0;
+	_state = STATE_COMPLETE;
+	return i;
 	for (; i < size; ++i)
 	{
 		unsigned char ch = data[i];
@@ -458,6 +460,7 @@ ssize_t	Request::feed(const char* data, size_t size)
 		_tmp_buffer += ch;
 		++i;
 	}
+
 	(void)_chunk_state;
 	return i;
 }
