@@ -5,8 +5,6 @@ EpollManager::EpollManager(int timeout)
 {
 	epfd = epoll_create1(0);
 
-	cout << "epoll instance : " << epfd << endl;
-
 	if (epfd == -1)
 	{
 		throw std::runtime_error("Failed to create epoll instance");
@@ -141,7 +139,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 
 	if (events & EPOLLIN)
 	{
-		cout << "EPOLLIN Event accured" << endl;
+		cout << "EPOLLIN Event occurred" << endl;
 		conn->onReadable();
 	}
 
@@ -153,6 +151,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 
 	if (conn->isRequestReady())
 	{
+		cout << "Response : RequestReady" << endl;
 		conn->markProcessing();
 
 		std::string response =
@@ -202,8 +201,6 @@ void	EpollManager::run_loop()
 		{
 			int fd = event_list[i].data.fd;
 			uint32_t events = event_list[i].events;
-
-			cout << "Process fd : " << fd << endl;
 
 			if (listeners.count(fd))
 			{

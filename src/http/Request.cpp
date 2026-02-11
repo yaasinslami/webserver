@@ -8,9 +8,7 @@
 ssize_t	Request::feed(const char* data, size_t size)
 {
 	size_t	i = 0;
-	_state = STATE_COMPLETE;
-	return i;
-	for (; i < size; ++i)
+	while (i < size)
 	{
 		unsigned char ch = data[i];
 		switch (_state)

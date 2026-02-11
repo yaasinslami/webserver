@@ -56,8 +56,6 @@ int main(int ac, char **av)
 			cerr << "Error: No servers could be started. Exiting." << endl;
 			return 1;
 		}
-		else
-			cout << "ALL Server started" << endl;
 
 		cout << "Starting Event Loop..." << endl;
 		poller.run_loop();

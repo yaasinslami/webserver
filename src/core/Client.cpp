@@ -26,8 +26,6 @@ Client::~Client()
 
 void Client::onReadable()
 {
-    cout << "call onReadable" << endl;
-
     char buf[BUFFER_SIZE];
 
     while (true)
@@ -38,17 +36,28 @@ void Client::onReadable()
         {
             _read_buf.append(buf, bytes);
 
+
             ssize_t consumed = _request.feed(buf, bytes);
 
-            cout << _read_buf; 
+            if (_request.requestCompleted()) {
+                cout << "completed pasre\n\n";
+            }
 
-            // if (consumed == -1)
-            // {
-            //     cerr << "Bad Request" << endl;
-            //     setStatus(400);
-            //     markProcessing();
-            //     return ;
-            // }
+            std::cout << "consumed:\t" << consumed << std::endl;
+
+            cout << "Request : ---------------------" << endl;
+            cout << _read_buf; 
+            cout << "-------------------------------" << endl;
+
+            _request.show();
+
+            if (consumed == -1)
+            {
+                cerr << "Bad Request" << endl;
+                setStatus(400);
+                markProcessing();
+                return ;
+            }
     
             // try {
             //     // If your teammate's parser expects to pull from a string, 
