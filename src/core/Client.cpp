@@ -40,9 +40,7 @@ void Client::onReadable()
                 return ;
             }
 
-            cout << "consumed : " << consumed << endl; 
-
-            _request.show();
+            // _request.show();
         }
         else if (bytes == 0)
         {

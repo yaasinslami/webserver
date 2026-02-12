@@ -127,8 +127,6 @@ void	EpollManager::handle_listener_event(int fd)
 
 void	EpollManager::handle_client_event(int fd, uint32_t events)
 {
-	int i = 0;
-
 	Client* client = clients[fd];
 	if (!client)
 		return ;
@@ -152,7 +150,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				{
 					cout << "isRequestReady : 1" << endl;
 					client->markProcessing();
-					i++;
 				}
 				else
 					break;
@@ -163,8 +160,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		// TODO: we will replace this with the RESPONSE generation logique.
 		{
 			std::cout << "Processing Request..." << std::endl;
-
-			std::cout << "i : " << i << endl;
 
 			std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n";
 			client->set_write_buf(response);
