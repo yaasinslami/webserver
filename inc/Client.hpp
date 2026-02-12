@@ -42,6 +42,7 @@ class Client
 		void				onReadable();
 		void				onWritable();
 
+		ClientState			getState() const;
 		void				markProcessing();
 		void				markWriting();
 		void				setWriteBuf(const std::string &s);

@@ -127,54 +127,70 @@ void	EpollManager::handle_listener_event(int fd)
 
 void	EpollManager::handle_client_event(int fd, uint32_t events)
 {
-	Client* conn = clients[fd];
-	if (!conn)
+	int i = 0;
+
+	Client* client = clients[fd];
+	if (!client)
 		return ;
 
 	if (events & (EPOLLERR | EPOLLHUP))
 	{
-		conn->scheduleClose();
-		return ;
-	}
-
-	if (events & EPOLLIN)
-	{
-		cout << "EPOLLIN Event occurred" << endl;
-		conn->onReadable();
-	}
-
-	if (conn->isClosed())
-	{
+		cerr << "⚠️  Epoll Error on fd=" << fd << endl;
 		remove_client(fd);
 		return ;
 	}
 
-	if (conn->isRequestReady())
+	switch (client->getState())
 	{
-		cout << "Response : RequestReady" << endl;
-		conn->markProcessing();
+		case READING:
+			if (events & EPOLLIN)
+			{
+				cout << "EPOLLIN Event occurred" << endl;
+				client->onReadable();
 
-		std::string response =
-				"HTTP/1.1 200 OK\r\n"
-				"Content-Type: text/plain\r\n"
-				"Content-Length: 12\r\n\r\n"
-				"Hello World\n";
+				if (client->isRequestReady())
+				{
+					cout << "isRequestReady : 1" << endl;
+					client->markProcessing();
+					i++;
+				}
+				else
+					break;
+			}
+			else
+				break;
+		case PROCESSING:
+		// TODO: we will replace this with the RESPONSE generation logique.
+		{
+			std::cout << "Processing Request..." << std::endl;
 
-		conn->set_write_buf(response);
-		conn->markWriting();
-		set_events(fd, EPOLLOUT);
+			std::cout << "i : " << i << endl;
+
+			std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n";
+			client->set_write_buf(response);
+			client->markWriting();
+			set_events(fd, EPOLLOUT);
+		}
+			break;
+		case WRITING:
+			if (events & EPOLLOUT)
+			{
+				client->onWritable();
+				if (client->getState() == READING)
+					set_events(fd, EPOLLIN);
+				else if (client->getState() == CLOSING)
+				{
+					remove_client(fd);
+					return ;
+				}
+			}
+			break;
+		case CLOSING:
+			remove_client(fd);
+			return ;
 	}
 
-	if (events & EPOLLOUT)
-	{
-		conn->onWritable();
-		if (!conn->get_write_buf().empty())
-			return;
-
-		set_events(fd, EPOLLIN);
-	}
-
-	if (conn->isClosed())
+	if (client->isClosed())
 		remove_client(fd);
 }
 

@@ -40,7 +40,9 @@ void Client::onReadable()
                 return ;
             }
 
-            // _request.show();
+            cout << "consumed : " << consumed << endl; 
+
+            _request.show();
         }
         else if (bytes == 0)
         {
@@ -96,6 +98,7 @@ bool Client::isRequestReady()
     return _request.requestCompleted(); 
 }
 
+ClientState Client::getState() const { return _state; }
 
 void Client::markProcessing() { _state = PROCESSING; }
 void Client::markWriting() { _state = WRITING; }

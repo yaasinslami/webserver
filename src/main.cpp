@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 
+#include <signal.h>
+
 using namespace std;
 
 static string get_config_path(int ac, char **av) 
@@ -35,6 +37,8 @@ static int start_servers(vector<Server>& servers, EpollManager& poller)
 
 int main(int ac, char **av) 
 {
+	signal(SIGPIPE, SIG_IGN);
+
 	try 
 	{
 		string config_file = get_config_path(ac, av);
