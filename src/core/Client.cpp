@@ -10,7 +10,12 @@ Client::Client(int fd, Server* owner_server)
       _closed(false),
       _server(owner_server), 
       _config(NULL), 
-      _status_code(200)
+      _status_code(200),
+      _cgi_pid(-1),
+      _cgi_pipe_read_fd(-1),
+      _cgi_pipe_write_fd(-1),
+      _is_cgi(false),
+      _cgi_bytes_written(0)
 {
     std::cout << "🟢 New Client fd=" << _fd << std::endl;
     if (_server)
@@ -40,7 +45,7 @@ void Client::onReadable()
                 return ;
             }
 
-            // _request.show();
+            _request.show();
         }
         else if (bytes == 0)
         {
@@ -79,6 +84,23 @@ Server* Client::getServer() const { return _server; }
 
 int& Client::getStatus() { return _status_code; }
 void Client::setStatus(int status) { _status_code = status; }
+
+void Client::setState( ClientState state ) { _state = state; }
+
+void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
+pid_t Client::getCgiPid() const { return _cgi_pid; };
+
+void Client::setCgiOutPipe(int fd) { _cgi_pipe_read_fd = fd; }
+int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
+
+void Client::setCgiInPipe(int fd) { _cgi_pipe_write_fd = fd; }
+int Client::getCgiInPipe() const { return _cgi_pipe_write_fd; }
+
+bool Client::isCgi() const { return _is_cgi; }
+void Client::setIsCgi(bool state) { _is_cgi = state; }
+
+string&	Client::get_cgi_response_buf() { return _cgi_response_buf; }
+size_t&	Client::get_cgi_bytes_written() { return _cgi_bytes_written; }
 
 void Client::setContext(Server *s, const Location *l)
 {

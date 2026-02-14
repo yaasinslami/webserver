@@ -15,6 +15,7 @@ enum ClientState
 	READING,
 	PROCESSING,
 	WRITING,
+	HANDLING_CGI,
 	CLOSING
 };
 
@@ -27,10 +28,19 @@ class Client
 		std::string     _write_buf;
 		bool            _closed;
 
-		Server*             _server;
-		const Directives*   _config;
-		Request             _request;
-		int                 _status_code;
+		Server*				_server;
+		const Directives*	_config;
+		Request				_request;
+		int					_status_code;
+
+		// CGI
+		pid_t				_cgi_pid;
+		int					_cgi_pipe_read_fd;
+		int					_cgi_pipe_write_fd;
+		
+		bool				_is_cgi;
+		std::string			_cgi_response_buf;
+		size_t				_cgi_bytes_written;
 
 	public:
 		Client(int fd, Server* owner_server);
@@ -57,6 +67,24 @@ class Client
 		
 		int&				getStatus();
 		void				setStatus(int status);
+
+		void				setState(ClientState state);
+
+		void				setCgiPid(pid_t pid);
+		pid_t				getCgiPid() const;
+
+		void				setCgiOutPipe(int fd);
+		int					getCgiOutPipe() const;
+		
+		void				setCgiInPipe(int fd);
+		int					getCgiInPipe() const;
+
+		bool				isCgi() const;
+		void				setIsCgi(bool state);
+		std::string&		get_cgi_response_buf();
+		size_t&				get_cgi_bytes_written();
+
+		void				closeCgiPipes();
 
 		bool				isRequestReady();
 

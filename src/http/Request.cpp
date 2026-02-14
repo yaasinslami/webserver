@@ -603,7 +603,7 @@ bool	Request::shouldKeepAlive() const { return this->_keep_alive; }
 bool	Request::requestCompleted()
 {
 	if (_state == STATE_COMPLETE) {
-		resetState();
+		// resetState();
 		return true;
 	}
 	return false;
@@ -678,8 +678,15 @@ Request& Request::operator=(const Request& other)
 std::string	Request::getMethod() const { return _method; }
 std::string Request::getPath() const { return _uri_path; }
 std::string	Request::getHeader(const std::string& key) const { return _headers.at(key); }
+
+// we will replace this with the actual body from the file
+// std::string Request::getBody() const { return "Hello world"; }
+std::string Request::getBody() const { return std::string(1024 * 100, 'A'); }
+
 std::string	Request::getServerName() const { return _server_name; }
 size_t		Request::getBodySize() const { return _total_body_bytes; }
+
+std::map<std::string, std::string> Request::getHeaders() const { return _headers; }
 
 void Request::show() const
 {

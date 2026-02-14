@@ -79,6 +79,10 @@ Directives::Directives() :
 	_allowed_methods.push_back("GET");
 	_allowed_methods.push_back("POST");
 	_allowed_methods.push_back("DELETE");
+
+	_cgi_handlers[".py"] = "/usr/bin/python3"; 
+    _cgi_handlers[".php"] = "/usr/bin/php-cgi"; 
+    _cgi_handlers[".pl"] = "/usr/bin/perl";
 }
 
 Directives::~Directives() {}
@@ -95,6 +99,10 @@ Directives& Directives::operator=(const Directives& dir)
 		setAllowedMethods(dir.getAllowedMethods());
 		setMaxBodySize(dir.getMaxBodySize());
 		setErrorPages(dir.getErrorPages());
+
+		_cgi_handlers[".py"] = "/usr/bin/python3"; 
+    	_cgi_handlers[".php"] = "/usr/bin/php-cgi"; 
+    	_cgi_handlers[".pl"] = "/usr/bin/perl";
 	}
 
 	return *this;
@@ -145,6 +153,8 @@ bool	Directives::isMethodAllowed(const std::string& method) const { return (std:
 void	Directives::setPath(const std::string& path) { _path = path; }
 
 void	Directives::setAlias(const std::string& alias) { _alias = alias; }
+
+const std::map<std::string, std::string>& Directives::getCgiHandlers() const { return _cgi_handlers; }
 
 e_directive_type	getDirectiveType(const std::string &directive_str)
 {

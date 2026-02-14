@@ -90,13 +90,16 @@ class	Request
 		~Request();
 		Request& operator=(const Request&);
 
-		RequestState getState() const;
-		std::string	getMethod() const;
-        std::string getPath() const;
-		std::string	getServerName()const;
-        std::string	getHeader(const std::string& key) const;
-		size_t		getContentLength() const;
-		size_t		getBodySize() const;
+		RequestState	getState() const;
+		std::string		getMethod() const;
+        std::string		getPath() const;
+		std::string		getServerName()const;
+        std::string		getHeader(const std::string& key) const;
+		std::string		getBody() const;
+		size_t			getContentLength() const;
+		size_t			getBodySize() const;
+
+		std::map<std::string, std::string> getHeaders() const;
 
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;

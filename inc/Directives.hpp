@@ -64,6 +64,8 @@ struct	Directives
 		bool						isMethodAllowed(const std::string&) const;
 		void	logs() const;
 
+		const std::map<std::string, std::string>&   getCgiHandlers() const;
+
 	private:
 		std::string					_root;
 		std::vector<std::string>	_index;
@@ -76,6 +78,8 @@ struct	Directives
 		// for location
 		std::string					_path;
 		std::string					_alias;
+
+		std::map<std::string, std::string>  _cgi_handlers;
 };
 
 e_directive_type getDirectiveType(const std::string& directive_str);
