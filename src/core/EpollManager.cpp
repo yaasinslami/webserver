@@ -146,7 +146,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				cout << "EPOLLIN Event occurred" << endl;
 				client->onReadable();
 
-				if (client->isRequestReady())
+				if (client->getRequest().requestCompleted())
 				{
 					cout << "isRequestReady : 1" << endl;
 					client->markProcessing();

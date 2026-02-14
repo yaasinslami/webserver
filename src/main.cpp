@@ -51,7 +51,7 @@ int main(int ac, char **av)
 
 		// http.logs();
 
-		vector<Server>& servers = http.getServers(); 
+		vector<Server>& servers = http.getServers();
 
 		EpollManager poller;
 		

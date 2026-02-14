@@ -13,8 +13,6 @@ Client::Client(int fd, Server* owner_server)
       _status_code(200)
 {
     std::cout << "🟢 New Client fd=" << _fd << std::endl;
-    if (_server)
-        _config = &_server->getDirectives();
 }
 
 Client::~Client()
@@ -26,56 +24,28 @@ Client::~Client()
 
 void Client::onReadable()
 {
-    char buf[BUFFER_SIZE];
+	char buf[BUFFER_SIZE];
 
-        ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
-        if (bytes > 0)
-        {
-            _read_buf.append(buf, bytes);
-            ssize_t consumed = _request.feed(buf, bytes);
-			if (consumed == -1) {
-                cerr << "Bad Request" << endl;
-                setStatus(400);
-                markProcessing();
-                return ;
-            }
-
-            // _request.show();
-        }
-        else if (bytes == 0)
-        {
-            std::cout << "Client closed fd=" << _fd << std::endl;
-            _closed = true;
-        }
+	ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
+	if (bytes > 0) {
+		_request.feed(buf, bytes);
+		// check here if we finish headers -> to see if something bad happen
+	}
+	else {
+		cerr << "Client disconnected or Read Error on fd=" << _fd << std::endl;
+		_closed = true;
+	}
 }
 
 void Client::onWritable()
-{
-    ssize_t sent = send(_fd, _write_buf.c_str(), _write_buf.size(), 0);
-
-    if (sent > 0)
-        _write_buf.erase(0, sent);
-    else
-        return;
-    
-    if (_write_buf.empty() && !_request.shouldKeepAlive())
-    {
-         _closed = true;
-    }
-    else if (_write_buf.empty())
-    {
-        _state = READING;
-        _request.resetState();
-    }
-}
-
+{}
 
 int Client::getFd() const { return _fd; }
 bool Client::isClosed() const { return _closed; }
 
 Request& Client::getRequest() { return _request; }
 const Directives* Client::getConfig() const { return _config; }
-Server* Client::getServer() const { return _server; }
+const Server* Client::getServer() const { return _server; }
 
 int& Client::getStatus() { return _status_code; }
 void Client::setStatus(int status) { _status_code = status; }
@@ -91,29 +61,8 @@ void Client::setContext(Server *s, const Location *l)
 
 bool Client::hasContext() const { return _server != NULL; }
 
-bool Client::isRequestReady() 
-{
-    return _request.requestCompleted(); 
-}
-
 ClientState Client::getState() const { return _state; }
 
 void Client::markProcessing() { _state = PROCESSING; }
 void Client::markWriting() { _state = WRITING; }
-void Client::setWriteBuf(const std::string &s) { _write_buf = s; }
 void Client::scheduleClose() { _closed = true; }
-
-const std::string& Client::get_read_buf() const
-{
-	return _read_buf;
-}
-
-const std::string& Client::get_write_buf() const
-{
-	return _write_buf;
-}
-
-void Client::set_write_buf(const std::string &s)
-{
-	_write_buf = s;
-}

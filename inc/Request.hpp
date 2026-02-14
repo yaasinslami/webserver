@@ -15,8 +15,10 @@
 enum	ChunkState
 {
 	LENGTH,
+	LENGTH_LF,
 	PAYLOAD_BODY,
-	CHUNK_END,
+	PAYLOAD_BODY_CR,
+	PAYLOAD_BODY_LF,
 };
 
 enum RequestState
@@ -24,64 +26,51 @@ enum RequestState
 	STATE_START,
 	STATE_METHOD,
 	STATE_URI_START,
-	STATE_URI_SCHEME,
-	STATE_SCHEME_FIRST_SLASH,
-	STATE_SCHEME_SECOND_SLASH,
-	STATE_URI_AUTH,
 	STATE_URI_PATH,
 	STATE_URI_QUERY,
-	STATE_URI_FRAGMENT,
-	STATE_PROTOCOL_H,
-	STATE_PROTOCOL_HT,
-	STATE_PROTOCOL_HTT,
-	STATE_PROTOCOL_HTTP,
-	STATE_PROTOCOL_SLASH,
-	STATE_MAJOR_DIGIT,
-	STATE_DOT_AFTER_DIGIT,
-	STATE_MINOR_DIGIT,
-	STATE_FIRST_CR,
-	STATE_FIRST_LF,
-	STATE_FIELD_START,
-	STATE_FIELD_NAME,
+	STATE_PROTOCOL,
+	STATE_PROTOCOL_LF,
+	STATE_FIELD_KEY,
 	STATE_FIELD_VALUE,
-	STATE_FIELD_END,
 	STATE_FIELD_LF,
-	STATE_CHUNK_LENGTH,
-	STATE_CHUNK_CR,
-	STATE_CHUNK_LF,
-	STATE_CHUNK_FINAL_CR,
-	STATE_CHUNK_FINAL_LF,
-	STATE_CHUNK_DATA,
+	STATE_HEADERS_DONE,
+	STATE_BODY_START,
 	STATE_BODY,
-	STATE_COMPLETE
+	STATE_CHUNKED,
+	STATE_COMPLETE,
+	STATE_BAD_REQUEST
 };
 
 class	Request
 {
 	private:
 		RequestState	_state;
-		std::string	_tmp_buffer;
-		size_t	_content_length;
-		bool	_chunked_transfer;
-		size_t	_chunk_length;
-
+		/* Request Line */
 		std::string	_method;
-		std::string	_uri_scheme;
-		std::string	_uri_auth;
-		std::string _uri_path;
-		std::string _uri_query;
-		std::string	_server_name;
-
+		std::string	_uri_path;
+		std::string	_uri_query;
+		std::string	_protocol;
+		/* Headers */
+		std::string	_tmp_key;
+		std::string	_tmp_value;
 		std::map<std::string, std::string>	_headers;
+		/* Body's Data informations */
+		bool			_body_exist;
+		size_t			_content_length;
+		bool			_chunked_transfer;
+		size_t			_chunk_length;
+		ChunkState		_chunk_state;
+		std::string		_body_file_path;
+		std::ofstream	_body_file;
+		size_t			_chunk_bytes_read;
+		size_t			_total_body_bytes;
 
-		std::string	_body_file_path;
-		std::ofstream	_body_file;// file where the body will be stored
-		size_t	_chunk_bytes_written;
-		size_t	_total_body_bytes;
-		bool	_body_exist;
-		ChunkState	_chunk_state;
+		std::string	_server_name;
 		bool	_keep_alive;
-		bool	_headers_finished;
+
+		static const size_t MAX_METHOD_LEN = 10;
+		static const size_t MAX_URI_LEN    = 1024;
+		static const size_t MAX_HEADER_LEN = 512;
 
 
 	public:
@@ -90,35 +79,37 @@ class	Request
 		~Request();
 		Request& operator=(const Request&);
 
-		RequestState getState() const;
-		std::string	getMethod() const;
-        std::string getPath() const;
-		std::string	getServerName()const;
-        std::string	getHeader(const std::string& key) const;
-		size_t		getContentLength() const;
-		size_t		getBodySize() const;
+		const RequestState&	getState() const;
+		const std::string&	getMethod() const;
+        const std::string&	getPath() const;
+        const std::string&	getQuery() const;
+		const std::string&	getServerName()const;
+        const std::string&	getHeader(const std::string& key) const;
+		const size_t&		getContentLength() const;
+		const size_t&		getBodySize() const;
+		const std::string&	getBodyPath() const;
 
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;
-		bool		headersFinished() const;
+		void		resetState();
 
-		ssize_t	feed(const char*,size_t);
-		void	resetState();
-		void	show() const;
+		void	feed(const char*,size_t);
+		void	log() const;
 
 	private:
-		static bool	_is_scheme_char(unsigned char);
 		static bool	_is_unreserved(unsigned char);
 		static bool	_is_sub_delim(unsigned char);
 		static bool	_is_pchar(unsigned char);
 		static bool	_is_query_char(unsigned char);
 		static bool	_is_token(unsigned char);
 		static bool	_is_valid_value(unsigned char);
+		
+		void _chunked_body(const char*, size_t, size_t&);
 
 		bool	_add_header();
-		bool	__headers();
+		bool	_validate_headers();
 
-		// static unsigned int _generate_random_id();// need implimentation (generalize the file_name)
+		static std::string _generate_random_id();
 };
 
 #endif
