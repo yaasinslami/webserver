@@ -84,6 +84,8 @@ class Client
 		std::string&		get_cgi_response_buf();
 		size_t&				get_cgi_bytes_written();
 
+		void				parseCgiResponse();
+
 		void				closeCgiPipes();
 
 		bool				isRequestReady();

@@ -240,12 +240,15 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 	if (!client)
 		return ;
 
-	if (events & (EPOLLERR | EPOLLHUP))
-	{
-		cerr << "⚠️  Epoll Error on fd=" << fd << endl;
-		remove_client(fd);
-		return ;
-	}
+	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+    {
+		cerr << "Epoll Error on fd=" << fd << endl;
+        if (client->getCgiPid() != -1)
+            remove_cgi_fds(client, false);
+
+        remove_client(fd);
+        return;
+    }
 
 	switch (client->getState())
 	{
@@ -255,7 +258,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				cout << "EPOLLIN Event occurred" << endl;
 				client->onReadable();
 
-				if (client->isRequestReady())
+				if (client->getState() != CLOSING && client->isRequestReady())
 					client->markProcessing();
 				else
 					break;
@@ -307,8 +310,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		case WRITING:
 			if (events & EPOLLOUT)
 			{
-				cout << "send response to Client" << endl;
-
 				client->onWritable();
 				if (client->getState() == READING)
 					set_events(fd, EPOLLIN);
@@ -320,10 +321,30 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			}
 			break;
 		case HANDLING_CGI:
-			return ;
+		{
+			if (events & EPOLLIN)
+            {
+                char buffer[1];
+                ssize_t bytes = recv(fd, buffer, 1, MSG_PEEK);
+
+                if (bytes == 0) 
+                {
+                    std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
+                    if (client->getCgiPid() != -1)
+                        remove_cgi_fds(client, false);
+                    remove_client(fd);
+                    return;
+                }
+            }
+            return ;
+		}
 		case CLOSING:
+		{
+			if (client->getCgiPid() != -1)
+                remove_cgi_fds(client, false);
 			remove_client(fd);
 			return ;
+		}
 	}
 
 	if (client->isClosed())
@@ -383,16 +404,14 @@ void EpollManager::handle_cgi_event(int fd, uint32_t events)
 		{
 			client->get_cgi_response_buf().append(buf, bytes);
 		}
-		else if (bytes == 0) // EOF
+		else if (bytes == 0)
 		{
 			remove_cgi_fds(client, false); 
 
 			// I will replace by real response logique
 			if (client->getStatus() != 500)
 			{
-				std::string final_response = "HTTP/1.1 200 OK\r\n" + client->get_cgi_response_buf();
-				
-				client->set_write_buf(final_response);
+				client->parseCgiResponse();
 				client->markWriting();
 				set_events(client->getFd(), EPOLLOUT);
 			}
