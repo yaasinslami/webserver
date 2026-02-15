@@ -25,7 +25,6 @@ Client::~Client()
 void Client::onReadable()
 {
 	char buf[BUFFER_SIZE];
-
 	ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 	if (bytes > 0) {
 		_request.feed(buf, bytes);

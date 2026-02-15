@@ -141,28 +141,15 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 	switch (client->getState())
 	{
 		case READING:
-			if (events & EPOLLIN)
-			{
+			if (events & EPOLLIN) {
 				cout << "EPOLLIN Event occurred" << endl;
 				client->onReadable();
-
-				if (client->getRequest().requestCompleted())
-				{
-					cout << "isRequestReady : 1" << endl;
-					client->markProcessing();
-				}
-				else
-					break;
 			}
-			else
-				break;
+			else break;
 		case PROCESSING:
-		// TODO: we will replace this with the RESPONSE generation logique.
 		{
+			// Generating the response
 			std::cout << "Processing Request..." << std::endl;
-
-			std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n";
-			client->set_write_buf(response);
 			client->markWriting();
 			set_events(fd, EPOLLOUT);
 		}

@@ -2,6 +2,7 @@
 #include <sstream>
 #include <vector>
 #include <iostream>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <limits>
@@ -43,21 +44,24 @@ void	Request::feed(const char* data, size_t size)
 			}
 			case STATE_URI_PATH:
 			{
-				if (ch == ' ') _state = STATE_PROTOCOL;
-				else if (ch == '?') _state = STATE_URI_QUERY;
-				else if (ch == '#') continue ;
-				else if ((!_is_pchar(ch) && ch != '/') || _uri_path.length() > MAX_URI_LEN) _state = STATE_BAD_REQUEST;
-
-				if (_state == STATE_URI_PATH) _uri_path += ch;
+				if (ch == ' ') { _state = STATE_PROTOCOL; break; }
+				else if (ch == '?') { _state = STATE_URI_QUERY; break; }
+				else if (ch == '#') { _state = STATE_URI_FRAGMENT; break; }
+				else if ((!_is_pchar(ch) && ch != '/') || _uri_path.length() >= MAX_URI_LEN) { _state = STATE_BAD_REQUEST; break; }
+				_uri_path += ch;
 				break ;
 			}
 			case STATE_URI_QUERY:
 			{
+				if (ch == ' ') { _state = STATE_PROTOCOL; break; }
+				else if (ch == '#') { _state = STATE_URI_FRAGMENT; break; }
+				else if (!_is_query_char(ch) || (_uri_path.length() + _uri_query.length()) >= MAX_URI_LEN) { _state = STATE_BAD_REQUEST; break; }
+				_uri_query += ch;
+				break ;
+			}
+			case STATE_URI_FRAGMENT:
+			{
 				if (ch == ' ') _state = STATE_PROTOCOL;
-				else if (ch == '#') continue ;
-				else if (!_is_query_char(ch) || _uri_query.length() > MAX_URI_LEN) _state = STATE_BAD_REQUEST;
-
-				if (_state == STATE_URI_QUERY) _uri_query += ch;
 				break ;
 			}
 			case STATE_PROTOCOL:
@@ -80,7 +84,7 @@ void	Request::feed(const char* data, size_t size)
 			case STATE_FIELD_KEY:
 			{
 				if (!_tmp_key.empty() && ch == ':') _state = STATE_FIELD_VALUE;
-				else if (!Request::_is_token(ch) || _tmp_key.length() >= MAX_HEADER_LEN) _state = STATE_BAD_REQUEST;
+				else if (!Request::_is_token(ch) || _tmp_key.length() >= MAX_HEADER_KEY_LEN) _state = STATE_BAD_REQUEST;
 				else _tmp_key += std::tolower(ch);
 				break ;
 			}
@@ -88,7 +92,7 @@ void	Request::feed(const char* data, size_t size)
 			{
 				if (ch == '\r') _add_header();
 				else if (_tmp_value.empty() && (ch == ' ' || ch == '\t')) continue ;
-				else if (!_is_valid_value(ch) || _tmp_value.length() >= MAX_HEADER_LEN) _state = STATE_BAD_REQUEST;
+				else if (!_is_valid_value(ch) || _tmp_value.length() >= MAX_HEADER_VALUE_LEN) _state = STATE_BAD_REQUEST;
 				else _tmp_value += ch;
 				break;
 			}
@@ -121,12 +125,16 @@ void	Request::feed(const char* data, size_t size)
 			}
 			case STATE_BODY:
 			{
+				if (!_body_file.is_open()) {_state = STATE_BAD_REQUEST; break; }
 				size_t available = size - i;
 				size_t needed = _content_length - _total_body_bytes;
 				size_t to_write = std::min(available, needed);
-				if (_body_file.is_open()) _body_file.write(data + i, to_write);
-				_total_body_bytes += to_write;
-				if (to_write > 0) i += to_write - 1;
+				if (to_write > 0) {
+					_body_file.write(data + i, to_write);
+					if (_body_file.fail()) {_state = STATE_BAD_REQUEST; break; }
+					_total_body_bytes += to_write;
+					i += to_write - 1;
+				}
 				if (_total_body_bytes >= _content_length) { _body_file.close(); _state = STATE_COMPLETE; }
 				break;
 			}
@@ -192,7 +200,7 @@ const size_t&		Request::getBodySize() const { return _total_body_bytes; }
 const RequestState& Request::getState() const { return _state; }
 const size_t&	Request::getContentLength() const { return _content_length; }
 const std::string& Request::getBodyPath() const { return _body_file_path; }
-bool	Request::shouldKeepAlive() const { return this->_keep_alive; }
+bool	Request::shouldKeepAlive() const { return _keep_alive == true; }
 /* Random Functions */
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
 {
@@ -212,7 +220,7 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 		case LENGTH_LF:
 		{
 			if (ch == '\n') {
-				if (_chunk_length == 0) { _state = STATE_COMPLETE; _body_file.close(); }
+				if (_chunk_length == 0) { _body_file.close(); _state = STATE_COMPLETE; }
 				else { _chunk_state = PAYLOAD_BODY; _chunk_bytes_read = 0; }
 			}
 			else _state = STATE_BAD_REQUEST;
@@ -243,23 +251,33 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 		}
 	}
 }
-bool	Request::requestCompleted() { _state == STATE_COMPLETE; }
+bool	Request::requestCompleted() { return _state == STATE_COMPLETE; }
 void	Request::resetState()
 {
+	/* strings */
+	_method.clear();
+	_uri_path.clear();
+	_uri_query.clear();
+	_protocol.clear();
+	_tmp_key.clear();
+	_tmp_value.clear();
+	_body_file_path.clear();
+	/* headers map */
+	_headers.clear();
+	/* states */
 	_state = STATE_START;
+	_chunk_state = LENGTH;
 	_content_length = 0;
 	_chunk_length = 0;
 	_chunk_bytes_read = 0;
 	_total_body_bytes = 0;
-	_chunked_transfer = false;
 	_body_exist = false;
-	_chunk_state = LENGTH;
+	_chunked_transfer = false;
 	_keep_alive = true;
-	_headers.clear();
-
-	if (_body_file.is_open()) {
+	/* body file - Reset the stream's internal error state flags */
+	if (_body_file.is_open())
 		_body_file.close();
-	}
+	_body_file.clear();
 }
 std::string Request::_generate_random_id()
 {
@@ -318,16 +336,23 @@ void Request::log() const
 /* Constructors */
 Request::Request() :
 	_state(STATE_START),
-	_content_length(0),
+	_body_exist(false),
 	_chunked_transfer(false),
+	_keep_alive(true),
+	_content_length(0),
+	_total_body_bytes(0),
 	_chunk_length(0),
 	_chunk_bytes_read(0),
-	_total_body_bytes(0),
-	_body_exist(false),
-	_chunk_state(LENGTH),
-	_keep_alive(true)
+	_chunk_state(LENGTH)
 {}
-Request::~Request() {}
+Request::~Request()
+{
+	if (_body_file.is_open())
+		_body_file.close();
+	_body_file.clear();
+	if (_state != STATE_COMPLETE && !_body_file_path.empty())
+		std::remove(_body_file_path.c_str());
+}
 Request::Request(const Request& other) { *this = other; }
 Request& Request::operator=(const Request& other)
 {
