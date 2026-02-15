@@ -631,6 +631,7 @@ void	Request::resetState()
 		_body_file.close();
 	}
 	_headers_finished = false;
+	_is_cgi = false;
 }
 
 Request::Request() :
@@ -643,7 +644,8 @@ Request::Request() :
 	_body_exist(false),
 	_chunk_state(LENGTH),
 	_keep_alive(true),
-	_headers_finished(false)
+	_headers_finished(false),
+	_is_cgi(false)
 {}
 
 Request::~Request() {}
@@ -671,6 +673,7 @@ Request& Request::operator=(const Request& other)
 	_chunk_state = other._chunk_state;
 	_keep_alive = other._keep_alive;
 	_headers_finished = other._headers_finished;
+	_is_cgi = other._is_cgi;
 
 	return (*this);
 }
@@ -685,6 +688,9 @@ std::string Request::getBody() const { return std::string(1024 * 100, 'A'); }
 
 std::string	Request::getServerName() const { return _server_name; }
 size_t		Request::getBodySize() const { return _total_body_bytes; }
+
+bool		Request::isCgi() const { return _is_cgi; }
+void		Request::setIsCgi(bool state) { _is_cgi = state; }
 
 std::map<std::string, std::string> Request::getHeaders() const { return _headers; }
 

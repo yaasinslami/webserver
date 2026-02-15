@@ -152,28 +152,44 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 	if (pid != -1)
 	{
 		int status;
-        pid_t result = waitpid(pid, &status, WNOHANG);
+		pid_t result = waitpid(pid, &status, WNOHANG);
 
-        if (result == 0) 
-        {
-            kill(pid, SIGKILL);
-            waitpid(pid, &status, 0); 
-            send_error = true;
-        }
-        else if (result == pid)
-        {
-            if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-                send_error = true;
-        }
-        
-        client->setCgiPid(-1);
+		if (result == 0) 
+		{
+			kill(pid, SIGKILL);
+			waitpid(pid, &status, 0); 
+			send_error = true;
+		}
+		else if (result == pid)
+		{
+			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+				send_error = true;
+		}
+		
+		client->setCgiPid(-1);
 	}
 
 	if (send_error)
 	{
 		std::cerr << "Sending 500 Error to Client " << client->getFd() << std::endl;
 		client->setStatus(500);
-		client->set_write_buf("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
+
+		std::string body = "<html>\r\n"
+						"<head><title>500 Internal Server Error</title></head>\r\n"
+						"<body>\r\n"
+						"<center><h1>500 Internal Server Error</h1></center>\r\n"
+						"<hr><center>webserv</center>\r\n"
+						"</body>\r\n"
+						"</html>\r\n";
+
+		std::string response = "HTTP/1.1 500 Internal Server Error\r\n"
+							"Content-Type: text/html\r\n"
+							"Content-Length: " + Utils::toString(body.length()) + "\r\n"
+							"Connection: close\r\n\r\n" + 
+							body;
+
+		client->set_write_buf(response);
+
 		client->setState(WRITING);
 		set_events(client->getFd(), EPOLLOUT);
 	}
@@ -209,8 +225,9 @@ void	EpollManager::handle_listener_event(int fd)
 	}
 }
 
-static string get_cgi_executable(string path, const Directives* config)
+static string get_cgi_executable(string path, Client& client)
 {
+	const Directives* config = client.getConfig();
 	const map<string, string>& handlers = config->getCgiHandlers();
 
 	if (handlers.empty())
@@ -229,7 +246,10 @@ static string get_cgi_executable(string path, const Directives* config)
 	map<string, string>::const_iterator it = handlers.find(extension);
 
 	if (it != handlers.end())
+	{
+		client.getRequest().setIsCgi(true);
 		return it->second;
+	}
 
 	return "";
 }
@@ -241,14 +261,14 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		return ;
 
 	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
-    {
+	{
 		cerr << "Epoll Error on fd=" << fd << endl;
-        if (client->getCgiPid() != -1)
-            remove_cgi_fds(client, false);
+		if (client->getCgiPid() != -1)
+			remove_cgi_fds(client, false);
 
-        remove_client(fd);
-        return;
-    }
+		remove_client(fd);
+		return;
+	}
 
 	switch (client->getState())
 	{
@@ -270,32 +290,15 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		{
 			std::cout << "Processing Request..." << std::endl;
 
-			// TODO : we will replace this by CGI responce detection logiqie isCGi() 
-			const Directives* config = client->getConfig();
-			string executable_path = get_cgi_executable(client->getRequest().getPath(), config);
+			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);
 
-			cout << "Path : " << client->getRequest().getPath() << endl;
-			cout << "executable_path : " << executable_path << endl;
-
-			if (!executable_path.empty())
+			if (client->getRequest().isCgi())
 			{
-				Request& req = client->getRequest();
-				string	path = req.getPath();
-				size_t	q_pos = path.find('?');
-				if (q_pos != string::npos)
-					path = path.substr(0, q_pos);
-
-				string script_fs_path = Utils::normalize_path(config->getRoot() + path);
-
-				cout << "cgi script : " << script_fs_path << endl;
-
-				if (access(script_fs_path.c_str(), F_OK) == -1)
-				{
-					client->setStatus(400);
-					cerr << "Cgi script file Not found : " << script_fs_path << endl;
-					return ;
-				}
+				std::string	script_fs_path = CgiHandler::prepare(client, *this, fd);
+				if (script_fs_path.empty())
+					break ;
 				CgiHandler::execute(client, script_fs_path, executable_path, this);
+				client->getRequest().setIsCgi(false);
 			}
 			else
 			{
@@ -323,25 +326,25 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		case HANDLING_CGI:
 		{
 			if (events & EPOLLIN)
-            {
-                char buffer[1];
-                ssize_t bytes = recv(fd, buffer, 1, MSG_PEEK);
+			{
+				char buffer[1];
+				ssize_t bytes = recv(fd, buffer, 1, MSG_PEEK);
 
-                if (bytes == 0) 
-                {
-                    std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
-                    if (client->getCgiPid() != -1)
-                        remove_cgi_fds(client, false);
-                    remove_client(fd);
-                    return;
-                }
-            }
-            return ;
+				if (bytes == 0) 
+				{
+					std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
+					if (client->getCgiPid() != -1)
+						remove_cgi_fds(client, false);
+					remove_client(fd);
+					return;
+				}
+			}
+			return ;
 		}
 		case CLOSING:
 		{
 			if (client->getCgiPid() != -1)
-                remove_cgi_fds(client, false);
+				remove_cgi_fds(client, false);
 			remove_client(fd);
 			return ;
 		}
@@ -424,7 +427,6 @@ void EpollManager::handle_cgi_event(int fd, uint32_t events)
 
 void	EpollManager::run_loop()
 {
-	const int MAX_EVENTS = 128;
 	struct epoll_event event_list[MAX_EVENTS];
 
 	running = true;

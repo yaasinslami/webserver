@@ -168,3 +168,42 @@ void CgiHandler::execute( Client* client, const string& script_path,
 	if (!poller->add_cgi_fds(client))
 		cout << "[poller]: register_cgi_fds failed" << endl;
 }
+
+std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
+{
+	const Directives* config = client->getConfig();
+	Request& req = client->getRequest();
+	string	path = req.getPath();
+	size_t	q_pos = path.find('?');
+
+	if (q_pos != string::npos)
+		path = path.substr(0, q_pos);
+
+	string script_fs_path = Utils::normalize_path(config->getRoot() + path);
+
+	if (access(script_fs_path.c_str(), F_OK) == -1)
+	{
+		client->setStatus(400);
+		std::string body = "<html>\r\n"
+						"<head><title>400 Bad Request</title></head>\r\n"
+						"<body>\r\n"
+						"<center><h1>400 Bad Request</h1></center>\r\n"
+						"<hr><center>webserv</center>\r\n"
+						"</body>\r\n"
+						"</html>\r\n";
+
+		std::string response = "HTTP/1.1 400 Bad Request\r\n"
+							"Content-Type: text/html\r\n"
+							"Content-Length: " + Utils::toString(body.length()) + "\r\n"
+							"Connection: close\r\n\r\n" + 
+							body;
+
+		client->set_write_buf(response);
+		client->markWriting();
+		poller.set_events(fd, EPOLLOUT);
+		client->getRequest().setIsCgi(false);
+		return "";
+	}
+
+	return (script_fs_path);
+}

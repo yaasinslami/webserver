@@ -83,6 +83,7 @@ class	Request
 		bool	_keep_alive;
 		bool	_headers_finished;
 
+		bool	_is_cgi;
 
 	public:
 		Request();
@@ -98,6 +99,8 @@ class	Request
 		std::string		getBody() const;
 		size_t			getContentLength() const;
 		size_t			getBodySize() const;
+		bool			isCgi() const;
+		void			setIsCgi(bool state);
 
 		std::map<std::string, std::string> getHeaders() const;
 

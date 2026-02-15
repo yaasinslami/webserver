@@ -12,6 +12,8 @@
 #include "CgiHandler.hpp"
 #include "Directives.hpp"
 
+#define MAX_EVENTS 128
+
 using namespace std;
 
 class EpollManager

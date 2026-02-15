@@ -15,7 +15,6 @@ Client::Client(int fd, Server* owner_server)
 	  _cgi_pid(-1),
 	  _cgi_pipe_read_fd(-1),
 	  _cgi_pipe_write_fd(-1),
-	  _is_cgi(false),
 	  _cgi_bytes_written(0)
 {
 	std::cout << "🟢 New Client fd=" << _fd << std::endl;
@@ -155,9 +154,6 @@ int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
 
 void Client::setCgiInPipe(int fd) { _cgi_pipe_write_fd = fd; }
 int Client::getCgiInPipe() const { return _cgi_pipe_write_fd; }
-
-bool Client::isCgi() const { return _is_cgi; }
-void Client::setIsCgi(bool state) { _is_cgi = state; }
 
 string&	Client::get_cgi_response_buf() { return _cgi_response_buf; }
 size_t&	Client::get_cgi_bytes_written() { return _cgi_bytes_written; }
