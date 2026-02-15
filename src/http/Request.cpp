@@ -297,7 +297,6 @@ void Request::log() const
 	std::cout << "  Method:       " << GREEN << getMethod() << RESET << "\n";
 	std::cout << "  Path:         " << getPath() << "\n";
 	std::cout << "  Query:         " << getQuery() << "\n";
-	std::cout << "  Target Host:  " << (getServerName().empty() ? "(default)" : getServerName()) << "\n";
 	// Headers
 	std::cout << "\n" << YELLOW << "[Headers]" << RESET << "\n";
 	if (_headers.empty()) std::cout << "  (No Headers)\n";
