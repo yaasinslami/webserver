@@ -12,6 +12,9 @@
 #define BLUE "\033[34m"
 #define CYAN "\033[36m"
 
+#define MAX_HEADERS_COUNT 100
+#define MAX_HEADER_VALUE_LEN 4096
+
 enum	ChunkState
 {
 	LENGTH,
@@ -64,12 +67,10 @@ class	Request
 		std::ofstream	_body_file;
 		size_t			_chunk_bytes_read;
 		size_t			_total_body_bytes;
-
-		std::string	_server_name;
 		bool	_keep_alive;
 
 		static const size_t MAX_METHOD_LEN = 10;
-		static const size_t MAX_URI_LEN    = 1024;
+		static const size_t MAX_URI_LEN    = 512;
 		static const size_t MAX_HEADER_LEN = 512;
 
 
@@ -83,7 +84,6 @@ class	Request
 		const std::string&	getMethod() const;
         const std::string&	getPath() const;
         const std::string&	getQuery() const;
-		const std::string&	getServerName()const;
         const std::string&	getHeader(const std::string& key) const;
 		const size_t&		getContentLength() const;
 		const size_t&		getBodySize() const;
@@ -106,8 +106,8 @@ class	Request
 		
 		void _chunked_body(const char*, size_t, size_t&);
 
-		bool	_add_header();
-		bool	_validate_headers();
+		void	_add_header();
+		void	_validate_headers();
 
 		static std::string _generate_random_id();
 };
