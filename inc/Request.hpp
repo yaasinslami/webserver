@@ -15,6 +15,7 @@
 enum	ChunkState
 {
 	LENGTH,
+	LENGTH_EXTENSION,
 	LENGTH_LF,
 	PAYLOAD_BODY,
 	PAYLOAD_BODY_CR,
@@ -39,15 +40,15 @@ enum RequestState
 	STATE_BODY,
 	STATE_CHUNKED,
 	STATE_COMPLETE,
-	STATE_BAD_REQUEST,//400
-	STATE_INTERNAL_ERROR,// 500
-	STATE_NOT_IMPLEMENTED// 501
+	STATE_ERROR
 };
 
 class	Request
 {
 	private:
 		RequestState	_state;
+		short&			_code;
+		std::string		_sys_error_msg;
 		/* Request Line */
 		std::string	_method;
 		std::string	_uri_path;
@@ -87,13 +88,14 @@ class	Request
 
 	public:
 		/* Constructors */
-		Request();
+		Request(short& code);
 		Request(const Request&);
 		~Request();
 		Request& operator=(const Request&);
 
 		/* Getters */
 		const RequestState&	getState() const;
+		const short&		getCode() const;
 		const std::string&	getMethod() const;
         const std::string&	getPath() const;
         const std::string&	getQuery() const;

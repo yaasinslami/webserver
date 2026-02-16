@@ -146,7 +146,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				client->onReadable();
 			}
 			else break;
-		case PROCESSING:
+		case PROCESSING:// PROCESSING is a CPU task
 		{
 			// Generating the response
 			std::cout << "Processing Request..." << std::endl;
