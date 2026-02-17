@@ -54,7 +54,7 @@ class Client
 	private:
 		Request				_request;
 		Response			_response;
-		const Server*		_server;// FALLBACK
+		const Server*		_server;// Client should have a vector of servers bind to the same port
 		const Directives*	_config;
 };
 

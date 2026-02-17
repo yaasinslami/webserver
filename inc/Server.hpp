@@ -28,6 +28,8 @@ enum	ServerTypes
 
 class	Server
 {
+	private:
+		std::vector<Server*> _virtual_hosts;
 	public:
 		Server(const Directives& g_directives);
 		~Server();

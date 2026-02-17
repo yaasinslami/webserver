@@ -30,7 +30,7 @@ void	Request::feed(const char* data, size_t size)
 					else _state = STATE_URI_START;
 				}
 				else if (!std::isalpha(ch)) { _state = STATE_ERROR; _code = 400; }
-				else if (_method.length() > MAX_METHOD_LEN) { _state = STATE_ERROR; _code = 414; }
+				else if (_method.length() >= MAX_METHOD_LEN) { _state = STATE_ERROR; _code = 414; }
 				else _method += ch;
 				break ;
 			}

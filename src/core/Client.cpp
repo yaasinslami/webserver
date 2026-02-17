@@ -21,7 +21,6 @@ void Client::onReadable()
 /* The Bridge / Worker */
 void Client::process()
 {
-	// get the best config
 	if (!hasConfig())
 		_setBestConfig();
 

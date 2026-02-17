@@ -138,6 +138,8 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		return ;
 	}
 
+	// 
+
 	switch (client->getState())
 	{
 		case READING:
