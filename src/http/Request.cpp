@@ -16,13 +16,6 @@ void	Request::feed(const char* data, size_t size)
 		unsigned char ch = data[i];
 		switch (_state)
 		{
-			case STATE_START:
-			{
-				if (ch == '\r' || ch == '\n')
-					continue ;
-				_state = STATE_METHOD;
-				break ;
-			}
 			case STATE_METHOD:
 			{
 				if (ch == ' ') {
@@ -83,7 +76,8 @@ void	Request::feed(const char* data, size_t size)
 			}
 			case STATE_FIELD_KEY:
 			{
-				if (!_tmp_key.empty() && ch == ':') _state = STATE_FIELD_VALUE;
+				if (_tmp_key.empty() && ch == '\r') _state = STATE_HEADERS_DONE;
+				else if (!_tmp_key.empty() && ch == ':') _state = STATE_FIELD_VALUE;
 				else if (!Request::_is_token(ch)) { _state = STATE_ERROR; _code = 400; }
 				else if (_tmp_key.length() >= MAX_HEADER_KEY_LEN) { _state = STATE_ERROR; _code = 431; }
 				else _tmp_key += std::tolower(ch);
@@ -108,8 +102,9 @@ void	Request::feed(const char* data, size_t size)
 			{
 				if (ch != '\n') { _state = STATE_ERROR;  _code = 400; break; }
 				_validate_headers();
-				if (_state != STATE_ERROR && _body_exist) _state = STATE_BODY_START;
-				else if (!_body_exist) _state = STATE_COMPLETE;
+				if (_state == STATE_ERROR) break;
+				if (_body_exist) _state = STATE_BODY_START;
+				else _state = STATE_COMPLETE;
 				break ;
 			}
 			case STATE_BODY_START:
@@ -155,6 +150,10 @@ void	Request::feed(const char* data, size_t size)
 				else std::cerr << YELLOW << "[Warn] Bad Request (" << _code << ")" << RESET << std::endl;
 				return;
 			}
+		}
+		if (_state = STATE_COMPLETE) {
+			std::cout << GREEN << "Request Completed" << RESET << std::endl;
+			break ;
 		}
 	}
 }
@@ -284,7 +283,7 @@ void	Request::resetState()
 	/* headers map */
 	_headers.clear();
 	/* states */
-	_state = STATE_START;
+	_state = STATE_METHOD;
 	_chunk_state = LENGTH;
 	_content_length = 0;
 	_chunk_length = 0;
@@ -355,7 +354,7 @@ void Request::log() const
 }
 /* Constructors */
 Request::Request(short& code) :
-	_state(STATE_START),
+	_state(STATE_METHOD),
 	_code(code),
 	_body_exist(false),
 	_chunked_transfer(false),

@@ -24,7 +24,6 @@ enum	ChunkState
 
 enum RequestState
 {
-	STATE_START,
 	STATE_METHOD,
 	STATE_URI_START,
 	STATE_URI_PATH,

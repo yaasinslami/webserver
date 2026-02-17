@@ -12,7 +12,7 @@ void Client::onReadable()
 		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 		if (bytes > 0) {
 			_request.feed(buf, bytes);
-			if (_request.getState() >= STATE_HEADERS_DONE) markProcessing();
+			if (_request.getState() >= STATE_HEADERS_DONE)  markProcessing();
 		}
 		else if (bytes == 0) {
 			std::cout << "Client closed fd=" << _fd << std::endl;

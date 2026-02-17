@@ -23,9 +23,9 @@ class EpollManager
 		int		timeout_ms;
 		bool	running;
 
-		map<int, Client*>		clients;
-		map<int, Server*>		listeners;
-		map<int, Client*>		_cgi_fd_map;
+		map<int, Client*>				clients;
+		map<int, std::vector<Server*> >	listeners;
+		map<int, Client*>				_cgi_fd_map;
 
 		void	handle_listener_event(int fd);
 		void	handle_client_event(int fd, uint32_t events);

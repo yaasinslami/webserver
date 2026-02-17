@@ -1,5 +1,179 @@
 #include "EpollManager.hpp"
 
+static string get_cgi_executable(string, Client&);
+
+void	EpollManager::handle_client_event(int fd, uint32_t events)
+{
+	Client* client = clients[fd];
+	if (!client)
+		return ;
+
+	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
+	{
+		cerr << "Epoll Error on fd=" << fd << endl;
+		if (client->getCgiPid() != -1)
+			remove_cgi_fds(client, false);
+
+		remove_client(fd);
+		return;
+	}
+	
+	client->updateTime();
+
+	switch (client->getState())
+	{
+		case READING:
+			if (events & EPOLLIN)
+			{
+				client->onReadable();
+
+				if (client->getState() ==  CLOSING)
+					break ;
+			}
+			else
+				break;
+		case PROCESSING:
+		{
+			std::cout << "Processing Request..." << std::endl;
+			client->getRequest().log();
+
+			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);
+
+			if (client->getRequest().getIsCgi())
+			{
+				std::string	script_fs_path = CgiHandler::prepare(client, *this, fd);
+				if (script_fs_path.empty())
+					break ;
+				CgiHandler::execute(client, script_fs_path, executable_path, this);
+			}
+			else
+			{
+				std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n";
+				client->set_write_buf(response);
+				client->markWriting();
+				set_events(fd, EPOLLOUT);
+			}
+		}
+			break;
+		case WRITING:
+			if (events & EPOLLOUT)
+			{
+				client->onWritable();
+				if (client->getState() == READING)
+					set_events(fd, EPOLLIN);
+				else if (client->getState() == CLOSING)
+				{
+					remove_client(fd);
+					return ;
+				}
+			}
+			break;
+		case HANDLING_CGI:
+		{
+			if (events & EPOLLIN)
+			{
+				char buffer[1];
+				ssize_t bytes = recv(fd, buffer, 1, MSG_PEEK);
+
+				if (bytes == 0) 
+				{
+					std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
+					if (client->getCgiPid() != -1)
+						remove_cgi_fds(client, false);
+					remove_client(fd);
+					return;
+				}
+			}
+			return ;
+		}
+		case CLOSING:
+		{
+			// Todo
+			if (client->getCgiPid() != -1)
+				remove_cgi_fds(client, false);
+			remove_client(fd);
+			return ;
+		}
+	}
+
+	if (client->isClosed())
+		remove_client(fd);
+}
+
+void EpollManager::handle_cgi_event(int fd, uint32_t events)
+{
+	Client* client = _cgi_fd_map[fd];
+	if (!client)
+		return;
+
+	client->updateTime();
+	
+	if (events & EPOLLERR)
+	{
+		std::cerr << "⚠️ CGI Pipe Error on fd=" << fd << std::endl;
+		remove_cgi_fds(client, true);
+		return;
+	}
+
+	if (fd == client->getCgiInPipe() && (events & EPOLLOUT))
+	{
+		const std::string& body = client->getRequest().getBody();
+		size_t& bytes_written = client->get_cgi_bytes_written(); 
+
+		if (bytes_written >= body.length())
+		{
+			epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+			_cgi_fd_map.erase(fd);
+			close(fd);
+			client->setCgiInPipe(-1);
+			return;
+		}
+
+		size_t remaining = body.length() - bytes_written;
+		ssize_t sent = write(fd, body.c_str() + bytes_written, remaining);
+
+		if (sent > 0)
+			bytes_written += sent;
+		else
+			return;
+
+		if (bytes_written >= body.length())
+		{
+			epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+			_cgi_fd_map.erase(fd);
+			close(fd);
+			client->setCgiInPipe(-1);
+		}
+	}
+
+	if (fd == client->getCgiOutPipe() && (events & (EPOLLIN | EPOLLHUP)))
+	{
+		char buf[4096];
+		ssize_t bytes = read(fd, buf, sizeof(buf));
+
+		if (bytes > 0)
+		{
+			client->get_cgi_response_buf().append(buf, bytes);
+		}
+		else if (bytes == 0)
+		{
+			remove_cgi_fds(client, false); 
+
+			// I will replace by real response logique
+			if (client->getStatus() != 500)
+			{
+				client->parseCgiResponse();
+				client->markWriting();
+				set_events(client->getFd(), EPOLLOUT);
+			}
+			client->get_cgi_response_buf().clear();
+		}
+		else
+			return;
+	}
+}
+
+
 EpollManager::EpollManager(int timeout)
 	: timeout_ms(timeout), running(false)
 {
@@ -20,25 +194,27 @@ EpollManager::~EpollManager()
 	close(epfd);
 }
 
-bool	EpollManager::add_listener(Server* srv)
+bool EpollManager::add_listener(Server *srv)
 {
-	if (!srv)
-		return false;
+	if (!srv) return false;
 
 	int fd = srv->get_fd();
-	if (fd < 0 || listeners.count(fd))
-		return false;
+	if (fd < 0) return false;
 
-	struct epoll_event ev;
-	ev.events = EPOLLIN;
-	ev.data.fd = fd;
-
-	if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
-		return false;
-
-	listeners[fd] = srv;
-
-	std::cout << "[Epoll] Listening fd=" << fd << std::endl;
+	if (listeners.find(fd) == listeners.end()) {
+		// This is the first server for this port. Add it to Epoll. (Defualt)
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.fd = fd;
+		if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+			return false;
+		}
+		std::cout << "[Epoll] Listening on new fd=" << fd << std::endl;
+	}
+	else {
+		std::cout << "[Epoll] Adding virtual host to existing fd=" << fd << std::endl;
+	}
+	listeners[fd].push_back(srv);
 	return true;
 }
 
@@ -206,19 +382,17 @@ void	EpollManager::set_events(int fd, uint32_t events)
 
 void	EpollManager::handle_listener_event(int fd)
 {
-	Server* srv = listeners[fd];
-	if (!srv)
-		return;
+	std::vector<Server*>& server_candidates = listeners[fd];
 
+	Server* primary_server = server_candidates[0];
 	while (true)
 	{
-		int client_fd = srv->accept_client();
+		int client_fd = primary_server->accept_client();
 		if (client_fd == -1)
 			break;
 
-		Client* conn = new Client(client_fd, srv);
-		if (!add_client(conn))
-		{
+		Client* conn = new Client(client_fd, server_candidates);
+		if (!add_client(conn)) {
 			close(client_fd);
 			delete conn;
 		}
@@ -252,179 +426,6 @@ static string get_cgi_executable(string path, Client& client)
 	}
 
 	return "";
-}
-
-void	EpollManager::handle_client_event(int fd, uint32_t events)
-{
-	Client* client = clients[fd];
-	if (!client)
-		return ;
-
-	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
-	{
-		cerr << "Epoll Error on fd=" << fd << endl;
-		if (client->getCgiPid() != -1)
-			remove_cgi_fds(client, false);
-
-		remove_client(fd);
-		return;
-	}
-	
-	client->updateTime();
-
-	switch (client->getState())
-	{
-		case READING:
-			if (events & EPOLLIN)
-			{
-				cout << "EPOLLIN Event occurred" << endl;
-				client->onReadable();
-
-				if (client->getState() != CLOSING && client->isRequestReady())
-					client->markProcessing();
-				else
-					break;
-			}
-			else
-				break;
-		case PROCESSING:
-		// TODO: we will replace this by the RESPONSE generation logique.
-		{
-			std::cout << "Processing Request..." << std::endl;
-
-			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);
-
-			if (client->getRequest().getIsCgi())
-			{
-				std::string	script_fs_path = CgiHandler::prepare(client, *this, fd);
-				if (script_fs_path.empty())
-					break ;
-				CgiHandler::execute(client, script_fs_path, executable_path, this);
-			}
-			else
-			{
-				std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n";
-				client->set_write_buf(response);
-				client->markWriting();
-				set_events(fd, EPOLLOUT);
-			}
-		}
-			break;
-		case WRITING:
-			if (events & EPOLLOUT)
-			{
-				client->onWritable();
-				if (client->getState() == READING)
-					set_events(fd, EPOLLIN);
-				else if (client->getState() == CLOSING)
-				{
-					remove_client(fd);
-					return ;
-				}
-			}
-			break;
-		case HANDLING_CGI:
-		{
-			if (events & EPOLLIN)
-			{
-				char buffer[1];
-				ssize_t bytes = recv(fd, buffer, 1, MSG_PEEK);
-
-				if (bytes == 0) 
-				{
-					std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
-					if (client->getCgiPid() != -1)
-						remove_cgi_fds(client, false);
-					remove_client(fd);
-					return;
-				}
-			}
-			return ;
-		}
-		case CLOSING:
-		{
-			if (client->getCgiPid() != -1)
-				remove_cgi_fds(client, false);
-			remove_client(fd);
-			return ;
-		}
-	}
-
-	if (client->isClosed())
-		remove_client(fd);
-}
-
-void EpollManager::handle_cgi_event(int fd, uint32_t events)
-{
-	Client* client = _cgi_fd_map[fd];
-	if (!client)
-		return;
-
-	client->updateTime();
-	
-	if (events & EPOLLERR)
-	{
-		std::cerr << "⚠️ CGI Pipe Error on fd=" << fd << std::endl;
-		remove_cgi_fds(client, true);
-		return;
-	}
-
-	if (fd == client->getCgiInPipe() && (events & EPOLLOUT))
-	{
-		const std::string& body = client->getRequest().getBody();
-		size_t& bytes_written = client->get_cgi_bytes_written(); 
-
-		if (bytes_written >= body.length())
-		{
-			epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-			_cgi_fd_map.erase(fd);
-			close(fd);
-			client->setCgiInPipe(-1);
-			return;
-		}
-
-		size_t remaining = body.length() - bytes_written;
-		ssize_t sent = write(fd, body.c_str() + bytes_written, remaining);
-
-		if (sent > 0)
-			bytes_written += sent;
-		else
-			return;
-
-		if (bytes_written >= body.length())
-		{
-			epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-			_cgi_fd_map.erase(fd);
-			close(fd);
-			client->setCgiInPipe(-1);
-		}
-	}
-
-	if (fd == client->getCgiOutPipe() && (events & (EPOLLIN | EPOLLHUP)))
-	{
-		char buf[4096];
-		ssize_t bytes = read(fd, buf, sizeof(buf));
-
-		if (bytes > 0)
-		{
-			client->get_cgi_response_buf().append(buf, bytes);
-		}
-		else if (bytes == 0)
-		{
-			remove_cgi_fds(client, false); 
-
-			// I will replace by real response logique
-			if (client->getStatus() != 500)
-			{
-				client->parseCgiResponse();
-				client->markWriting();
-				set_events(client->getFd(), EPOLLOUT);
-			}
-			client->get_cgi_response_buf().clear();
-		}
-		else
-			return;
-	}
 }
 
 void	EpollManager::run_loop()
