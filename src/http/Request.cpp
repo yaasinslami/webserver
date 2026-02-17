@@ -138,8 +138,7 @@ void	Request::feed(const char* data, size_t size)
 			}
 			case STATE_COMPLETE:
 			{
-				std::cout << GREEN << "Request Completed" << RESET << std::endl;
-				break ;
+				return ;
 			}
 			case STATE_ERROR:
 			{
@@ -150,10 +149,6 @@ void	Request::feed(const char* data, size_t size)
 				else std::cerr << YELLOW << "[Warn] Bad Request (" << _code << ")" << RESET << std::endl;
 				return;
 			}
-		}
-		if (_state = STATE_COMPLETE) {
-			std::cout << GREEN << "Request Completed" << RESET << std::endl;
-			break ;
 		}
 	}
 }
@@ -191,7 +186,6 @@ void	Request::_validate_headers()
 		else { _state = STATE_ERROR; _code = 501; return; }// 501 Not Implemented
 	}
 	if (_headers.count("connection") && _headers["connection"].find("close") != std::string::npos) _keep_alive = false;
-	std::cout << GREEN << "Headers Parsed Successfully" << RESET << std::endl;
 }
 /* Getters */
 const std::string&	Request::getMethod() const { return _method; }

@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include <iostream>
+#include <algorithm>
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
@@ -243,4 +244,20 @@ int Server::accept_client(void)
 
     std::cout << "New client accepted: fd=" << clientFd << std::endl;
     return (clientFd);
+}
+
+bool Server::hasIdenticalNames(const Server *other) const
+{
+	const std::vector<std::string> &my_names = this->getServerNames();
+	const std::vector<std::string> &other_names = other->getServerNames();
+
+	if (my_names.size() != other_names.size())
+		return false;
+
+	std::vector<std::string> sorted_a = my_names;
+	std::vector<std::string> sorted_b = other_names;
+
+	std::sort(sorted_a.begin(), sorted_a.end());
+	std::sort(sorted_b.begin(), sorted_b.end());
+	return (sorted_a == sorted_b);
 }

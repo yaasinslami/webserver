@@ -63,6 +63,8 @@ class	Server
 		bool						init();
 		int							accept_client();
 
+		bool hasIdenticalNames(const Server*) const;
+
 
 	private:
 		Directives					_directives;

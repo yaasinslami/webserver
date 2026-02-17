@@ -211,7 +211,16 @@ bool EpollManager::add_listener(Server *srv)
 		}
 		std::cout << "[Epoll] Listening on new fd=" << fd << std::endl;
 	}
-	else {
+	else
+	{
+		std::vector<Server *> &existing_servers = listeners[fd];
+		for (size_t i = 0; i < existing_servers.size(); ++i) {
+			if (srv->hasIdenticalNames(existing_servers[i])) {
+				std::cerr << "⚠️  WARNING: Conflicting server_name on port [" << srv->getPortStr()
+						<< "] (ignored)." << std::endl;
+				return false;
+			}
+		}
 		std::cout << "[Epoll] Adding virtual host to existing fd=" << fd << std::endl;
 	}
 	listeners[fd].push_back(srv);
