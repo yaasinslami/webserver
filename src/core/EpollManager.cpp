@@ -481,7 +481,7 @@ void EpollManager::stop()
 void EpollManager::check_client_timeouts()
 {
 	time_t current_time = time(NULL);
-	const double TIMEOUT_LIMIT = 10.0; 
+	const double TIMEOUT_LIMIT = 60.0; 
 
 	std::map<int, Client*>::iterator it = clients.begin();
 	
