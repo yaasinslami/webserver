@@ -15,7 +15,8 @@ Client::Client(int fd, Server* owner_server)
 	  _cgi_pid(-1),
 	  _cgi_pipe_read_fd(-1),
 	  _cgi_pipe_write_fd(-1),
-	  _cgi_bytes_written(0)
+	  _cgi_bytes_written(0),
+	  _last_activity_time(time(NULL))
 {
 	std::cout << "🟢 New Client fd=" << _fd << std::endl;
 	if (_server)
@@ -63,10 +64,11 @@ void Client::onWritable()
 		_write_buf.erase(0, sent);
 	else
 		return;
-	
+
 	if (_write_buf.empty() && !_request.shouldKeepAlive())
 	{
-		 _closed = true;
+		_state = CLOSING;
+		_closed = true;
 	}
 	else if (_write_buf.empty())
 	{
@@ -167,12 +169,13 @@ void Client::setContext(Server *s, const Location *l)
 		_config = &s->getDirectives();
 }
 
-bool Client::hasContext() const { return _server != NULL; }
+bool	Client::hasContext() const { return _server != NULL; }
 
-bool Client::isRequestReady() 
-{
-	return _request.requestCompleted(); 
-}
+bool	Client::isRequestReady() { return _request.requestCompleted(); }
+
+void	Client::updateTime() { _last_activity_time = time(NULL); }
+
+time_t	Client::getLastActivity( void ) const { return _last_activity_time; }
 
 ClientState Client::getState() const { return _state; }
 

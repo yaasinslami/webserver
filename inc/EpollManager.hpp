@@ -32,7 +32,7 @@ class EpollManager
 		void	handle_cgi_event(int fd, uint32_t events);
 
 	public:
-		EpollManager(int timeout = 60000);
+		EpollManager(int timeout = 1000);
 		~EpollManager();
 
 		bool	add_listener(Server* srv);
@@ -47,4 +47,6 @@ class EpollManager
 		void	set_events(int fd, uint32_t events);
 		void	run_loop();
 		void	stop();
+
+		void	check_client_timeouts();
 };

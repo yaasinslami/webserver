@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <ctime>
 
 #include "Request.hpp"
 #include "Server.hpp"
@@ -40,6 +41,8 @@ class Client
 
 		std::string			_cgi_response_buf;
 		size_t				_cgi_bytes_written;
+
+		time_t				_last_activity_time;
 
 	public:
 		Client(int fd, Server* owner_server);
@@ -86,6 +89,8 @@ class Client
 		void				closeCgiPipes();
 
 		bool				isRequestReady();
+		void				updateTime();
+		time_t				getLastActivity() const;
 
 		// i will remove this
 		const std::string&	get_read_buf() const;

@@ -269,6 +269,8 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		remove_client(fd);
 		return;
 	}
+	
+	client->updateTime();
 
 	switch (client->getState())
 	{
@@ -298,7 +300,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				if (script_fs_path.empty())
 					break ;
 				CgiHandler::execute(client, script_fs_path, executable_path, this);
-				client->getRequest().setIsCgi(false);
 			}
 			else
 			{
@@ -307,7 +308,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				client->markWriting();
 				set_events(fd, EPOLLOUT);
 			}
-
 		}
 			break;
 		case WRITING:
@@ -360,6 +360,8 @@ void EpollManager::handle_cgi_event(int fd, uint32_t events)
 	if (!client)
 		return;
 
+	client->updateTime();
+	
 	if (events & EPOLLERR)
 	{
 		std::cerr << "⚠️ CGI Pipe Error on fd=" << fd << std::endl;
@@ -466,6 +468,8 @@ void	EpollManager::run_loop()
 
 			cout << "-------------------------" << endl;
 		}
+
+		check_client_timeouts();
 	}
 }
 
@@ -473,3 +477,35 @@ void EpollManager::stop()
 {
 	running = false;
 }
+
+void EpollManager::check_client_timeouts()
+{
+	time_t current_time = time(NULL);
+	const double TIMEOUT_LIMIT = 10.0; 
+
+	std::map<int, Client*>::iterator it = clients.begin();
+	
+	while (it != clients.end())
+	{
+		int fd = it->first;
+		Client* client = it->second;
+
+		if (difftime(current_time, client->getLastActivity()) > TIMEOUT_LIMIT)
+		{
+			std::cout << "Timeout: Client " << fd << " idle for " << TIMEOUT_LIMIT << "s. Closing." << std::endl;
+
+			std::map<int, Client*>::iterator next = it;
+			++next;
+
+			if (client->getCgiPid() != -1)
+				remove_cgi_fds(client, false);
+
+			remove_client(fd);
+
+			it = next;
+		}
+		else
+			++it;
+	}
+}
+

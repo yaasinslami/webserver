@@ -536,7 +536,7 @@ bool	Request::__headers()
 	}
 
 
-	if (_headers.count("connection") && _headers["connection"].find("close")) {
+	if (_headers.count("connection") && _headers["connection"].find("close") != std::string::npos) {
 		std::cout << "--++---\texplicitly the client want to close the conection\n";
 		_keep_alive = false;
 	}
