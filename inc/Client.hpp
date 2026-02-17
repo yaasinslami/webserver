@@ -52,10 +52,13 @@ class Client
 		bool				hasConfig() const;
 
 	private:
-		Request				_request;
-		Response			_response;
-		const Server*		_server;// Client should have a vector of servers bind to the same port
-		const Directives*	_config;
+		/* http */
+		Request		_request;
+		Response	_response;
+		/* Configs */
+		const std::vector<Server*>*	_server_candidates;
+		const Server*				_server;
+		const Directives*			_config;
 };
 
 #endif

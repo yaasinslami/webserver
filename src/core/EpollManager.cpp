@@ -20,25 +20,28 @@ EpollManager::~EpollManager()
 	close(epfd);
 }
 
-bool	EpollManager::add_listener(Server* srv)
+bool EpollManager::add_listener(Server *srv)
 {
-	if (!srv)
-		return false;
+	if (!srv) return false;
 
 	int fd = srv->get_fd();
-	if (fd < 0 || listeners.count(fd))
-		return false;
+	if (fd < 0) return false;
 
-	struct epoll_event ev;
-	ev.events = EPOLLIN;
-	ev.data.fd = fd;
-
-	if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
-		return false;
-
-	listeners[fd] = srv;
-
-	std::cout << "[Epoll] Listening fd=" << fd << std::endl;
+	if (listeners.find(fd) == listeners.end()) {
+		// This is the first server for this port. Add it to Epoll. (Defualt)
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.fd = fd;
+		if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+			return false;
+		}
+		std::cout << "[Epoll] Listening on new fd=" << fd << std::endl;
+	}
+	else {
+		// A server is already listening on this FD.
+		std::cout << "[Epoll] Adding virtual host to existing fd=" << fd << std::endl;
+	}
+	listeners[fd].push_back(srv);
 	return true;
 }
 
@@ -106,19 +109,17 @@ void	EpollManager::set_events(int fd, uint32_t events)
 
 void	EpollManager::handle_listener_event(int fd)
 {
-	Server* srv = listeners[fd];
-	if (!srv)
-		return;
+	std::vector<Server*>& server_candidates = listeners[fd];
 
+	Server* primary_server = server_candidates[0];
 	while (true)
 	{
-		int client_fd = srv->accept_client();
+		int client_fd = primary_server->accept_client();
 		if (client_fd == -1)
 			break;
 
-		Client* conn = new Client(client_fd, srv);
-		if (!add_client(conn))
-		{
+		Client* conn = new Client(client_fd, server_candidates);// change client constructor
+		if (!add_client(conn)) {
 			close(client_fd);
 			delete conn;
 		}
@@ -137,8 +138,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		remove_client(fd);
 		return ;
 	}
-
-	// 
 
 	switch (client->getState())
 	{

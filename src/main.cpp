@@ -15,30 +15,19 @@ static string get_config_path(int ac, char **av)
 	return (ac == 2 ? av[1] : "config/default.conf");
 }
 
-static int start_servers(vector<Server>& servers, EpollManager& poller)
+static int start_servers(vector<Server> &servers, EpollManager &poller)
 {
-	std::map<std::string, Server*> active_ports;
 	int started_count = 0;
 
 	for (size_t i = 0; i < servers.size(); ++i)
 	{
-		std::string port = servers[i].getPortStr();
-		if (active_ports.find(port) == active_ports.end())
-		{
-			if (servers[i].init()) {
-				if (poller.add_listener(&servers[i])) {
-					started_count++;
-					active_ports[port] = &servers[i];
-				}
-			}
-			else cerr << "Error starting server on port " << port << endl;
+		if (servers[i].init()) {
+			if (poller.add_listener(&servers[i]))
+				started_count++;
 		}
 		else {
-			Server *primary = active_ports[port];
-			primary->addVirtualHost(&servers[i]);
-
-			cout << "Attached virtual host " << servers[i].getServerName()
-				 << " to port " << port << endl;
+			cerr << "Warning: Failed to start server on port "
+				 << servers[i].getPortStr() << endl;
 		}
 	}
 	return started_count;

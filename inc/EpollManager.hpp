@@ -1,4 +1,5 @@
 #include <map>
+#include <vector>
 #include <algorithm>
 #include <cstdio>
 
@@ -16,8 +17,8 @@ class EpollManager
 		int		timeout_ms;
 		bool	running;
 
-		map<int, Client*>		clients;
-		map<int, Server*>		listeners;
+		map<int, Client*>					clients;
+		map<int, std::vector<Server*>>		listeners;
 
 		void	handle_listener_event(int fd);
 		void	handle_client_event(int fd, uint32_t events);		
