@@ -6,26 +6,26 @@
 /*   By: oel-hadr <oel-hadr@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/05 00:09:01 by oel-hadr          #+#    #+#             */
-/*   Updated: 2026/02/13 15:25:42 by oel-hadr         ###   ########.fr       */
+/*   Updated: 2026/02/17 16:11:08 by oel-hadr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Utils.hpp"
 
-bool Utils::set_nonblocking( int socket )
+bool	Utils::set_nonblocking(int socket)
 {
-    int flags = fcntl(socket, F_GETFL, 0);
+	if (fcntl(socket, F_SETFL, O_NONBLOCK) == -1)
+	{
+		std::cerr << "Error: fcntl F_SETFL O_NONBLOCK failed" << std::endl;
+		return (false);
+	}
 
-	if (flags == -1)
+	if (fcntl(socket, F_SETFD, FD_CLOEXEC) == -1)
 	{
-		cerr << "fcntl F_GETFL" << endl;
+		std::cerr << "Error: fcntl F_SETFD FD_CLOEXEC failed" << std::endl;
 		return (false);
 	}
-	if (fcntl(socket, F_SETFL, flags | O_NONBLOCK) == -1)
-	{
-		cerr << "fcntl F_SETFL, O_NONBLOCK" << endl;
-		return (false);
-	}
+
 	return (true);
 }
 
