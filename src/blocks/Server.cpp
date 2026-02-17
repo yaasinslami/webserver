@@ -184,7 +184,6 @@ bool Server::init(void)
         if (bind(fd, p->ai_addr, p->ai_addrlen) == 0)
         {
             std::cout << "Socket " << fd << " bound to " << _interface << ":" << _port << std::endl;
-            // Utils::printAddr(p, _port);
             break;
         }
 

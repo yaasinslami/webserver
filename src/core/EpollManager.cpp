@@ -38,26 +38,10 @@ bool EpollManager::add_listener(Server *srv)
 		std::cout << "[Epoll] Listening on new fd=" << fd << std::endl;
 	}
 	else {
-		// A server is already listening on this FD.
 		std::cout << "[Epoll] Adding virtual host to existing fd=" << fd << std::endl;
 	}
 	listeners[fd].push_back(srv);
 	return true;
-}
-
-bool	EpollManager::remove_listener(Server* srv)
-{
-	if (!srv)
-		return (false);
-	
-	int fd = srv->get_fd();
-	if (!listeners.count(fd))
-		return (false);
-
-	epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-	listeners.erase(fd);
-
-	return (true);
 }
 
 bool	EpollManager::add_client(Client* conn)
@@ -118,7 +102,7 @@ void	EpollManager::handle_listener_event(int fd)
 		if (client_fd == -1)
 			break;
 
-		Client* conn = new Client(client_fd, server_candidates);// change client constructor
+		Client* conn = new Client(client_fd, server_candidates);
 		if (!add_client(conn)) {
 			close(client_fd);
 			delete conn;

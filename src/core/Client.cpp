@@ -17,7 +17,6 @@ void Client::onReadable()
 		_closed = true;
 	}
 }
-
 /* The Bridge / Worker */
 void Client::process()
 {
@@ -31,10 +30,8 @@ void Client::process()
 		return;
 	}
 }
-
 void Client::onWritable()
 {}
-
 /* Getters */
 int Client::getFd() const { return _fd; }
 bool Client::isClosed() const { return _closed; }
@@ -44,28 +41,24 @@ const Server* Client::getServer() const { return _server; }
 const short& Client::getStatus() const { return _status_code; }
 void Client::setStatus(int status) { _status_code = status; }
 ClientState Client::getState() const { return _state; }
-
 /* Context => Server and Directives */
 void Client::_setBestConfig()
-{
-	
-}
+{}
 bool Client::hasConfig() const { return _server != NULL; }
-
 /* State methods */
 void Client::markProcessing() { _state = PROCESSING; }
 void Client::markWriting() { _state = WRITING; }
 void Client::scheduleClose() { _closed = true; }
-
 /* Constructors */
-Client::Client(int fd, Server* owner_server)
+Client::Client(int fd, const std::vector<Server*>& server_candidates)
 	: _fd(fd), 
 	_state(READING), 
 	_closed(false),
 	_status_code(200),
 	_request(_status_code),
 	_response(_status_code),
-	_server(owner_server), 
+	_server_candidates(&server_candidates),
+	_server(server_candidates[0]),
 	_config(NULL)
 {
 	std::cout << "🟢 New Client fd=" << _fd << std::endl;

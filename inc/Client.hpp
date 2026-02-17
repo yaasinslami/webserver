@@ -27,7 +27,7 @@ class Client
 		short			_status_code;
 
 	public:
-		Client(int, Server*);
+		Client(int, const std::vector<Server*>&);
 		~Client();
 
 		/* Getters */

@@ -18,7 +18,7 @@ class EpollManager
 		bool	running;
 
 		map<int, Client*>					clients;
-		map<int, std::vector<Server*>>		listeners;
+		map<int, std::vector<Server*> >		listeners;
 
 		void	handle_listener_event(int fd);
 		void	handle_client_event(int fd, uint32_t events);		
@@ -28,7 +28,6 @@ class EpollManager
 		~EpollManager();
 
 		bool	add_listener(Server* srv);
-		bool	remove_listener(Server* srv);
 		bool	add_client(Client* conn);
 		bool	remove_client(int fd);
 
