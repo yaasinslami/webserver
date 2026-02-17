@@ -198,12 +198,16 @@ void	Request::_validate_headers()
 const std::string&	Request::getMethod() const { return _method; }
 const std::string& Request::getPath() const { return _uri_path; }
 const std::string& Request::getQuery() const { return _uri_query; }
+std::map<std::string, std::string> Request::getHeaders() const { return _headers; }
 const std::string&	Request::getHeader(const std::string& key) const { return _headers.at(key); }
 const size_t&		Request::getBodySize() const { return _total_body_bytes; }
 const RequestState& Request::getState() const { return _state; }
 const size_t&	Request::getContentLength() const { return _content_length; }
 const std::string& Request::getBodyPath() const { return _body_file_path; }
 bool	Request::shouldKeepAlive() const { return _keep_alive == true; }
+bool		Request::getIsCgi() const { return _is_cgi; }
+void		Request::setIsCgi(bool state) { _is_cgi = state; }
+std::string Request::getBody() const { return "Hello world"; }
 /* Random Functions */
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
 {
@@ -293,6 +297,7 @@ void	Request::resetState()
 	if (_body_file.is_open())
 		_body_file.close();
 	_body_file.clear();
+	_is_cgi = false;
 }
 std::string Request::_generate_random_id()
 {
@@ -359,7 +364,8 @@ Request::Request(short& code) :
 	_total_body_bytes(0),
 	_chunk_length(0),
 	_chunk_bytes_read(0),
-	_chunk_state(LENGTH)
+	_chunk_state(LENGTH),
+	_is_cgi(false)
 {}
 Request::~Request()
 {
@@ -388,6 +394,7 @@ Request& Request::operator=(const Request& other)
 		_body_exist = other._body_exist;
 		_chunk_state = other._chunk_state;
 		_keep_alive = other._keep_alive;
+		_is_cgi = other._is_cgi;
 	}
 	return (*this);
 }

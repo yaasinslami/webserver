@@ -75,6 +75,8 @@ class	Request
 		size_t		_chunk_length;
 		size_t		_chunk_bytes_read;
 		ChunkState	_chunk_state;
+		// cgi
+		bool	_is_cgi;
 
 
 		enum Limits
@@ -99,10 +101,14 @@ class	Request
 		const std::string&	getMethod() const;
         const std::string&	getPath() const;
         const std::string&	getQuery() const;
+		std::map<std::string, std::string> getHeaders() const;
         const std::string&	getHeader(const std::string& key) const;
 		const size_t&		getContentLength() const;
 		const size_t&		getBodySize() const;
 		const std::string&	getBodyPath() const;
+		std::string 		getBody() const;
+		bool				getIsCgi() const;
+		void				setIsCgi(bool state);
 
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;

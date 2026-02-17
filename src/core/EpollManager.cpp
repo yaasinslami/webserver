@@ -294,7 +294,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 
 			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);
 
-			if (client->getRequest().isCgi())
+			if (client->getRequest().getIsCgi())
 			{
 				std::string	script_fs_path = CgiHandler::prepare(client, *this, fd);
 				if (script_fs_path.empty())

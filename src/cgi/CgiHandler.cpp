@@ -45,7 +45,7 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	{
 		// i will remove this
 		std::stringstream ss;
-		ss << req.getBody().length(); 
+		ss << req.getBody().length();
 		env_vars.push_back("CONTENT_LENGTH=" + ss.str());
 
 		// env_vars.push_back("CONTENT_LENGTH=" + req.getHeader("content-length"));

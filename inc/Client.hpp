@@ -45,7 +45,7 @@ class Client
 		/* timeout */
 		time_t				_last_activity_time;
 
-		// remove this
+		// i will remove this
 		std::string _write_buf;
 
 	public:
@@ -61,7 +61,6 @@ class Client
 		ClientState			getState() const;
 		void				markProcessing();
 		void				markWriting();
-		void				setWriteBuf(const std::string &s);
 		void				scheduleClose();
 		/* Context => Server and Directives */
 		void				_setBestConfig();
@@ -95,4 +94,8 @@ class Client
 		bool				isRequestReady();
 		void				updateTime();
 		time_t				getLastActivity() const;
+
+		// i will remove this
+		const std::string&	get_write_buf() const;
+		void				set_write_buf(const std::string &s);
 };

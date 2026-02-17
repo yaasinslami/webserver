@@ -127,7 +127,6 @@ void	Client::updateTime() { _last_activity_time = time(NULL); }
 /* State methods */
 void Client::markProcessing() { _state = PROCESSING; }
 void Client::markWriting() { _state = WRITING; }
-void Client::setWriteBuf(const std::string &s) { _write_buf = s; }
 void Client::scheduleClose() { _closed = true; }
 /* Constructors */
 Client::Client(int fd, const std::vector<Server*>& server_candidates) :
@@ -156,4 +155,15 @@ Client::~Client()
 	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
 	if (_fd != -1)
 		close(_fd);
+}
+
+// i will remove this
+const std::string& Client::get_write_buf() const
+{
+	return _write_buf;
+}
+
+void Client::set_write_buf(const std::string &s)
+{
+	_write_buf = s;
 }
