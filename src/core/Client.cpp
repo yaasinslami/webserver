@@ -5,51 +5,16 @@
 #include <cstring>
 #include <sstream>
 
-Client::Client(int fd, Server* owner_server)
-	: _fd(fd), 
-	  _state(READING), 
-	  _closed(false),
-	  _server(owner_server), 
-	  _config(NULL), 
-	  _status_code(200),
-	  _cgi_pid(-1),
-	  _cgi_pipe_read_fd(-1),
-	  _cgi_pipe_write_fd(-1),
-	  _cgi_bytes_written(0),
-	  _last_activity_time(time(NULL))
-{
-	std::cout << "🟢 New Client fd=" << _fd << std::endl;
-	if (_server)
-		_config = &_server->getDirectives();
-}
-
-Client::~Client()
-{
-	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
-	if (_fd != -1)
-		close(_fd);
-}
-
 void Client::onReadable()
 {
 	char buf[BUFFER_SIZE];
 
 		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
-		if (bytes > 0)
-		{
-			_read_buf.append(buf, bytes);
-			ssize_t consumed = _request.feed(buf, bytes);
-			if (consumed == -1) {
-				cerr << "Bad Request" << endl;
-				setStatus(400);
-				markProcessing();
-				return ;
-			}
-
-			_request.show();
+		if (bytes > 0) {
+			_request.feed(buf, bytes);
+			if (_request.getState() >= STATE_HEADERS_DONE) markProcessing();
 		}
-		else if (bytes == 0)
-		{
+		else if (bytes == 0) {
 			std::cout << "Client closed fd=" << _fd << std::endl;
 			_closed = true;
 			setState(CLOSING);
@@ -136,65 +101,59 @@ void	Client::parseCgiResponse()
 	_write_buf = response.str();
 }
 
+/* Getters */
+ClientState Client::getState() const { return _state; }
 int Client::getFd() const { return _fd; }
 bool Client::isClosed() const { return _closed; }
-
 Request& Client::getRequest() { return _request; }
 const Directives* Client::getConfig() const { return _config; }
-Server* Client::getServer() const { return _server; }
-
-int& Client::getStatus() { return _status_code; }
+const Server* Client::getServer() const { return _server; }
+const short& Client::getStatus() const { return _status_code; }
 void Client::setStatus(int status) { _status_code = status; }
-
 void Client::setState( ClientState state ) { _state = state; }
-
+bool	Client::isRequestReady() { return _request.requestCompleted(); }
+time_t	Client::getLastActivity( void ) const { return _last_activity_time; }
+/* CGI */
 void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
 pid_t Client::getCgiPid() const { return _cgi_pid; };
-
 void Client::setCgiOutPipe(int fd) { _cgi_pipe_read_fd = fd; }
 int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
-
 void Client::setCgiInPipe(int fd) { _cgi_pipe_write_fd = fd; }
 int Client::getCgiInPipe() const { return _cgi_pipe_write_fd; }
-
 string&	Client::get_cgi_response_buf() { return _cgi_response_buf; }
 size_t&	Client::get_cgi_bytes_written() { return _cgi_bytes_written; }
-
-void Client::setContext(Server *s, const Location *l)
-{
-	_server = s;
-	if (l != NULL)
-		_config = &l->getDirectives();
-	else if (s != NULL)
-		_config = &s->getDirectives();
-}
-
-bool	Client::hasContext() const { return _server != NULL; }
-
-bool	Client::isRequestReady() { return _request.requestCompleted(); }
-
+/* timeout */
 void	Client::updateTime() { _last_activity_time = time(NULL); }
-
-time_t	Client::getLastActivity( void ) const { return _last_activity_time; }
-
-ClientState Client::getState() const { return _state; }
-
+/* State methods */
 void Client::markProcessing() { _state = PROCESSING; }
 void Client::markWriting() { _state = WRITING; }
 void Client::setWriteBuf(const std::string &s) { _write_buf = s; }
 void Client::scheduleClose() { _closed = true; }
-
-const std::string& Client::get_read_buf() const
+/* Constructors */
+Client::Client(int fd, const std::vector<Server*>& server_candidates) :
+	_fd(fd), 
+	_state(READING), 
+	_closed(false),
+	_status_code(200),
+	_request(_status_code),
+	_response(_status_code),
+	_server_candidates(&server_candidates),
+	_server(server_candidates[0]), 
+	_config(NULL), 
+	_cgi_pid(-1),
+	_cgi_pipe_read_fd(-1),
+	_cgi_pipe_write_fd(-1),
+	_cgi_bytes_written(0),
+	_last_activity_time(time(NULL))
 {
-	return _read_buf;
+	std::cout << "🟢 New Client fd=" << _fd << std::endl;
+	if (_server)
+		_config = &_server->getDirectives();
 }
 
-const std::string& Client::get_write_buf() const
+Client::~Client()
 {
-	return _write_buf;
-}
-
-void Client::set_write_buf(const std::string &s)
-{
-	_write_buf = s;
+	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
+	if (_fd != -1)
+		close(_fd);
 }

@@ -6,6 +6,7 @@
 #include <ctime>
 
 #include "Request.hpp"
+#include "Response.hpp"
 #include "Server.hpp"
 #include "Directives.hpp"
 
@@ -23,29 +24,32 @@ enum ClientState
 class Client
 {
 	private:
+		/* states */
 		int             _fd;
 		ClientState     _state;
-		std::string     _read_buf;
-		std::string     _write_buf;
 		bool            _closed;
-
-		Server*				_server;
-		const Directives*	_config;
-		Request				_request;
-		int					_status_code;
-
-		// CGI
+		short			_status_code;
+		/* http */
+		Request		_request;
+		Response	_response;
+		/* Configs */
+		const std::vector<Server*>*	_server_candidates;
+		const Server*				_server;
+		const Directives*			_config;
+		/* CGI */
 		pid_t				_cgi_pid;
 		int					_cgi_pipe_read_fd;
 		int					_cgi_pipe_write_fd;
-
 		std::string			_cgi_response_buf;
 		size_t				_cgi_bytes_written;
-
+		/* timeout */
 		time_t				_last_activity_time;
 
+		// remove this
+		std::string _write_buf;
+
 	public:
-		Client(int fd, Server* owner_server);
+		Client(int, const std::vector<Server*>&);
 		~Client();
 
 
@@ -59,15 +63,15 @@ class Client
 		void				markWriting();
 		void				setWriteBuf(const std::string &s);
 		void				scheduleClose();
-
-		void				setContext(Server *s, const Location *l);
-		bool				hasContext() const;
+		/* Context => Server and Directives */
+		void				_setBestConfig();
+		bool				hasConfig() const;
 		
 		Request&			getRequest();
 		const Directives*	getConfig() const;
-		Server*				getServer() const;
+		const Server*				getServer() const;
 		
-		int&				getStatus();
+		const short&				getStatus() const;
 		void				setStatus(int status);
 
 		void				setState(ClientState state);
@@ -91,11 +95,4 @@ class Client
 		bool				isRequestReady();
 		void				updateTime();
 		time_t				getLastActivity() const;
-
-		// i will remove this
-		const std::string&	get_read_buf() const;
-		const std::string&	get_write_buf() const;
-		void				set_write_buf(const std::string &s);
-
-		std::string		_leftover_buffer;
 };
