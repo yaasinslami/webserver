@@ -11,9 +11,10 @@ void Client::onReadable()
 
 		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 		if (bytes > 0) {
+			std::cout << "DEBUG: Try to Feed: [" << bytes << "] | Request State: " << _request.getState() << std::endl;
 			_request.feed(buf, bytes);
-
 			std::cout << "DEBUG: Bytes read: " << bytes << " | Request State: " << _request.getState() << std::endl;
+
 
 			if (_request.getState() == STATE_COMPLETE)
 			{
@@ -44,6 +45,7 @@ void Client::onWritable()
 	}
 	else if (_write_buf.empty())
 	{
+		std::cout <<  "reset the state\n";
 		_state = READING;
 		_request.resetState();
 	}
