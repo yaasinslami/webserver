@@ -26,13 +26,9 @@ class EpollManager
 		map<int, Client*>				clients;
 		map<int, std::vector<Server*> >	listeners;
 		map<int, Client*>				_cgi_fd_map;
-
-		void	handle_listener_event(int fd);
-		void	handle_client_event(int fd, uint32_t events);
-		void	handle_cgi_event(int fd, uint32_t events);
-
 	public:
-		EpollManager(int timeout = 1000);
+		/* Constructors */
+		EpollManager(std::vector<Server>&);
 		~EpollManager();
 
 		bool	add_listener(Server* srv);
@@ -49,4 +45,9 @@ class EpollManager
 		void	stop();
 
 		void	check_client_timeouts();
+	private:
+		void	handle_listener_event(int fd);
+		void	handle_client_event(int fd, uint32_t events);
+		void	handle_cgi_event(int fd, uint32_t events);
+		bool	_setup_servers(std::vector<Server>& servers);
 };

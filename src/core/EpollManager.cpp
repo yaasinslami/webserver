@@ -142,27 +142,6 @@ void EpollManager::handle_cgi_event(int fd, uint32_t events)
 	}
 }
 
-
-EpollManager::EpollManager(int timeout)
-	: timeout_ms(timeout), running(false)
-{
-	epfd = epoll_create1(0);
-
-	if (epfd == -1)
-	{
-		throw std::runtime_error("Failed to create epoll instance");
-	}
-}
-
-EpollManager::~EpollManager()
-{
-	for (std::map<int, Client*>::iterator it = clients.begin();
-			it != clients.end(); ++it)
-		delete it->second;
-
-	close(epfd);
-}
-
 bool EpollManager::add_listener(Server *srv)
 {
 	if (!srv) return false;
@@ -171,7 +150,6 @@ bool EpollManager::add_listener(Server *srv)
 	if (fd < 0) return false;
 
 	if (listeners.find(fd) == listeners.end()) {
-		// This is the first server for this port. Add it to Epoll. (Defualt)
 		struct epoll_event ev;
 		ev.events = EPOLLIN;
 		ev.data.fd = fd;
@@ -466,3 +444,47 @@ void EpollManager::check_client_timeouts()
 	}
 }
 
+/* Constructor */
+EpollManager::EpollManager(std::vector<Server>& servers) :
+	epfd(-1),
+	timeout_ms(1000),
+	running(false)
+{
+	if ((epfd = epoll_create1(0)) == -1) throw std::runtime_error("Failed to create epoll instance");
+
+	if (!_setup_servers(servers)) throw std::runtime_error("No servers could be started!");
+}
+EpollManager::~EpollManager()
+{
+	for (std::map<int, Client*>::iterator it = clients.begin();
+			it != clients.end(); ++it)
+		delete it->second;
+
+	close(epfd);
+}
+
+bool	EpollManager::_setup_servers(std::vector<Server>& servers)
+{
+	int success_count = 0;
+	std::map<std::string, int> active_ports;
+	for (size_t i = 0; i < servers.size(); ++i)
+	{
+		std::string port = servers[i].getPortStr();
+		if (active_ports.find(port) != active_ports.end()) {
+			int shared_fd = active_ports[port];
+			servers[i].set_fd(shared_fd);
+			std::cout << "Virtual Host: Server " << servers[i].getInterfaceStr()
+					  << " reusing port " << port << " (FD " << shared_fd << ")" << std::endl;
+		}
+		else {
+			if (!servers[i].init()) {
+				std::cerr << "Error: Could not start server on port " << port << std::endl;
+				continue;
+			}
+			active_ports[port] = servers[i].get_fd();
+		}
+		if (add_listener(&servers[i])) success_count++;
+	}
+	if (success_count == 0) return false;
+	return true;
+}
