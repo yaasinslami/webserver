@@ -27,14 +27,14 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			{
 				client->onReadable();
 
-				if (client->getState() ==  CLOSING)
+				if (client->getState() != PROCESSING)
 					break ;
 			}
 			else
 				break;
 		case PROCESSING:
 		{
-			// std::cout << "Processing Request..." << std::endl;
+			std::cout << "Processing Request..." << std::endl;
 			// client->getRequest().log();
 
 			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);

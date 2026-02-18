@@ -206,7 +206,6 @@ const std::string& Request::getBodyPath() const { return _body_file_path; }
 bool	Request::shouldKeepAlive() const { return _keep_alive == true; }
 bool		Request::getIsCgi() const { return _is_cgi; }
 void		Request::setIsCgi(bool state) { _is_cgi = state; }
-std::string Request::getBody() const { return "Hello world"; }
 /* Random Functions */
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
 {

@@ -105,7 +105,6 @@ class	Request
 		const size_t&		getContentLength() const;
 		const size_t&		getBodySize() const;
 		const std::string&	getBodyPath() const;
-		std::string 		getBody() const;
 		bool				getIsCgi() const;
 		void				setIsCgi(bool state);
 
