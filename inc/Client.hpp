@@ -39,7 +39,6 @@ class Client
 		/* CGI */
 		pid_t				_cgi_pid;
 		int					_cgi_pipe_read_fd;
-		int					_cgi_pipe_write_fd;
 		std::string			_cgi_response_buf;
 		size_t				_cgi_bytes_written;
 		/* timeout */
@@ -80,9 +79,6 @@ class Client
 
 		void				setCgiOutPipe(int fd);
 		int					getCgiOutPipe() const;
-		
-		void				setCgiInPipe(int fd);
-		int					getCgiInPipe() const;
 
 		std::string&		get_cgi_response_buf();
 		size_t&				get_cgi_bytes_written();

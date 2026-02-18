@@ -34,8 +34,8 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				break;
 		case PROCESSING:
 		{
-			std::cout << "Processing Request..." << std::endl;
-			client->getRequest().log();
+			// std::cout << "Processing Request..." << std::endl;
+			// client->getRequest().log();
 
 			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);
 
@@ -113,37 +113,6 @@ void EpollManager::handle_cgi_event(int fd, uint32_t events)
 		std::cerr << "⚠️ CGI Pipe Error on fd=" << fd << std::endl;
 		remove_cgi_fds(client, true);
 		return;
-	}
-
-	if (fd == client->getCgiInPipe() && (events & EPOLLOUT))
-	{
-		const std::string& body = client->getRequest().getBody();
-		size_t& bytes_written = client->get_cgi_bytes_written(); 
-
-		if (bytes_written >= body.length())
-		{
-			epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-			_cgi_fd_map.erase(fd);
-			close(fd);
-			client->setCgiInPipe(-1);
-			return;
-		}
-
-		size_t remaining = body.length() - bytes_written;
-		ssize_t sent = write(fd, body.c_str() + bytes_written, remaining);
-
-		if (sent > 0)
-			bytes_written += sent;
-		else
-			return;
-
-		if (bytes_written >= body.length())
-		{
-			epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
-			_cgi_fd_map.erase(fd);
-			close(fd);
-			client->setCgiInPipe(-1);
-		}
 	}
 
 	if (fd == client->getCgiOutPipe() && (events & (EPOLLIN | EPOLLHUP)))
@@ -273,7 +242,7 @@ bool	EpollManager::remove_client(int fd)
 		return (false);
 
 	Client *client = clients[fd];
-	if (client->getCgiInPipe() != -1 || client->getCgiOutPipe() != -1)
+	if (client->getCgiOutPipe() != -1)
 		remove_cgi_fds(client, false);
 
 	epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
@@ -287,8 +256,7 @@ bool	EpollManager::remove_client(int fd)
 bool	EpollManager::add_cgi_fds(Client *client)
 {
 	int out_pipe = client->getCgiOutPipe();
-	int in_pipe = client->getCgiInPipe();
-	
+
 	struct epoll_event ev;
 
 	ev.data.fd = out_pipe;
@@ -299,87 +267,66 @@ bool	EpollManager::add_cgi_fds(Client *client)
 	
 	_cgi_fd_map[out_pipe] = client;
 
-	// only for POST request
-	if (in_pipe != -1)
-	{
-		ev.data.fd = in_pipe;
-		ev.events = EPOLLOUT;
-		if (epoll_ctl(epfd, EPOLL_CTL_ADD, in_pipe, &ev) == -1)
-			return false;
-		_cgi_fd_map[in_pipe] = client;
-	}
-
 	return true;
 }
 
 void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 {
-	int read_fd = client->getCgiOutPipe();
-	int write_fd = client->getCgiInPipe();
-	pid_t pid = client->getCgiPid();
+    int read_fd = client->getCgiOutPipe();
+    pid_t pid = client->getCgiPid();
 
-	if (read_fd != -1)
-	{
-		epoll_ctl(epfd, EPOLL_CTL_DEL, read_fd, NULL);
-		close(read_fd);
-		_cgi_fd_map.erase(read_fd);
-	}
-	if (write_fd != -1)
-	{
-		epoll_ctl(epfd, EPOLL_CTL_DEL, write_fd, NULL);
-		close(write_fd);
-		_cgi_fd_map.erase(write_fd);
-	}
+    if (read_fd != -1)
+    {
+        epoll_ctl(epfd, EPOLL_CTL_DEL, read_fd, NULL);
+        close(read_fd);
+        _cgi_fd_map.erase(read_fd);
+    }
 
-	client->setCgiInPipe(-1);
-	client->setCgiOutPipe(-1);
+    client->setCgiOutPipe(-1);
 
-	if (pid != -1)
-	{
-		int status;
-		pid_t result = waitpid(pid, &status, WNOHANG);
+    if (pid != -1)
+    {
+        int status;
+        pid_t result = waitpid(pid, &status, WNOHANG);
 
-		if (result == 0) 
-		{
-			kill(pid, SIGKILL);
-			waitpid(pid, &status, 0); 
-			send_error = true;
-		}
-		else if (result == pid)
-		{
-			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-				send_error = true;
-		}
-		
-		client->setCgiPid(-1);
-	}
+		// Process exited naturally
+        if (result == 0)
+        {
+            kill(pid, SIGKILL);
+            waitpid(pid, &status, 0);
+        }
+        else if (result == pid)
+        {
+            if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+                send_error = true;
+        }
+        
+        client->setCgiPid(-1);
+    }
 
-	if (send_error)
-	{
-		std::cerr << "Sending 500 Error to Client " << client->getFd() << std::endl;
+    if (send_error)
+    {
+        std::cerr << "Sending 500 Error to Client " << client->getFd() << std::endl;
 		client->setStatus(500);
 
-		std::string body = "<html>\r\n"
-						"<head><title>500 Internal Server Error</title></head>\r\n"
-						"<body>\r\n"
-						"<center><h1>500 Internal Server Error</h1></center>\r\n"
-						"<hr><center>webserv</center>\r\n"
-						"</body>\r\n"
-						"</html>\r\n";
+        std::string body = "<html>\r\n"
+                        "<head><title>500 Internal Server Error</title></head>\r\n"
+                        "<body>\r\n"
+                        "<center><h1>500 Internal Server Error</h1></center>\r\n"
+                        "<hr><center>webserv</center>\r\n"
+                        "</body>\r\n"
+                        "</html>\r\n";
 
-		std::string response = "HTTP/1.1 500 Internal Server Error\r\n"
-							"Content-Type: text/html\r\n"
-							"Content-Length: " + Utils::toString(body.length()) + "\r\n"
-							"Connection: close\r\n\r\n" + 
-							body;
-
-		client->set_write_buf(response);
-
-		client->setState(WRITING);
-		set_events(client->getFd(), EPOLLOUT);
-	}
+        std::string response = "HTTP/1.1 500 Internal Server Error\r\n"
+                            "Content-Type: text/html\r\n"
+                            "Content-Length: " + Utils::toString(body.length()) + "\r\n"
+                            "Connection: close\r\n\r\n" +
+                            body;
+        client->set_write_buf(response);
+        client->setState(WRITING);
+        set_events(client->getFd(), EPOLLOUT);
+    }
 }
-
 void	EpollManager::set_events(int fd, uint32_t events)
 {
 	struct epoll_event ev;
@@ -462,21 +409,21 @@ void	EpollManager::run_loop()
 
 			if (listeners.count(fd))
 			{
-				cout << "call handle_listener_event" << endl;
+				// cout << "call handle_listener_event" << endl;
 				handle_listener_event(fd);
 			}
 			else if (clients.count(fd))
 			{
-				cout << "call handle_client_event" << endl;
+				// cout << "call handle_client_event" << endl;
 				handle_client_event(fd, events);
 			}
 			else
 			{
-				cout << "call handle_cgi_event" << endl;;
+				// cout << "call handle_cgi_event" << endl;;
 				handle_cgi_event(fd, events);
 			}
 
-			cout << "-------------------------" << endl;
+			// cout << "-------------------------" << endl;
 		}
 
 		check_client_timeouts();

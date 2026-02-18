@@ -43,12 +43,9 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 
 	try
 	{
-		// i will remove this
 		std::stringstream ss;
-		ss << req.getBody().length();
+		ss << req.getBodySize();
 		env_vars.push_back("CONTENT_LENGTH=" + ss.str());
-
-		// env_vars.push_back("CONTENT_LENGTH=" + req.getHeader("content-length"));
 		env_vars.push_back("CONTENT_TYPE=" + req.getHeader("content-type"));
 	}
 	catch ( const exception& e )
@@ -92,50 +89,57 @@ static void	child_exit_error(const char* msg)
 	exit(1);
 }
 
-void CgiHandler::execute( Client* client, const string& script_path,
-		const string& interpreter, EpollManager *poller )
+void CgiHandler::execute(Client* client, const string& script_path,
+		const string& interpreter, EpollManager *poller)
 {
-	const Request&			req = client->getRequest();
-	const Directives* 		config = client->getConfig();
+	const Request&      req = client->getRequest();
+	const Directives* config = client->getConfig();
 
-	int cgi_in_pipe[2] = {-1, -1};
 	int cgi_out_pipe[2] = {-1, -1};
 
-	if (pipe(cgi_in_pipe) == -1 || pipe(cgi_out_pipe) == -1)
+	if (pipe(cgi_out_pipe) == -1)
 	{
 		cerr << "Pipe error" << endl;
 		client->setStatus(500);
-		cerr << "500 Internal Server Error" << endl;
 		return;
 	}
 
 	char** envp = create_env(*client, script_path);
-	string	script_directory = script_path.substr(0, script_path.rfind('/'));
+	string script_directory = script_path.substr(0, script_path.rfind('/'));
 
 	pid_t pid = fork();
 	if (pid == -1)
 	{
 		cerr << "Fork error" << endl;
 		delete_env(envp);
-
 		client->setStatus(500);
-		client->set_write_buf("HTTP/1.1 500 Internal Server Error\r\n\r\nFork Failed");
-		cerr << "500 Internal Server Error" << endl;
-		poller->set_events(client->getFd(), EPOLLOUT);
-		return ;
+		close(cgi_out_pipe[READ_END]);
+		close(cgi_out_pipe[WRITE_END]);
+		return;
 	}
 
 	if (pid == 0)
 	{
-		close(cgi_in_pipe[WRITE_END]);
 		close(cgi_out_pipe[READ_END]);
 
-		if (dup2(cgi_in_pipe[READ_END], STDIN_FILENO) == -1)
+		int body_fd = -1;
+
+		if (!req.getBodyPath().empty()) {
+			body_fd = open(req.getBodyPath().c_str(), O_RDONLY);
+		}
+
+		if (body_fd == -1) {
+			body_fd = open("/dev/null", O_RDONLY);
+		}
+
+		if (dup2(body_fd, STDIN_FILENO) == -1)
 			child_exit_error("dup2 stdin failed");
+		
+		close(body_fd);
+
 		if (dup2(cgi_out_pipe[WRITE_END], STDOUT_FILENO) == -1)
 			child_exit_error("dup2 stdout failed");
 
-		close(cgi_in_pipe[READ_END]);
 		close(cgi_out_pipe[WRITE_END]);
 
 		if (chdir(script_directory.c_str()) == -1)
@@ -149,22 +153,19 @@ void CgiHandler::execute( Client* client, const string& script_path,
 		};
 
 		execve(interpreter.c_str(), argv, envp);
-
 		child_exit_error("execve failed");
 	}
 
-	close(cgi_in_pipe[READ_END]);
 	close(cgi_out_pipe[WRITE_END]);
 
-	Utils::set_nonblocking(cgi_in_pipe[WRITE_END]);
 	Utils::set_nonblocking(cgi_out_pipe[READ_END]);
 
 	client->setCgiPid(pid);
-	client->setCgiInPipe(cgi_in_pipe[WRITE_END]);
 	client->setCgiOutPipe(cgi_out_pipe[READ_END]);
 
 	client->setState(HANDLING_CGI);
 	delete_env(envp);
+
 	if (!poller->add_cgi_fds(client))
 		cout << "[poller]: register_cgi_fds failed" << endl;
 }

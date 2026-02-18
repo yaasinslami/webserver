@@ -12,8 +12,14 @@ void Client::onReadable()
 		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 		if (bytes > 0) {
 			_request.feed(buf, bytes);
-			if (_request.getState() >= STATE_HEADERS_DONE)  markProcessing();
-			if (_request.getState() == STATE_COMPLETE) std::cout << GREEN << "Request Completed" << RESET << std::endl;
+
+			std::cout << "DEBUG: Bytes read: " << bytes << " | Request State: " << _request.getState() << std::endl;
+
+			if (_request.getState() == STATE_COMPLETE)
+			{
+				std::cout << GREEN << "Request Completed" << RESET << std::endl;
+				markProcessing();
+			}
 		}
 		else if (bytes == 0) {
 			std::cout << "Client closed fd=" << _fd << std::endl;
@@ -119,8 +125,6 @@ void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
 pid_t Client::getCgiPid() const { return _cgi_pid; };
 void Client::setCgiOutPipe(int fd) { _cgi_pipe_read_fd = fd; }
 int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
-void Client::setCgiInPipe(int fd) { _cgi_pipe_write_fd = fd; }
-int Client::getCgiInPipe() const { return _cgi_pipe_write_fd; }
 string&	Client::get_cgi_response_buf() { return _cgi_response_buf; }
 size_t&	Client::get_cgi_bytes_written() { return _cgi_bytes_written; }
 /* timeout */
@@ -142,7 +146,6 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 	_config(NULL), 
 	_cgi_pid(-1),
 	_cgi_pipe_read_fd(-1),
-	_cgi_pipe_write_fd(-1),
 	_cgi_bytes_written(0),
 	_last_activity_time(time(NULL))
 {

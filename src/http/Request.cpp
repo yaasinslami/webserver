@@ -112,9 +112,9 @@ void	Request::feed(const char* data, size_t size)
 				_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
 				_body_file.open(_body_file_path.c_str(), std::ios::binary | std::ios::trunc);
 				if (!_body_file.is_open()) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break ; }
-				if (_chunked_transfer) _state = STATE_CHUNKED;
-				else _state = STATE_BODY;
-				break ;
+				_state = (_chunked_transfer) ? STATE_CHUNKED : STATE_BODY;
+				i--;
+				break;
 			}
 			case STATE_BODY:
 			{
@@ -138,6 +138,8 @@ void	Request::feed(const char* data, size_t size)
 			}
 			case STATE_COMPLETE:
 			{
+				if (_body_file.is_open()) 
+					_body_file.close();
 				return ;
 			}
 			case STATE_ERROR:
@@ -182,7 +184,11 @@ void	Request::_validate_headers()
 	}
 	if (_headers.count("transfer-encoding")) {
 		// if (_body_exist) {_state = STATE_ERROR; _code = 400;return; }// Transfer-Encoding overrides Content-Length
-		if (_headers["transfer-encoding"].find("chunked") != std::string::npos) { _chunked_transfer = true; _body_exist = true; }
+		if (_headers["transfer-encoding"].find("chunked") != std::string::npos) {
+			_chunked_transfer = true;
+			_body_exist = true;
+			std::cout << "DEBUG: Chunked transfer detected!" << std::endl;
+		}
 		else { _state = STATE_ERROR; _code = 501; return; }// 501 Not Implemented
 	}
 	if (_headers.count("connection") && _headers["connection"].find("close") != std::string::npos) _keep_alive = false;
@@ -242,6 +248,7 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 				_body_file.write(data + i, to_write);
 				if (_body_file.fail()) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break; }
 				_chunk_bytes_read += to_write;
+				_total_body_bytes += to_write;
 				i += to_write - 1;
 			}
 			if (_chunk_bytes_read >= _chunk_length) _chunk_state = PAYLOAD_BODY_CR;
