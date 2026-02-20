@@ -25,9 +25,9 @@ class Client
 {
 	private:
 		/* states */
-		int             _fd;
-		ClientState     _state;
-		bool            _closed;
+		int				_fd;
+		ClientState		_state;
+		bool			_closed;
 		short			_status_code;
 		/* http */
 		Request		_request;
@@ -48,40 +48,40 @@ class Client
 		std::string _write_buf;
 
 	public:
+		/* Constructors */
 		Client(int, const std::vector<Server*>&);
 		~Client();
 
-
-		int					getFd() const;
-		bool				isClosed() const;
+		/* Workers */
 		void				onReadable();
 		void				onWritable();
+		void				process();
 
+		/* Getters */
+		int					getFd() const;
+		bool				isClosed() const;
+		Request&			getRequest();
+		const Directives*	getConfig() const;
+		const Server*		getServer() const;
 		ClientState			getState() const;
+		const short&		getStatus() const;
+		void				setStatus(int status);
+		pid_t				getCgiPid() const;
+		int					getCgiOutPipe() const;
+		std::string&		get_cgi_response_buf();
+		size_t&				get_cgi_bytes_written();
+		
+		/* Setters */	
+		void				setState(ClientState state);
+		void				setCgiPid(pid_t pid);
+		void				setCgiOutPipe(int fd);
+		/* State Markers */
 		void				markProcessing();
 		void				markWriting();
 		void				scheduleClose();
 		/* Context => Server and Directives */
 		void				_setBestConfig();
 		bool				hasConfig() const;
-		
-		Request&			getRequest();
-		const Directives*	getConfig() const;
-		const Server*				getServer() const;
-		
-		const short&				getStatus() const;
-		void				setStatus(int status);
-
-		void				setState(ClientState state);
-
-		void				setCgiPid(pid_t pid);
-		pid_t				getCgiPid() const;
-
-		void				setCgiOutPipe(int fd);
-		int					getCgiOutPipe() const;
-
-		std::string&		get_cgi_response_buf();
-		size_t&				get_cgi_bytes_written();
 
 		void				parseCgiResponse();
 
@@ -94,4 +94,6 @@ class Client
 		// i will remove this
 		const std::string&	get_write_buf() const;
 		void				set_write_buf(const std::string &s);
+	private:
+		bool				_validateRequest();
 };

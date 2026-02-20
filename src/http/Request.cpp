@@ -103,18 +103,14 @@ void	Request::feed(const char* data, size_t size)
 				if (ch != '\n') { _state = STATE_ERROR;  _code = 400; break; }
 				_validate_headers();
 				if (_state == STATE_ERROR) break;
-				if (_body_exist) _state = STATE_BODY_START;
+				if (_body_exist) {
+					_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
+					_body_file.open(_body_file_path.c_str(), std::ios::binary | std::ios::trunc);
+					if (!_body_file.is_open()) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break ; }
+					_state = (_chunked_transfer) ? STATE_CHUNKED : STATE_BODY;
+				}
 				else _state = STATE_COMPLETE;
 				break ;
-			}
-			case STATE_BODY_START:
-			{
-				_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
-				_body_file.open(_body_file_path.c_str(), std::ios::binary | std::ios::trunc);
-				if (!_body_file.is_open()) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break ; }
-				_state = (_chunked_transfer) ? STATE_CHUNKED : STATE_BODY;
-				i--;
-				break;
 			}
 			case STATE_BODY:
 			{
@@ -206,7 +202,10 @@ const std::string& Request::getBodyPath() const { return _body_file_path; }
 bool	Request::shouldKeepAlive() const { return _keep_alive == true; }
 bool		Request::getIsCgi() const { return _is_cgi; }
 void		Request::setIsCgi(bool state) { _is_cgi = state; }
+const short& Request::getCode() const { return _code; }
+bool Request::hasBody() const { return _body_exist; }
 /* Random Functions */
+void	Request::setState(RequestState state) { _state = state; }
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
 {
 	unsigned char ch = data[i];

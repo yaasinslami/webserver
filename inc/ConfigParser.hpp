@@ -17,7 +17,6 @@ class	ConfigParser
 		void	parse( void );
 
 		/* Getters */
-		const std::string&				getFileName() const;
 		const std::vector<std::string>&	getTokens() const;
 		const size_t&					getTokensIndex() const;
 		Http&							getHttp();
@@ -32,12 +31,11 @@ class	ConfigParser
 		std::string consumeToken();
 	
 	private:
-		std::string					_filename;
-		std::ifstream				_file;
 		std::vector<std::string>	_tokens;
 		size_t						_token_index;
 		Http						_http;
 
+		static bool _reg_directive(const enum e_directive_type);
 		// --- Helper Methods ---
 		void tokenize(std::string& content);
 		

@@ -86,10 +86,8 @@ void Server::setServerName(const std::vector<std::string> &server_name)
 void	Server::addServerName(const std::string& server_name)
 {
 	std::string s_name(server_name);
-
 	++_server_table[S_NAME];
-	if (server_name == "localhost")
-		s_name = "127.0.0.1";
+	if (server_name == "localhost") s_name = "127.0.0.1";
 	this->_server_name.push_back(s_name);
 }
 
@@ -113,7 +111,6 @@ void	Server::validate() const
 {
 	if (_server_table.at(INTERFACE) == 0 && _server_table.at(PORT) == 0)
 		throw std::runtime_error("Missing 'listen' directve in server block.");
-
 	if (_server_table.at(INTERFACE) > 1 || _server_table.at(PORT) > 1)
 		throw std::runtime_error("Duplicate 'Interface|port' in server block.");
 
@@ -260,4 +257,11 @@ bool Server::hasIdenticalNames(const Server *other) const
 	std::sort(sorted_a.begin(), sorted_a.end());
 	std::sort(sorted_b.begin(), sorted_b.end());
 	return (sorted_a == sorted_b);
+}
+bool Server::hasServerName(const std::string &s_name) const
+{
+	for (size_t i = 0; i < _server_name.size(); ++i)  {
+		if (s_name == _server_name[i]) return true;
+	}
+	return false;
 }

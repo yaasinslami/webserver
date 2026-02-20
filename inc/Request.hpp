@@ -35,7 +35,6 @@ enum RequestState
 	STATE_FIELD_VALUE,
 	STATE_FIELD_LF,
 	STATE_HEADERS_DONE,
-	STATE_BODY_START,
 	STATE_BODY,
 	STATE_CHUNKED,
 	STATE_COMPLETE,
@@ -97,6 +96,7 @@ class	Request
 		/* Getters */
 		const RequestState&	getState() const;
 		const short&		getCode() const;
+		bool				hasBody() const;
 		const std::string&	getMethod() const;
         const std::string&	getPath() const;
         const std::string&	getQuery() const;
@@ -106,8 +106,10 @@ class	Request
 		const size_t&		getBodySize() const;
 		const std::string&	getBodyPath() const;
 		bool				getIsCgi() const;
-		void				setIsCgi(bool state);
+		bool				isChunked();
 
+		void		setIsCgi(bool state);
+		void		setState(RequestState);
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;
 		void		resetState();

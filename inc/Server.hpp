@@ -63,7 +63,8 @@ class	Server
 		bool						init();
 		int							accept_client();
 
-		bool hasIdenticalNames(const Server*) const;
+		bool	hasIdenticalNames(const Server*) const;
+		bool	hasServerName(const std::string&) const;
 
 
 	private:

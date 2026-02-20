@@ -26,12 +26,9 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			if (events & EPOLLIN)
 			{
 				client->onReadable();
-
-				if (client->getState() != PROCESSING)
-					break ;
+				if (client->getState() != PROCESSING) break ;
 			}
-			else
-				break;
+			else break;
 		case PROCESSING:
 		{
 			std::cout << "Processing Request..." << std::endl;
@@ -162,7 +159,7 @@ bool EpollManager::add_listener(Server *srv)
 	{
 		std::vector<Server *> &existing_servers = listeners[fd];
 		for (size_t i = 0; i < existing_servers.size(); ++i) {
-			if (srv->hasIdenticalNames(existing_servers[i])) {
+			if (srv->hasIdenticalNames(existing_servers[i])) {// tkhwira
 				std::cerr << "⚠️  WARNING: Conflicting server_name on port [" << srv->getPortStr()
 						<< "] (ignored)." << std::endl;
 				return false;

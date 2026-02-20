@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <cstring>
 #include <sstream>
+#include <algorithm>
 
 void Client::onReadable()
 {
@@ -11,22 +12,92 @@ void Client::onReadable()
 
 		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 		if (bytes > 0) {
-			std::cout << "DEBUG: Try to Feed: [" << bytes << "] | Request State: " << _request.getState() << std::endl;
 			_request.feed(buf, bytes);
-			std::cout << "DEBUG: Bytes read: " << bytes << " | Request State: " << _request.getState() << std::endl;
-
-
-			if (_request.getState() == STATE_COMPLETE)
-			{
-				std::cout << GREEN << "Request Completed" << RESET << std::endl;
-				markProcessing();
-			}
 		}
 		else if (bytes == 0) {
 			std::cout << "Client closed fd=" << _fd << std::endl;
 			_closed = true;
 			setState(CLOSING);
 		}
+}
+
+void Client::process()
+{
+	if (_request.getState() == STATE_ERROR) {
+		std::cout << "[Bridge] Fatal parser error detected early (Code: " << _request.getCode() << ")." << std::endl;
+		_config = &_server->getDirectives();
+		_response.setConfig(_config);
+		_response.generateError(_config);
+		markWriting();
+		return;
+	}
+
+	if (!hasConfig()) _setBestConfig();
+
+	if (!_validateRequest())
+	{
+		std::cout << "[Client] Request rejected. Code: " << _status_code << std::endl;
+		_request.setState(STATE_ERROR);
+		_response.generateError(_config);
+		markWriting();
+		return;
+	}
+
+
+	if (_request.getState() == STATE_COMPLETE) {
+		_response.generate(_request);
+		markWriting();
+	}
+}
+
+bool	Client::_validateRequest()
+{
+	/* allowed Methods */
+	bool	method_allowd = false;
+	const std::vector<std::string> &allowed = _config->getAllowedMethods();
+	if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end()) {
+    	_status_code = 405;
+    	return false;
+	}
+	/* Max Body Size */
+	if (_request.hasBody()) {
+		if (_request.getContentLength() > _config->getMaxBodySize() || _request.getBodySize() > _config->getMaxBodySize()) {
+			_status_code = 413; 
+			return false;
+		}
+	}
+	return true;
+}
+
+void	Client::_setBestConfig()
+{
+	/* Server */
+	std::string host = _request.getHeader("host");
+	size_t colon_pos = host.find(':');
+	if (colon_pos != std::string::npos) host = host.substr(0, colon_pos);
+
+	for (size_t i = 0; i < _server_candidates->size(); ++i) {
+		Server* srv = (*_server_candidates)[i];
+		if (srv->hasServerName(host)) { _server = srv; break; }
+	}
+
+	/* Location */
+	const std::vector<Location>& locations = _server->getLocation();
+	const Location *best_match = NULL;
+	std::string path = _request.getPath();
+	size_t best_len = 0;
+	for (size_t i = 0; i < locations.size(); ++i) {
+		const std::string &loc_path = locations[i].getDirectives().getPath();
+		if (path.compare(0, loc_path.length(), loc_path) == 0) {
+			if (path.length() == loc_path.length() || path[loc_path.length()] == '/') {
+				if (loc_path.length() > best_len) {
+					best_match = &locations[i];
+					best_len = loc_path.length();
+				}
+			}
+		}
+	}
+	_config = (best_match) ? &best_match->getDirectives() : &_server->getDirectives();
 }
 
 void Client::onWritable()
@@ -122,6 +193,7 @@ void Client::setStatus(int status) { _status_code = status; }
 void Client::setState( ClientState state ) { _state = state; }
 bool	Client::isRequestReady() { return _request.requestCompleted(); }
 time_t	Client::getLastActivity( void ) const { return _last_activity_time; }
+bool	Client::hasConfig() const { return _config != NULL; }
 /* CGI */
 void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
 pid_t Client::getCgiPid() const { return _cgi_pid; };
@@ -155,7 +227,6 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 	if (_server)
 		_config = &_server->getDirectives();
 }
-
 Client::~Client()
 {
 	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
