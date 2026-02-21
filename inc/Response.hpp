@@ -1,9 +1,9 @@
 #ifndef RESPONSE
 # define RESPONSE
 
-#include <string>
 #include "Directives.hpp"
 #include "Request.hpp"
+#include "Utils.hpp"
 
 class Response
 {
@@ -27,12 +27,15 @@ class Response
 		void setConfig(const Directives*);
 		void generate(const Request&);
 		/* errors */
-		void	generateError(const Directives*);
+		void	generateError();
 		/* Response reseter */
 		void	clear();
 
 		static std::string _sanitizePath(const std::string&);
 		void _translatePath(const std::string uri);
+
+		/* utils */
+		std::string	_getMimeType(const std::string& path);
 
 		private:
 			void	_handleGet();

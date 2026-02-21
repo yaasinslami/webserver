@@ -8,6 +8,7 @@
 #define READ_END 0
 #define WRITE_END 1
 
+class Client;
 class EpollManager;
 
 class CgiHandler
@@ -15,7 +16,7 @@ class CgiHandler
 	public:
 		static std::string	prepare(Client* client, EpollManager& poller, int fd);
 		static void	execute(Client* client, const string& script_path,
-				const string& interpreter, EpollManager* poller);
+				const string& interpreter, EpollManager& poller);
 
 	private:
 		static char** create_env(Client& client, const std::string& script_path);

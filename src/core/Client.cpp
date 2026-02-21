@@ -21,32 +21,89 @@ void Client::onReadable()
 		}
 }
 
-void Client::process()
+
+static string get_cgi_executable(string path, Client& client)
 {
+	const Directives* config = client.getConfig();
+	const map<string, string>& handlers = config->getCgiHandlers();
+
+	if (handlers.empty())
+		return "";
+
+	size_t dot_pos = path.rfind('.');
+	if (dot_pos == string::npos)
+		return "";
+
+	string extension = path.substr(dot_pos);
+
+	map<string, string>::const_iterator it = handlers.find(extension);
+
+	if (it != handlers.end())
+	{
+		client.getRequest().setIsCgi(true);
+		return it->second;
+	}
+
+	return "";
+}
+
+void Client::process(EpollManager &poller)
+{
+	if (!_server) { 
+        std::cout << RED << "CRITICAL: _server is NULL in process()" << RESET << std::endl; 
+        return; 
+    }
+
+	cout << GREEN << "process path : " << _request.getPath() << RESET << endl;
+
 	if (_request.getState() == STATE_ERROR) {
 		std::cout << "[Bridge] Fatal parser error detected early (Code: " << _request.getCode() << ")." << std::endl;
-		_config = &_server->getDirectives();
+		// _config = &_server->getDirectives();
 		_response.setConfig(_config);
-		_response.generateError(_config);
+		// _response.generateError();
 		markWriting();
+		poller.set_events(_fd, EPOLLOUT);
 		return;
 	}
 
-	if (!hasConfig()) _setBestConfig();
+	if (!hasConfig())
+	{
+		_setBestConfig();
+		_response.setConfig(_config);
+	}
 
 	if (!_validateRequest())
 	{
 		std::cout << "[Client] Request rejected. Code: " << _status_code << std::endl;
 		_request.setState(STATE_ERROR);
-		_response.generateError(_config);
+		// _response.generateError();
 		markWriting();
 		return;
 	}
 
-
 	if (_request.getState() == STATE_COMPLETE) {
-		_response.generate(_request);
-		markWriting();
+		// CGI
+		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
+		if (_request.getIsCgi())
+		{
+			cout << BLUE << "CGI Request" << RESET << std::endl;
+			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
+			if (script_fs_path.empty()) {
+				// _response.generateError();
+				markWriting();
+				poller.set_events(_fd, EPOLLOUT);
+				return;
+			}
+			CgiHandler::execute(this, script_fs_path, executable_path, poller);
+		}
+		else
+		{
+			// Normal Response 
+			cout << BLUE << "Normal Request" << RESET << std::endl;
+			_response.generate(_request);
+			markWriting();
+			poller.set_events(_fd, EPOLLOUT);
+		}
 	}
 }
 
@@ -56,8 +113,8 @@ bool	Client::_validateRequest()
 	bool	method_allowd = false;
 	const std::vector<std::string> &allowed = _config->getAllowedMethods();
 	if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end()) {
-    	_status_code = 405;
-    	return false;
+		_status_code = 405;
+		return false;
 	}
 	/* Max Body Size */
 	if (_request.hasBody()) {
@@ -116,60 +173,49 @@ void Client::onWritable()
 	}
 	else if (_write_buf.empty())
 	{
-		std::cout <<  "reset the state\n";
-		_state = READING;
-		_request.resetState();
+		std::cout << "reset the state\n";
+		resetForNextRequest();
 	}
 }
 
-void	Client::parseCgiResponse()
+void Client::parseCgiResponse()
 {
 	std::string raw = _cgi_response_buf;
-	std::string headers_part;
-	std::string body_part;
-
 	size_t split_pos = raw.find("\r\n\r\n");
-	size_t separator_len = 4;
+	size_t sep_len = 4;
 
-	if (split_pos == std::string::npos)
-	{
+	if (split_pos == std::string::npos) {
 		split_pos = raw.find("\n\n");
-		separator_len = 2;
+		sep_len = 2;
 	}
 
-	if (split_pos != std::string::npos)
-	{
-		headers_part = raw.substr(0, split_pos);
-		body_part = raw.substr(split_pos + separator_len); 
+	if (split_pos == std::string::npos) {
+		std::cerr << "[Error] CGI sent no header separator." << std::endl;
+		setStatus(502);
+		return;
 	}
-	else
-		body_part = raw;
+
+	std::string headers_part = raw.substr(0, split_pos);
+	std::string body_part = raw.substr(split_pos + sep_len);
 
 	std::string status_line = "HTTP/1.1 200 OK";
 	std::string final_headers = "";
-	
 	std::stringstream ss(headers_part);
 	std::string line;
 
-	while (std::getline(ss, line))
-	{
+	while (std::getline(ss, line)) {
 		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length() - 1);
+		if (line.empty()) continue;
 
-		if (line.empty())
-			continue;
-
-		if (line.compare(0, 7, "Status:") == 0)
-		{
-			if (line.size() > 8)
-				status_line = "HTTP/1.1 " + line.substr(8);
-		}
-		else if (line.compare(0, 15, "Content-Length:") == 0)
-			continue;
-		else 
+		if (line.compare(0, 7, "Status:") == 0) {
+			if (line.size() > 8) status_line = "HTTP/1.1 " + line.substr(8);
+		} else if (line.find(':') == std::string::npos) {
+			setStatus(502);
+			return;
+		} else
 			final_headers += line + "\r\n";
 	}
-
 	std::stringstream response;
 	
 	response << status_line << "\r\n";
@@ -194,6 +240,13 @@ void Client::setState( ClientState state ) { _state = state; }
 bool	Client::isRequestReady() { return _request.requestCompleted(); }
 time_t	Client::getLastActivity( void ) const { return _last_activity_time; }
 bool	Client::hasConfig() const { return _config != NULL; }
+void	Client::resetForNextRequest() {
+    _request.resetState();
+    // _response.clear();
+    _config = NULL;
+    _status_code = 200;
+    _state = READING;
+}
 /* CGI */
 void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
 pid_t Client::getCgiPid() const { return _cgi_pid; };
@@ -224,8 +277,6 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 	_last_activity_time(time(NULL))
 {
 	std::cout << "🟢 New Client fd=" << _fd << std::endl;
-	if (_server)
-		_config = &_server->getDirectives();
 }
 Client::~Client()
 {

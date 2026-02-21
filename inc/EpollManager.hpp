@@ -1,20 +1,19 @@
 #pragma once
 
-#include <map>
-#include <algorithm>
-#include <cstdio>
+#include "Client.hpp"
+#include "Server.hpp"
+#include "Utils.hpp"
+#include <cerrno>
 
 #include <sys/epoll.h>
 #include <sys/wait.h>
 
-#include "Server.hpp"
-#include "Client.hpp"
-#include "CgiHandler.hpp"
-#include "Directives.hpp"
-
 #define MAX_EVENTS 128
 
 using namespace std;
+
+class Client; 
+class Server;
 
 class EpollManager
 {

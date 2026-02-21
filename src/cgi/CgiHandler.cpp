@@ -20,25 +20,15 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 
 	std::vector<std::string> env_vars;
 
-	string path = req.getPath();
-
-	string query_string = "";
-	size_t q_pos = path.find('?');
-	if (q_pos != string::npos)
-	{
-		query_string = path.substr(q_pos + 1);
-		path = path.substr(0, q_pos);
-	}
-
 	env_vars.push_back("REQUEST_METHOD=" + req.getMethod());
 	env_vars.push_back("SERVER_PROTOCOL=HTTP/1.1");
 	env_vars.push_back("SCRIPT_FILENAME=" + script_path);
 	env_vars.push_back("GATEWAY_INTERFACE=CGI/1.1");
-	env_vars.push_back("SCRIPT_NAME=" + path);
+	env_vars.push_back("SCRIPT_NAME=" + req.getPath());
 	env_vars.push_back("SCRIPT_FILENAME=" + script_path);
 	env_vars.push_back("REQUEST_URI=" + req.getPath());
 	env_vars.push_back("DOCUMENT_ROOT=" + config->getRoot());
-	env_vars.push_back("QUERY_STRING=" + query_string);
+	env_vars.push_back("QUERY_STRING=" + req.getQuery());
 	env_vars.push_back("REDIRECT_STATUS=200");
 
 	try
@@ -50,7 +40,7 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	}
 	catch ( const exception& e )
 	{
-		std::cout << "CONTENT_LENGTH or CONTENT_TYPE is missing" << endl;
+		// std::cout << "CONTENT_LENGTH or CONTENT_TYPE is missing" << endl;
 	}
 
 	const map<string, string> headers = req.getHeaders();
@@ -90,7 +80,7 @@ static void	child_exit_error(const char* msg)
 }
 
 void CgiHandler::execute(Client* client, const string& script_path,
-		const string& interpreter, EpollManager *poller)
+		const string& interpreter, EpollManager &poller)
 {
 	const Request&      req = client->getRequest();
 	const Directives* config = client->getConfig();
@@ -105,7 +95,6 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	}
 
 	char** envp = create_env(*client, script_path);
-	string script_directory = script_path.substr(0, script_path.rfind('/'));
 
 	pid_t pid = fork();
 	if (pid == -1)
@@ -120,6 +109,10 @@ void CgiHandler::execute(Client* client, const string& script_path,
 
 	if (pid == 0)
 	{
+		size_t last_slash = script_path.rfind('/');
+        string script_directory = (last_slash == string::npos) ? "." : script_path.substr(0, last_slash);
+        string script_filename = (last_slash == string::npos) ? script_path : script_path.substr(last_slash + 1);
+
 		close(cgi_out_pipe[READ_END]);
 
 		int body_fd = -1;
@@ -148,7 +141,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 		const char* script_path_arg = script_path.c_str();
 		char* argv[] = {
 			const_cast<char*>(interpreter.c_str()),
-			const_cast<char*>(script_path_arg),
+			const_cast<char*>(script_filename.c_str()),
 			NULL
 		};
 
@@ -166,7 +159,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	client->setState(HANDLING_CGI);
 	delete_env(envp);
 
-	if (!poller->add_cgi_fds(client))
+	if (!poller.add_cgi_fds(client))
 		cout << "[poller]: register_cgi_fds failed" << endl;
 }
 
@@ -174,14 +167,13 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 {
 	const Directives* config = client->getConfig();
 	Request& req = client->getRequest();
-	string	path = req.getPath();
-	size_t	q_pos = path.find('?');
 
-	if (q_pos != string::npos)
-		path = path.substr(0, q_pos);
-
-	string script_fs_path = Utils::normalize_path(config->getRoot() + path);
-
+	cout << YELLOW << "config->getRoot() : " << config->getRoot() << RESET << endl;
+	cout << YELLOW << "config->getPath() : " << req.getPath() << RESET << endl;
+	
+	string script_fs_path = Utils::normalize_path(config->getRoot() + req.getPath());
+	
+	cout << YELLOW << "script_fs_path : " << script_fs_path << RESET << endl;
 	if (access(script_fs_path.c_str(), F_OK) == -1)
 	{
 		client->setStatus(400);
@@ -200,9 +192,6 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 							body;
 
 		client->set_write_buf(response);
-		client->markWriting();
-		poller.set_events(fd, EPOLLOUT);
-		client->getRequest().setIsCgi(false);
 		return "";
 	}
 

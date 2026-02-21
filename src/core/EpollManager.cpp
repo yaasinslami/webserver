@@ -26,32 +26,21 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			if (events & EPOLLIN)
 			{
 				client->onReadable();
-				if (client->getState() != PROCESSING) break ;
+				if (client->getRequest().getState() >= STATE_HEADERS_DONE)
+					client->setState(PROCESSING);
+				else
+					break ;
 			}
 			else break;
 		case PROCESSING:
 		{
 			std::cout << "Processing Request..." << std::endl;
-			// client->getRequest().log();
+			client->process(*this);
 
-			std::string executable_path = get_cgi_executable(client->getRequest().getPath(), *client);
-
-			if (client->getRequest().getIsCgi())
-			{
-				std::string	script_fs_path = CgiHandler::prepare(client, *this, fd);
-				if (script_fs_path.empty())
-					break ;
-				CgiHandler::execute(client, script_fs_path, executable_path, this);
-			}
-			else
-			{
-				std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n";
-				client->set_write_buf(response);
-				client->markWriting();
-				set_events(fd, EPOLLOUT);
-			}
+			if (client->getState() == PROCESSING)
+				client->setState(READING);
+			break ;
 		}
-			break;
 		case WRITING:
 			if (events & EPOLLOUT)
 			{
@@ -129,6 +118,24 @@ void EpollManager::handle_cgi_event(int fd, uint32_t events)
 			if (client->getStatus() != 500)
 			{
 				client->parseCgiResponse();
+				if (client->getStatus() == 502)
+				{
+					std::string body = "<html>\r\n"
+						"<head><title>502 Bad Gateway</title></head>\r\n"
+						"<body>\r\n"
+						"<center><h1>502 Bad Gateway</h1></center>\r\n"
+						"<hr><center>webserv</center>\r\n"
+						"</body>\r\n"
+						"</html>\r\n";
+
+					std::string response = "HTTP/1.1 502 Bad Gateway\r\n"
+										"Content-Type: text/html\r\n"
+										"Content-Length: " + Utils::toString(body.length()) + "\r\n"
+										"Connection: close\r\n\r\n" + 
+										body;
+
+					client->set_write_buf(response);
+				}
 				client->markWriting();
 				set_events(client->getFd(), EPOLLOUT);
 			}
@@ -328,35 +335,6 @@ void	EpollManager::handle_listener_event(int fd)
 			delete conn;
 		}
 	}
-}
-
-static string get_cgi_executable(string path, Client& client)
-{
-	const Directives* config = client.getConfig();
-	const map<string, string>& handlers = config->getCgiHandlers();
-
-	if (handlers.empty())
-		return "";
-	
-	size_t q_pos = path.find('?');
-	if (q_pos != string::npos)
-		path = path.substr(0, q_pos);
-
-	size_t dot_pos = path.rfind('.');
-	if (dot_pos == string::npos)
-		return "";
-
-	string extension = path.substr(dot_pos);
-	
-	map<string, string>::const_iterator it = handlers.find(extension);
-
-	if (it != handlers.end())
-	{
-		client.getRequest().setIsCgi(true);
-		return it->second;
-	}
-
-	return "";
 }
 
 void	EpollManager::run_loop()

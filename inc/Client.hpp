@@ -1,16 +1,18 @@
 #pragma once
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <ctime>
-
 #include "Request.hpp"
 #include "Response.hpp"
 #include "Server.hpp"
 #include "Directives.hpp"
+#include "CgiHandler.hpp"
 
 #define BUFFER_SIZE 65536
+
+class Request;
+class Response;
+class Server;
+class Directives;
+class EpollManager;
 
 enum ClientState
 {
@@ -55,7 +57,7 @@ class Client
 		/* Workers */
 		void				onReadable();
 		void				onWritable();
-		void				process();
+		void				process(EpollManager& poller);
 
 		/* Getters */
 		int					getFd() const;
@@ -82,9 +84,10 @@ class Client
 		/* Context => Server and Directives */
 		void				_setBestConfig();
 		bool				hasConfig() const;
+		void				resetForNextRequest();
 
+		/* CGI */
 		void				parseCgiResponse();
-
 		void				closeCgiPipes();
 
 		bool				isRequestReady();

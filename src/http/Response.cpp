@@ -5,13 +5,19 @@
 
 void Response::generate(const Request& req)
 {
+	if (_config == NULL)
+	{
+		std::cout << RED << "_config is NULL" << RESET << std::endl;
+		return ;
+	}
+
 	_translatePath(req.getPath());
 	std::cout << "[Response] Target resource: " << _resource_path << std::endl;
 
 	std::string method = req.getPath();
 	if (method == "GET") _handleGet();
-	else if (method == "POST") _handlePost();
-	else if (method == "DELETE") _handleDelete();
+	// else if (method == "POST") _handlePost();
+	// else if (method == "DELETE") _handleDelete();
 }
 
 void Response::_handleGet()
@@ -19,7 +25,7 @@ void Response::_handleGet()
 	struct stat file_info;
 	if (stat(_resource_path.c_str(), &file_info) != 0) { setCode(404); return; }
 	if (S_ISDIR(file_info.st_mode)) _handleDirectory();
-	if (S_ISREG(file_info.st_mode)) _serveFile();
+	// if (S_ISREG(file_info.st_mode)) _serveFile();
 }
 
 void	Response::_handleDirectory()
@@ -84,6 +90,26 @@ std::string Response::_sanitizePath(const std::string& path)
 		}
 	}
 	return sanitized;
+}
+
+
+std::string Response::_getMimeType(const std::string& path)
+{
+	size_t dot = path.find_last_of(".");
+	if (dot == std::string::npos)
+		return "application/octet-stream";
+
+	std::string ext = path.substr(dot);
+	if (ext == ".html" || ext == ".htm") return "text/html";
+	if (ext == ".css") return "text/css";
+	if (ext == ".js") return "application/javascript";
+	if (ext == ".png") return "image/png";
+	if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
+	if (ext == ".gif") return "image/gif";
+	if (ext == ".ico") return "image/x-icon";
+	if (ext == ".txt") return "text/plain";
+	if (ext == ".pdf") return "application/pdf";
+	return "application/octet-stream";
 }
 
 void Response::setCode(short code) { _code = code; }

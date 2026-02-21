@@ -176,7 +176,7 @@ void	Request::_validate_headers()
 		unsigned long len = std::strtoul(str, &endptr, 10);
 		if (errno == ERANGE || endptr == str || *endptr != '\0') { _state = STATE_ERROR; _code = 400; return; }
 		_content_length = (size_t)len;
-		_body_exist = true;
+		_body_exist = _content_length == 0 ? false : true;
 	}
 	if (_headers.count("transfer-encoding")) {
 		// if (_body_exist) {_state = STATE_ERROR; _code = 400;return; }// Transfer-Encoding overrides Content-Length
@@ -297,6 +297,7 @@ void	Request::resetState()
 	_body_file.clear();
 	_is_cgi = false;
 }
+
 std::string Request::_generate_random_id()
 {
 	std::stringstream ss;
