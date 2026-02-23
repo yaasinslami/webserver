@@ -74,6 +74,7 @@ void	Client::process(EpollManager &poller)
 		else {
 			std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
+
 			if (script_fs_path.empty())
 			{
 				markWriting();
@@ -305,9 +306,9 @@ void Client::parseCgiResponse()
 
 void Client::openCgiTempFile()
 {
-	char filename[] = "/tmp/webserv_cgi_XXXXXX";
+	std::string filename = "/tmp/webserv_cgi_" + Request::_generate_random_id();
 
-	int fd = mkstemp(filename);
+	int fd = open(filename.c_str(), O_CREAT | O_RDWR | O_EXCL, 0644);
 	if (fd == -1)
 	{
 		_status_code = 500;
@@ -315,9 +316,9 @@ void Client::openCgiTempFile()
 	}
 
 	_cgi_temp_path = filename;
+	close(fd);
 
 	_cgi_out_file.open(_cgi_temp_path.c_str(), std::ios::binary);
-	close(fd);
 }
 
 void Client::writeToCgiTempFile(const char* buf, ssize_t size)
