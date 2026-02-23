@@ -87,6 +87,7 @@ void	Client::process(EpollManager &poller)
 		if (_request.getIsCgi())
 		{
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
+
 			if (script_fs_path.empty())
 			{
 				markWriting();

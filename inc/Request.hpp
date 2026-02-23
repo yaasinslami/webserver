@@ -112,6 +112,7 @@ class	Request
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;
 		void		resetState();
+		static std::string	_generate_random_id();
 
 		void	feed(const char*,size_t);
 		void	log() const;
@@ -131,7 +132,6 @@ class	Request
 		void	_add_header();
 		void	_validate_headers();
 
-		static std::string _generate_random_id();
 };
 
 #endif

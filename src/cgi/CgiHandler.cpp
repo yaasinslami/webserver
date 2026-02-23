@@ -111,8 +111,8 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	if (pid == 0)
 	{
 		size_t last_slash = script_path.rfind('/');
-        string script_directory = (last_slash == string::npos) ? "." : script_path.substr(0, last_slash);
-        string script_filename = (last_slash == string::npos) ? script_path : script_path.substr(last_slash + 1);
+		string script_directory = (last_slash == string::npos) ? "." : script_path.substr(0, last_slash);
+		string script_filename = (last_slash == string::npos) ? script_path : script_path.substr(last_slash + 1);
 
 		close(cgi_out_pipe[READ_END]);
 
@@ -169,15 +169,46 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 	const Directives* config = client->getConfig();
 	Request& req = client->getRequest();
 
-	string script_fs_path = Utils::normalize_path(config->getRoot() + req.getPath());
+	std::string script_fs_path = Utils::normalize_path(config->getRoot() + req.getPath());
 	
-	cout << YELLOW << "script_fs_path : " << script_fs_path << RESET << endl;
-	if (access(script_fs_path.c_str(), F_OK) == -1)
+	struct stat s;
+	if (stat(script_fs_path.c_str(), &s) == -1)
 	{
-		client->setStatus(400);
+		client->setStatus(404);
 		client->getResponse().generateError();
 		return "";
 	}
 
-	return (script_fs_path);
+	if (S_ISDIR(s.st_mode))
+	{
+		client->setStatus(403);
+		client->getResponse().generateError();
+		return "";
+	}
+
+	if (access(script_fs_path.c_str(), R_OK | X_OK) == -1)
+	{
+		perror("Access check failed");
+		client->setStatus(403);
+		client->getResponse().generateError();
+		return "";
+	}
+
+	if (!(s.st_mode & S_IXUSR) && !(s.st_mode & S_IXGRP) && !(s.st_mode & S_IXOTH))
+	{
+		std::cout << RED << "Permission Denied: No execute bits set" << RESET << std::endl;
+		client->setStatus(403);
+		client->getResponse().generateError();
+		return "";
+	}
+
+	if (!(s.st_mode & S_IRUSR) && !(s.st_mode & S_IRGRP) && !(s.st_mode & S_IROTH))
+	{
+		std::cout << RED << "Permission Denied: No read bits set" << RESET << std::endl;
+		client->setStatus(403);
+		client->getResponse().generateError();
+		return "";
+	}
+
+	return script_fs_path;
 }
