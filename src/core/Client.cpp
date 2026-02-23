@@ -225,8 +225,6 @@ void	Client::onWritable()
 	{
 		cout << RED << "[DEBUG] : send body from File" << RESET << endl;
 		_serveLargeFile();
-
-		exit(1);
 	}
 
 	if (_response.getHeaderBuffer().empty() && 
