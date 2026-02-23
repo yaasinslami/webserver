@@ -6,33 +6,36 @@
 void Response::generate(const Request& req)
 {
 	/* Method Dispatch */
-	std::string method = req.getPath();
-	if (method == "GET") _handleGet();
+	std::string method = req.getMethod();
+	if (method == "GET") _handleGet(req.getPath());
 	// else if (method == "POST") _handlePost();
 	// else if (method == "DELETE") _handleDelete();
 }
 
-void Response::_handleGet()
+void Response::_handleGet(const std::string& uri)
 {
 	struct stat file_info;
 	if (stat(_resource_path.c_str(), &file_info) != 0) { setCode(404); return; }
-	if (S_ISDIR(file_info.st_mode)) _handleDirectory();
+	if (S_ISDIR(file_info.st_mode)) _handleDirectory(uri);
 	if (S_ISREG(file_info.st_mode)) _serveFile();
 }
 
-void Response::_handleDirectory()
+void Response::_handleDirectory(const std::string& uri)
 {
-	const std::string& path = _resource_path;// we already translated the URI to a physical path
+	const std::string& path = uri;
 	if (!path.empty() && path[path.length() - 1] != '/') {
 		setCode(301);
+		_headers += "HTTP/1.1 301 Moved Permanently\r\n";
+		_headers += "Location: " + path + "/\r\n";
+		_headers += "Content-Length: 0\r\n\r\n";
 		std::cout << "[Response] Redirecting missing trailing slash to: " << path << "/" << std::endl;
-		return; 
+		return;
 	}
 
 	const std::vector<std::string>& index_list = _config->getIndex();
 	for (size_t i = 0; i < index_list.size(); ++i) {
 		std::string candidate = _resource_path;
-		
+
 		// Ensure our physical path ends with a slash before appending the index name
 		if (candidate[candidate.length() - 1] != '/') {
 			candidate += "/";
@@ -80,7 +83,6 @@ void	Response::_serveFile()
 	_headers += "Content-Type: " + Utils::getMimeType(_resource_path) + "\r\n";
 	_headers += "Content-Length: " + Utils::toString(_file_size) + "\r\n";
 	_headers += "\r\n";
-
 	setCode(200);
 	std::cout << "File opened successfully. Prepared to send " << _file_size << " bytes.\n";
 }

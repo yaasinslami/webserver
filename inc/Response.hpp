@@ -29,19 +29,23 @@ class Response
 
 		void setCode(short);
 		void setConfig(const Directives*);
+
 		void generate(const Request&);
-		/* errors */
 		void	generateError();
+
 		/* Response reseter */
 		void	clear();
 
 		void translatePath(const std::string& uri);
-		private:
-			void	_handleGet();
-			void	_handlePost();
-			void	_handleDelete();
-			void	_handleDirectory();
-			void	_serveFile();
+	private:
+		/* GET */
+		void	_handleGet(const std::string&);
+		void	_handleDirectory(const std::string&);
+		void	_serveFile();
+		 /* POST */
+		void	_handlePost();
+		 /* DELETE */
+		void	_handleDelete();
 };
 
 #endif

@@ -82,7 +82,7 @@ void Client::process(EpollManager &poller)
 			CgiHandler::execute(this, script_fs_path, executable_path, poller);
 		}
 	}
-	
+
 	if (_request.getState() == STATE_ERROR) {
 		std::cout << "[Client] Generating Error Page for Code: " << _status_code << std::endl;
 		// _response.generateError();
