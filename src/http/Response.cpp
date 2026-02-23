@@ -87,7 +87,6 @@ void	Response::_serveFile()
 
 void Response::translatePath(const std::string& uri)
 {
-	// Plan A: Alias
 	std::string alias = _config->getAlias();
 	if (!alias.empty()) {
 		std::string reminder = uri.substr(_config->getPath().length());
@@ -95,9 +94,8 @@ void Response::translatePath(const std::string& uri)
 	}
 	else _resource_path = _config->getRoot() + uri;
 
-	_resource_path = _sanitizePath(physical_path);
+	_resource_path = Utils::sanitizePath(_resource_path);
 }
-
 
 void Response::setCode(short code) { _code = code; }
 void Response::setConfig(const Directives* config) { _config = config; }

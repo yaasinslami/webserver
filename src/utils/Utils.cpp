@@ -122,6 +122,30 @@ std::string Utils::normalize_uri(const std::string& uri)
 	return result;
 }
 
+std::string Utils::sanitizePath(const std::string &path)
+{
+	if (path.empty()) return "";
+
+	std::string result;
+
+	result.reserve(path.length());
+	bool last_was_slash = false;
+
+	for (size_t i = 0; i < path.length(); ++i) {
+		if (path[i] == '/') {
+			if (!last_was_slash) {
+				result += '/';
+				last_was_slash = true;
+			}
+		}
+		else {
+			result += path[i];
+			last_was_slash = false;
+		}
+	}
+	return result;
+}
+
 std::string Utils::getMimeType(const std::string& file_path)
 {
 	size_t dot = file_path.find_last_of(".");
