@@ -97,6 +97,8 @@ Directives& Directives::operator=(const Directives& dir)
 	if (this != &dir)
 	{
 		setRoot(dir.getRoot());
+		setAlias(dir.getAlias());
+		setPath(dir.getPath());
 		setIndex(dir.getIndex());
 		setAutoIndex(dir.getAutoIndex());
 		setAllowedMethods(dir.getAllowedMethods());

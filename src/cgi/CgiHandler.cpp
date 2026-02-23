@@ -108,6 +108,8 @@ void CgiHandler::execute(Client* client, const string& script_path,
 		return;
 	}
 
+	cout << GREEN << "Forked CGI process with PID: " << pid << RESET << endl;
+
 	if (pid == 0)
 	{
 		size_t last_slash = script_path.rfind('/');
@@ -159,6 +161,8 @@ void CgiHandler::execute(Client* client, const string& script_path,
 
 	client->setState(HANDLING_CGI);
 	delete_env(envp);
+
+	cout << GREEN << "Registered CGI output pipe with fd: " << cgi_out_pipe[READ_END] << RESET << endl;
 
 	if (!poller.add_cgi_fds(client))
 		cout << "[poller]: register_cgi_fds failed" << endl;

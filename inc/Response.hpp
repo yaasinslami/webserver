@@ -13,6 +13,7 @@ class Response
 		size_t	_file_size;
 		std::string	_content_type;
 		std::string	_resource_path;
+		std::string	_file_path;
 		std::string	_headers;
 		std::string	_body_content;
 		std::string	_redirect_location;

@@ -20,12 +20,9 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/zsh developer && \
-    echo "developer:developer" | chpasswd && \
-    adduser developer sudo
-
-USER developer
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+SHELL ["/bin/zsh", "-c"]
 
 RUN git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
     sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions)/' ~/.zshrc

@@ -81,6 +81,7 @@ void	Client::process(EpollManager &poller)
 				poller.set_events(_fd, EPOLLOUT);
 				return;
 			}
+			cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
 			CgiHandler::execute(this, script_fs_path, executable_path, poller);
 		}
 	}
@@ -170,7 +171,7 @@ void	Client::_serveLargeFile()
 		if (_request.getIsCgi())
 		{
 			_file_stream.seekg(_cgi_header_size, std::ios::beg);
-			std::cout << RED << "Seeked to: " << _file_stream.tellg() << RESET << std::endl;
+			// std::cout << RED << "Seeked to: " << _file_stream.tellg() << RESET << std::endl;
 		}
 	}
 
@@ -226,7 +227,7 @@ void	Client::onWritable()
 
 	if (!_response.getPhysicalPath().empty())
 	{
-		cout << RED << "[DEBUG] : send body from File" << RESET << endl;
+		// cout << RED << "[DEBUG] : send body from File" << RESET << endl;
 		_serveLargeFile();
 	}
 
@@ -303,6 +304,10 @@ void Client::parseCgiResponse()
 	h_ss << "\r\n";
 
 	_response.getHeaderBuffer() = h_ss.str();
+
+
+	cout << "PATH : " << _cgi_temp_path << endl;
+
 	_response.setPath(_cgi_temp_path);
 }
 
@@ -372,6 +377,8 @@ void	Client::resetForNextRequest()
 
 	closeCgiOutFile();
 
+	_request.resetState();
+	_response.clear();
 	_cgi_temp_path.clear();
 	_request.resetState();
 	_response.clear();

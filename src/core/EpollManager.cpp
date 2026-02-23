@@ -26,8 +26,18 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
         if (bytes > 0)
         {
             if (!client->isCgiFileOpen())
-                client->openCgiTempFile(); 
-            
+			{
+				cout << GREEN << "Received first chunk of CGI output. Opening temp file for buffering..." << RESET << endl;
+                client->openCgiTempFile();
+				if (client->getStatus() == 500)
+				{
+					cout << RED << "Failed to open temp file for CGI output buffering." << RESET << endl;
+					remove_cgi_fds(client, true);
+					client->getResponse().generateError();
+					client->setState(WRITING);
+					return;
+				}
+			}
             // 2. Write to disk
             client->writeToCgiTempFile(buf, bytes);
             
@@ -37,6 +47,8 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
         }
         else if (bytes == 0)
         {
+			cout << GREEN << "CGI output pipe closed by child process (EOF)" << RESET << endl;
+
             remove_cgi_fds(client, false);
             client->closeCgiOutFile();
             
