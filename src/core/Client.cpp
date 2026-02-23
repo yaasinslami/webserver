@@ -63,6 +63,7 @@ void	Client::process(EpollManager &poller)
 	}
 
 	if (_request.getState() == STATE_COMPLETE) {
+		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (!_request.getIsCgi()) {
 			cout << BLUE << "Normal Request" << RESET << std::endl;
 			_response.generate(_request);
@@ -72,7 +73,6 @@ void	Client::process(EpollManager &poller)
 			}
 		}
 		else {
-			std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
 
 			if (script_fs_path.empty())
@@ -192,8 +192,10 @@ void	Client::_serveLargeFile()
 		_file_stream.close();
 		_file_stream.clear();
 
-		if (!_response.getPhysicalPath().empty())
-			unlink(_response.getPhysicalPath().c_str());
+		// if (!_response.getPhysicalPath().empty())
+		// 	unlink(_response.getPhysicalPath().c_str());
+		// print the path
+		std::cout << RED << "Finished sending file: " << _response.getPhysicalPath() << RESET << std::endl;
 		_response.clearFilePath();
 	}
 }
