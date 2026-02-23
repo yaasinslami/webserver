@@ -20,16 +20,20 @@ class Response
 		~Response();
 		Response& operator=(const Response&);
 		/* Getters */
-		std::string	getBuffer() const;
-		std::string	getFilePath() const;
-
+		std::string&	getBuffer();
+		std::string&	getHeaderBuffer();
+		std::string		getFilePath() const;
+		/* Setters */
 		void setCode(short);
 		void setConfig(const Directives*);
+		void setPath(std::string&);
+
 		void generate(const Request&);
 		/* errors */
 		void	generateError();
 		/* Response reseter */
 		void	clear();
+		void	clearFilePath();
 
 		static std::string _sanitizePath(const std::string&);
 		void _translatePath(const std::string uri);
@@ -38,11 +42,14 @@ class Response
 		std::string	_getMimeType(const std::string& path);
 
 		private:
-			void	_handleGet();
-			void	_handlePost();
-			void	_handleDelete();
-			void	_handleDirectory();
-			void	_serveFile();
+			void		_handleGet();
+			void		_handlePost();
+			void		_handleDelete();
+			void		_handleDirectory();
+			void		_serveFile();
+			std::string	_getStatusMsg(short code);
+
+			std::string	_headers;
 };
 
 #endif

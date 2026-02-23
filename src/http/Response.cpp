@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <stdlib.h>
+
 void Response::generate(const Request& req)
 {
 	if (_config == NULL)
@@ -14,8 +16,17 @@ void Response::generate(const Request& req)
 	_translatePath(req.getPath());
 	std::cout << "[Response] Target resource: " << _resource_path << std::endl;
 
-	std::string method = req.getPath();
-	if (method == "GET") _handleGet();
+	std::string method = req.getMethod();
+
+	// i will remove it use it now just to avoid infinit request send
+	if (method == "GET" || method == "POST" || method == "DELETE")
+	{
+		setCode(501);
+		generateError();
+		_resource_path.clear();
+		return ;
+	}
+	// if (method == "GET") _handleGet();
 	// else if (method == "POST") _handlePost();
 	// else if (method == "DELETE") _handleDelete();
 }
@@ -111,9 +122,14 @@ std::string Response::_getMimeType(const std::string& path)
 	if (ext == ".pdf") return "application/pdf";
 	return "application/octet-stream";
 }
-
+/* Getters */
+std::string&	Response::getBuffer() { return _body_content; }
+std::string&	Response::getHeaderBuffer() { return _headers; }
+std::string		Response::getFilePath() const { return _resource_path; }
+/* Setters */
 void Response::setCode(short code) { _code = code; }
 void Response::setConfig(const Directives* config) { _config = config; }
+void Response::setPath(std::string& path ) { _resource_path = path; }
 /* Constructors */
 Response::Response(short& code) : _code(code), _config(NULL) {}
 Response::Response(const Response& other) : _code(other._code) { *this = other; }
@@ -125,4 +141,80 @@ Response& Response::operator=(const Response& other)
 	return *this;
 }
 Response::~Response() {}
-// void	Response::generateError(const Directives* config) {}
+/* Errors */
+std::string	Response::_getStatusMsg(short code)
+{
+	switch (code)
+	{
+		case 200: return "OK";
+		case 201: return "Created";
+		case 204: return "No Content";
+		case 400: return "Bad Request";
+		case 403: return "Forbidden";
+		case 404: return "Not Found";
+		case 405: return "Method Not Allowed";
+		case 413: return "Payload Too Large";
+		case 500: return "Internal Server Error";
+		case 501: return "Not Implemented";
+		case 502: return "Bad Gateway";
+		case 504: return "Gateway Timeout";
+		default:  return "Internal Server Error";
+	}
+}
+void Response::generateError()
+{
+	std::string error_body;
+	std::string msg = _getStatusMsg(_code);
+	bool        custom_page_loaded = false;
+
+	if (_config)
+	{
+		const std::map<int, std::string>& error_pages = _config->getErrorPages();
+		std::map<int, std::string>::const_iterator it = error_pages.find(_code);
+
+		if (it != error_pages.end())
+		{
+			std::string full_path = Utils::normalize_path(_config->getRoot() + it->second);
+			std::ifstream file(full_path.c_str());
+			if (file.is_open())
+			{
+				std::stringstream ss;
+				ss << file.rdbuf();
+				error_body = ss.str();
+				custom_page_loaded = true;
+				file.close();
+			}
+		}
+	}
+
+	if (!custom_page_loaded)
+	{
+		std::stringstream ss;
+		ss << "<html>\r\n<head><title>" << _code << " " << msg << "</title></head>\r\n";
+		ss << "<body bgcolor=\"white\">\r\n<center><h1>" << _code << " " << msg << "</h1></center>\r\n";
+		ss << "<hr><center>webserv</center>\r\n</body>\r\n</html>\r\n";
+		error_body = ss.str();
+	}
+
+	std::stringstream h_ss;
+	h_ss << "HTTP/1.1 " << _code << " " << msg << "\r\n";
+	h_ss << "Content-Type: text/html\r\n";
+	h_ss << "Content-Length: " << error_body.length() << "\r\n";
+	h_ss << "Connection: close\r\n"; 
+	h_ss << "\r\n";
+
+	_headers = h_ss.str();
+	_body_content = error_body;
+}
+
+/* Response reseter */
+void	Response::clear()
+{
+	_headers.clear();
+	_body_content.clear();
+	_resource_path.clear();
+	_config = NULL;
+	_code = 200;
+}
+
+void	Response::clearFilePath() { _resource_path.clear(); }

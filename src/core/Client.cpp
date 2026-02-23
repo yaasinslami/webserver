@@ -21,8 +21,7 @@ void Client::onReadable()
 		}
 }
 
-
-static string get_cgi_executable(string path, Client& client)
+static string	get_cgi_executable(string path, Client& client)
 {
 	const Directives* config = client.getConfig();
 	const map<string, string>& handlers = config->getCgiHandlers();
@@ -47,20 +46,21 @@ static string get_cgi_executable(string path, Client& client)
 	return "";
 }
 
-void Client::process(EpollManager &poller)
+void	Client::process(EpollManager &poller)
 {
-	if (!_server) { 
-        std::cout << RED << "CRITICAL: _server is NULL in process()" << RESET << std::endl; 
-        return; 
-    }
+	if (!_server)
+	{
+		std::cout << RED << "CRITICAL: _server is NULL in process()" << RESET << std::endl; 
+		return ;
+	}
 
 	cout << GREEN << "process path : " << _request.getPath() << RESET << endl;
 
 	if (_request.getState() == STATE_ERROR) {
 		std::cout << "[Bridge] Fatal parser error detected early (Code: " << _request.getCode() << ")." << std::endl;
-		// _config = &_server->getDirectives();
+		_config = &_server->getDirectives();
 		_response.setConfig(_config);
-		// _response.generateError();
+		_response.generateError();
 		markWriting();
 		poller.set_events(_fd, EPOLLOUT);
 		return;
@@ -76,7 +76,7 @@ void Client::process(EpollManager &poller)
 	{
 		std::cout << "[Client] Request rejected. Code: " << _status_code << std::endl;
 		_request.setState(STATE_ERROR);
-		// _response.generateError();
+		_response.generateError();
 		markWriting();
 		return;
 	}
@@ -86,10 +86,9 @@ void Client::process(EpollManager &poller)
 		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (_request.getIsCgi())
 		{
-			cout << BLUE << "CGI Request" << RESET << std::endl;
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
-			if (script_fs_path.empty()) {
-				// _response.generateError();
+			if (script_fs_path.empty())
+			{
 				markWriting();
 				poller.set_events(_fd, EPOLLOUT);
 				return;
@@ -157,30 +156,91 @@ void	Client::_setBestConfig()
 	_config = (best_match) ? &best_match->getDirectives() : &_server->getDirectives();
 }
 
-void Client::onWritable()
+void	Client::_serveLargeFile()
 {
-	ssize_t sent = send(_fd, _write_buf.c_str(), _write_buf.size(), 0);
-
-	if (sent > 0)
-		_write_buf.erase(0, sent);
-	else
-		return;
-
-	if (_write_buf.empty() && !_request.shouldKeepAlive())
+	if (!_file_stream.is_open())
 	{
-		_state = CLOSING;
-		_closed = true;
+		_file_stream.open(_response.getFilePath().c_str(), std::ios::binary);
+		if (_request.getIsCgi())
+		{
+			_file_stream.seekg(_cgi_header_size, std::ios::beg);
+			std::cout << RED << "Seeked to: " << _file_stream.tellg() << RESET << std::endl;
+		}
 	}
-	else if (_write_buf.empty())
+
+	char buf[BUFFER_SIZE];
+	_file_stream.read(buf, BUFFER_SIZE);
+	ssize_t bytes_read = _file_stream.gcount();
+
+	if (bytes_read > 0) {
+		ssize_t sent = send(_fd, buf, bytes_read, 0);
+		if (sent < bytes_read)
+		{
+			long unsent = bytes_read - (sent > 0 ? sent : 0);
+			_file_stream.seekg((long)_file_stream.tellg() - unsent);
+		}
+	}
+
+	if (_file_stream.eof())
 	{
-		std::cout << "reset the state\n";
-		resetForNextRequest();
+		_file_stream.close();
+		_file_stream.clear();
+
+		if (!_response.getFilePath().empty())
+			unlink(_response.getFilePath().c_str());
+		_response.clearFilePath();
+	}
+}
+
+void	Client::onWritable()
+{
+	if (!_response.getHeaderBuffer().empty())
+	{
+		cout << RED << "[DEBUG] : send Headers" << RESET << endl;
+
+		std::string& h_buf = _response.getHeaderBuffer();
+		ssize_t sent = send(_fd, h_buf.c_str(), h_buf.size(), 0);
+		if (sent > 0) h_buf.erase(0, sent);
+		
+		if (!h_buf.empty()) return;
+	}
+
+	if (!_response.getBuffer().empty())
+	{
+		cout << RED << "[DEBUG] : send _response._body_content in case of error" << RESET << endl;
+
+		std::string& b_buf = _response.getBuffer();
+		ssize_t sent = send(_fd, b_buf.c_str(), b_buf.size(), 0);
+		if (sent > 0) b_buf.erase(0, sent);
+
+		if (!b_buf.empty()) return;
+	}
+
+	if (!_response.getFilePath().empty())
+	{
+		cout << RED << "[DEBUG] : send body from File" << RESET << endl;
+		_serveLargeFile();
+
+		exit(1);
+	}
+
+	if (_response.getHeaderBuffer().empty() && 
+		_response.getBuffer().empty() && 
+		_response.getFilePath().empty())
+	{
+		cout << RED << "Sending DONE" << RESET << endl;
+		if (!_request.shouldKeepAlive() || _status_code >= 400)
+		{
+			_state = CLOSING;
+			_closed = true;
+		}
+		else resetForNextRequest();
 	}
 }
 
 void Client::parseCgiResponse()
 {
-	std::string raw = _cgi_response_buf;
+	std::string& raw = _cgi_header_buf;
 	size_t split_pos = raw.find("\r\n\r\n");
 	size_t sep_len = 4;
 
@@ -190,41 +250,96 @@ void Client::parseCgiResponse()
 	}
 
 	if (split_pos == std::string::npos) {
-		std::cerr << "[Error] CGI sent no header separator." << std::endl;
 		setStatus(502);
 		return;
 	}
 
 	std::string headers_part = raw.substr(0, split_pos);
-	std::string body_part = raw.substr(split_pos + sep_len);
+	_cgi_header_size = split_pos + sep_len;
+
+	cout << BLUE << headers_part << RESET << endl;
 
 	std::string status_line = "HTTP/1.1 200 OK";
 	std::string final_headers = "";
 	std::stringstream ss(headers_part);
 	std::string line;
 
-	while (std::getline(ss, line)) {
+	while (std::getline(ss, line))
+	{
 		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length() - 1);
-		if (line.empty()) continue;
+		if (line.empty())
+			continue;
 
-		if (line.compare(0, 7, "Status:") == 0) {
-			if (line.size() > 8) status_line = "HTTP/1.1 " + line.substr(8);
-		} else if (line.find(':') == std::string::npos) {
+		if (line.compare(0, 7, "Status:") == 0)
+		{
+			if (line.size() > 8)
+				status_line = "HTTP/1.1 " + line.substr(8);
+		}
+		else if (line.find(':') == std::string::npos)
+		{
 			setStatus(502);
 			return;
-		} else
+		}
+		else
 			final_headers += line + "\r\n";
 	}
-	std::stringstream response;
-	
-	response << status_line << "\r\n";
-	response << final_headers;
-	response << "Content-Length: " << body_part.length() << "\r\n";
-	response << "\r\n";
-	response << body_part;
 
-	_write_buf = response.str();
+	// 2. Calculate Body Size from the file we just wrote
+	long total_file_size = Utils::getFileSize(_cgi_temp_path);
+	long body_size = total_file_size - _cgi_header_size;
+
+	// 3. Set the Response Object
+	std::stringstream h_ss;
+	h_ss << status_line << "\r\n";
+	h_ss << final_headers;
+	h_ss << "Content-Length: " << body_size << "\r\n";
+	h_ss << "\r\n";
+
+	_response.getHeaderBuffer() = h_ss.str();
+	_response.setPath(_cgi_temp_path);
+}
+
+void Client::openCgiTempFile()
+{
+	char filename[] = "/tmp/webserv_cgi_XXXXXX";
+
+	int fd = mkstemp(filename);
+	if (fd == -1)
+	{
+		_status_code = 500;
+		return;
+	}
+
+	_cgi_temp_path = filename;
+
+	_cgi_out_file.open(_cgi_temp_path.c_str(), std::ios::binary);
+	close(fd);
+}
+
+void Client::writeToCgiTempFile(const char* buf, ssize_t size)
+{
+	if (_cgi_out_file.is_open())
+		_cgi_out_file.write(buf, size);
+}
+
+void Client::closeCgiOutFile()
+{
+	if (_cgi_out_file.is_open())
+	{
+		_cgi_out_file.close();
+		_cgi_out_file.clear();
+	}
+}
+
+bool Client::isCgiFileOpen() const 
+{
+    return const_cast<std::ofstream&>(_cgi_out_file).is_open();
+}
+
+std::string& Client::getCgiHeaderBuf()
+{
+    return _cgi_header_buf;
 }
 
 /* Getters */
@@ -232,6 +347,7 @@ ClientState Client::getState() const { return _state; }
 int Client::getFd() const { return _fd; }
 bool Client::isClosed() const { return _closed; }
 Request& Client::getRequest() { return _request; }
+Response& Client::getResponse() { return _response; }
 const Directives* Client::getConfig() const { return _config; }
 const Server* Client::getServer() const { return _server; }
 const short& Client::getStatus() const { return _status_code; }
@@ -240,10 +356,23 @@ void Client::setState( ClientState state ) { _state = state; }
 bool	Client::isRequestReady() { return _request.requestCompleted(); }
 time_t	Client::getLastActivity( void ) const { return _last_activity_time; }
 bool	Client::hasConfig() const { return _config != NULL; }
-void	Client::resetForNextRequest() {
-    _request.resetState();
-    // _response.clear();
-    _config = NULL;
+void	Client::resetForNextRequest()
+{
+	if (_file_stream.is_open())
+	{
+		_file_stream.close();
+		_file_stream.clear();
+	}
+
+	closeCgiOutFile();
+
+	_cgi_temp_path.clear();
+	_request.resetState();
+	_response.clear();
+	_cgi_pid = -1;
+    _cgi_header_buf.clear();
+    _cgi_header_size = 0;
+	_config = NULL;
     _status_code = 200;
     _state = READING;
 }
@@ -252,8 +381,6 @@ void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
 pid_t Client::getCgiPid() const { return _cgi_pid; };
 void Client::setCgiOutPipe(int fd) { _cgi_pipe_read_fd = fd; }
 int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
-string&	Client::get_cgi_response_buf() { return _cgi_response_buf; }
-size_t&	Client::get_cgi_bytes_written() { return _cgi_bytes_written; }
 /* timeout */
 void	Client::updateTime() { _last_activity_time = time(NULL); }
 /* State methods */
@@ -273,25 +400,19 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 	_config(NULL), 
 	_cgi_pid(-1),
 	_cgi_pipe_read_fd(-1),
-	_cgi_bytes_written(0),
-	_last_activity_time(time(NULL))
+	_last_activity_time(time(NULL)),
+	_file_stream(),
+	_cgi_out_file(),
+	_cgi_header_size(0)
 {
 	std::cout << "🟢 New Client fd=" << _fd << std::endl;
 }
 Client::~Client()
 {
 	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
+	if (_file_stream.is_open())
+		_file_stream.close();
+
 	if (_fd != -1)
 		close(_fd);
-}
-
-// i will remove this
-const std::string& Client::get_write_buf() const
-{
-	return _write_buf;
-}
-
-void Client::set_write_buf(const std::string &s)
-{
-	_write_buf = s;
 }

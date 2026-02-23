@@ -6,7 +6,7 @@
 /*   By: oel-hadr <oel-hadr@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/05 00:07:46 by oel-hadr          #+#    #+#             */
-/*   Updated: 2026/02/20 21:07:25 by oel-hadr         ###   ########.fr       */
+/*   Updated: 2026/02/22 02:00:28 by oel-hadr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,9 @@
 #include <vector>
 #include <sstream>
 #include <cstring>
+
 #include <fcntl.h>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -26,6 +28,7 @@ class Utils
 		static std::string	normalize_path(const std::string& path);
 		static bool			set_nonblocking(int socket);
 		static void*		memset(void *p, int c, size_t len);
+		static long			getFileSize(const std::string& filename);
 
 		template <typename T>
 		static std::string	toString(const T& value)
