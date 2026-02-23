@@ -10,10 +10,13 @@ class Response
 	private:
 		short&	_code;
 		int		_file_fd;
-		off_t	_file_size;
+		size_t	_file_size;
+		std::string	_content_type;
 		std::string	_resource_path;
 		std::string	_headers;
 		std::string	_body_content;
+		std::string	_redirect_location;
+		bool		_is_static_file;
 
 		const Directives* _config;
 	public:
@@ -32,6 +35,8 @@ class Response
 
 		void generate(const Request&);
 		void	generateError();
+		void	_generateAutoIndex(const std::string&);
+		void	_buildHeaders();
 
 		/* Response reseter */
 		void	clear();

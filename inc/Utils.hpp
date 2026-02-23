@@ -30,6 +30,7 @@ class Utils
 		static std::string normalize_uri(const std::string&);
 		static std::string urlDecode(const std::string&);
 		static std::string sanitizePath(const std::string &);
+		static std::string getStatusMessage(int code);
 
 		template <typename T>
 		static std::string	toString(const T& value)
