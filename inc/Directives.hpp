@@ -21,6 +21,7 @@ enum e_directive_type
 	DIR_ERROR_PAGES,
 	DIR_UPLOAD,
 	DIR_UPLOAD_LOC,
+	DIR_CGI_HANDLER,
 	DIR_UNKNOWN
 };
 
