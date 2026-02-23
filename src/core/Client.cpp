@@ -77,6 +77,7 @@ void	Client::process(EpollManager &poller)
 
 			if (script_fs_path.empty())
 			{
+				_response.generateError();
 				markWriting();
 				poller.set_events(_fd, EPOLLOUT);
 				return;
@@ -295,11 +296,9 @@ void Client::parseCgiResponse()
 			final_headers += line + "\r\n";
 	}
 
-	// 2. Calculate Body Size from the file we just wrote
 	long total_file_size = Utils::getFileSize(_cgi_temp_path);
 	long body_size = total_file_size - _cgi_header_size;
 
-	// 3. Set the Response Object
 	std::stringstream h_ss;
 	h_ss << status_line << "\r\n";
 	h_ss << final_headers;
@@ -307,10 +306,6 @@ void Client::parseCgiResponse()
 	h_ss << "\r\n";
 
 	_response.getHeaderBuffer() = h_ss.str();
-
-
-	cout << "PATH : " << _cgi_temp_path << endl;
-
 	_response.setPath(_cgi_temp_path);
 }
 

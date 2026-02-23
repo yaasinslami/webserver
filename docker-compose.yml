@@ -6,6 +6,7 @@ services:
       - .:/app
     ports:
       - "8080:8080"
+      - "4242:4242"
     cap_add:
       - SYS_PTRACE
     security_opt:

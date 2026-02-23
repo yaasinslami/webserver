@@ -39,7 +39,6 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	}
 	catch ( const exception& e )
 	{
-		// std::cout << "CONTENT_LENGTH or CONTENT_TYPE is missing" << endl;
 	}
 
 	const map<string, string> headers = req.getHeaders();
@@ -173,42 +172,21 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 	
 	struct stat s;
 	if (stat(script_fs_path.c_str(), &s) == -1)
-	{
-		client->setStatus(404);
-		client->getResponse().generateError();
-		return "";
-	}
+		return (client->setStatus(404), "");
 
 	if (S_ISDIR(s.st_mode))
-	{
-		client->setStatus(403);
-		client->getResponse().generateError();
-		return "";
-	}
+		return (client->setStatus(403), "");
 
 	if (access(script_fs_path.c_str(), R_OK | X_OK) == -1)
-	{
-		perror("Access check failed");
-		client->setStatus(403);
-		client->getResponse().generateError();
-		return "";
-	}
+		return (client->setStatus(403), "");
 
-	if (!(s.st_mode & S_IXUSR) && !(s.st_mode & S_IXGRP) && !(s.st_mode & S_IXOTH))
-	{
-		std::cout << RED << "Permission Denied: No execute bits set" << RESET << std::endl;
-		client->setStatus(403);
-		client->getResponse().generateError();
-		return "";
-	}
+	if (!(s.st_mode & S_IXUSR) && !(s.st_mode & S_IXGRP)
+		&& !(s.st_mode & S_IXOTH))
+		return (client->setStatus(403), "");
 
-	if (!(s.st_mode & S_IRUSR) && !(s.st_mode & S_IRGRP) && !(s.st_mode & S_IROTH))
-	{
-		std::cout << RED << "Permission Denied: No read bits set" << RESET << std::endl;
-		client->setStatus(403);
-		client->getResponse().generateError();
-		return "";
-	}
+	if (!(s.st_mode & S_IRUSR) && !(s.st_mode & S_IRGRP)
+		&& !(s.st_mode & S_IROTH))
+		return (client->setStatus(403), "");
 
 	return script_fs_path;
 }
