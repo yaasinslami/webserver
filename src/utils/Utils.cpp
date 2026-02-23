@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Utils.cpp                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: oel-hadr <oel-hadr@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/10/05 00:09:01 by oel-hadr          #+#    #+#             */
-/*   Updated: 2026/02/21 01:20:09 by oel-hadr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Utils.hpp"
 
 bool	Utils::set_nonblocking(int socket)
@@ -41,6 +29,34 @@ void*	Utils::memset(void *p, int c, size_t n)
 	}
 
 	return (ptr);
+}
+
+std::string Utils::urlDecode(const std::string& str) 
+{
+	std::string result;
+	result.reserve(str.length());
+
+	for (size_t i = 0; i < str.length(); ++i) {
+		if (str[i] == '%') 
+		{
+			// Make sure there are at least 2 characters after the '%'
+			if (i + 2 < str.length()) {
+				int value;
+				std::istringstream is(str.substr(i + 1, 2));
+				// Read the two characters as a hex number
+				if (is >> std::hex >> value) {
+					result += static_cast<char>(value);
+					i += 2; // Skip the two hex characters we just read
+				}
+				else result += '%'; // Fallback if it wasn't valid hex
+			}
+			else result += '%'; // Fallback if string ends abruptly
+		} 
+		else if (str[i] == '+') result += ' ';
+		else result += str[i];
+	}
+
+	return result;
 }
 
 std::string Utils::normalize_path(const std::string& path)
@@ -77,4 +93,49 @@ std::string Utils::normalize_path(const std::string& path)
         return "./";
 
     return result;
+}
+
+std::string Utils::normalize_uri(const std::string& uri)
+{
+	std::vector<std::string> components;
+	std::stringstream ss(uri);
+	std::string component;
+
+	while (std::getline(ss, component, '/'))
+	{
+		if (component.empty() || component == ".") continue;
+
+		if (component == "..") {
+			if (!components.empty()) components.pop_back();
+		}
+		else components.push_back(component);
+	}
+
+	std::string result = "";
+	for (size_t i = 0; i < components.size(); ++i)
+		result += "/" + components[i];
+
+	if (result.empty()) return "/";
+
+	if (uri[uri.length() - 1] == '/' && result != "/") result += "/";
+
+	return result;
+}
+
+std::string Utils::getMimeType(const std::string& file_path)
+{
+	size_t dot = file_path.find_last_of(".");
+	if (dot == std::string::npos) return "application/octet-stream";
+
+	std::string ext = file_path.substr(dot);
+	if (ext == ".html" || ext == ".htm") return "text/html";
+	if (ext == ".css") return "text/css";
+	if (ext == ".js") return "application/javascript";
+	if (ext == ".png") return "image/png";
+	if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
+	if (ext == ".gif") return "image/gif";
+	if (ext == ".ico") return "image/x-icon";
+	if (ext == ".txt") return "text/plain";
+	if (ext == ".pdf") return "application/pdf";
+	return "application/octet-stream";
 }

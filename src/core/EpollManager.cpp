@@ -309,6 +309,7 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
         set_events(client->getFd(), EPOLLOUT);
     }
 }
+
 void	EpollManager::set_events(int fd, uint32_t events)
 {
 	struct epoll_event ev;

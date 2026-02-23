@@ -58,12 +58,13 @@ class	Request
 		std::map<std::string, std::string>	_headers;
 		/* Body's Data informations */
 		std::string		_body_file_path;
-		std::ofstream	_body_file;
+		int				_body_fd;
 
 		// Body Flags & connection
 		bool	_body_exist;
 		bool	_chunked_transfer;
 		bool	_keep_alive;
+		bool	_headers_validated;
 
 		// Body Counters
 		size_t		_content_length;
@@ -106,6 +107,8 @@ class	Request
 		const std::string&	getBodyPath() const;
 		bool				getIsCgi() const;
 		bool				isChunked();
+		bool				headersValidated() const;
+		void				markHeadersValidated();
 
 		void		setIsCgi(bool state);
 		void		setState(RequestState);

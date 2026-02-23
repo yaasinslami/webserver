@@ -49,44 +49,29 @@ static string get_cgi_executable(string path, Client& client)
 
 void Client::process(EpollManager &poller)
 {
-	if (!_server) { 
-        std::cout << RED << "CRITICAL: _server is NULL in process()" << RESET << std::endl; 
-        return; 
-    }
-
-	cout << GREEN << "process path : " << _request.getPath() << RESET << endl;
-
-	if (_request.getState() == STATE_ERROR) {
-		std::cout << "[Bridge] Fatal parser error detected early (Code: " << _request.getCode() << ")." << std::endl;
-		// _config = &_server->getDirectives();
-		_response.setConfig(_config);
-		// _response.generateError();
-		markWriting();
-		poller.set_events(_fd, EPOLLOUT);
-		return;
+	if (!hasConfig()) {
+		if (_request.getState() != STATE_ERROR) _setBestConfig();
+		else _config = &_server->getDirectives();
+		_response.setConfig(_config);	
 	}
 
-	if (!hasConfig())
-	{
-		_setBestConfig();
-		_response.setConfig(_config);
-	}
-
-	if (!_validateRequest())
-	{
+	if (_request.getState() != STATE_ERROR && !_validateRequest()) {
 		std::cout << "[Client] Request rejected. Code: " << _status_code << std::endl;
 		_request.setState(STATE_ERROR);
-		// _response.generateError();
-		markWriting();
-		return;
 	}
 
 	if (_request.getState() == STATE_COMPLETE) {
-		// CGI
-		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
-		if (_request.getIsCgi())
-		{
+		if (!_request.getIsCgi()) {
+			cout << BLUE << "Normal Request" << RESET << std::endl;
+			_response.generate(_request);
+			if (_status_code >= 400) {
+				std::cout << "[Client] Error response generated. Code: " << _status_code << std::endl;
+				_request.setState(STATE_ERROR);
+			}
+		}
+		else {
 			cout << BLUE << "CGI Request" << RESET << std::endl;
+			std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
 			if (script_fs_path.empty()) {
 				// _response.generateError();
@@ -96,33 +81,51 @@ void Client::process(EpollManager &poller)
 			}
 			CgiHandler::execute(this, script_fs_path, executable_path, poller);
 		}
-		else
-		{
-			// Normal Response 
-			cout << BLUE << "Normal Request" << RESET << std::endl;
-			_response.generate(_request);
-			markWriting();
-			poller.set_events(_fd, EPOLLOUT);
-		}
+	}
+	
+	if (_request.getState() == STATE_ERROR) {
+		std::cout << "[Client] Generating Error Page for Code: " << _status_code << std::endl;
+		// _response.generateError();
+		markWriting();
+		poller.set_events(_fd, EPOLLOUT);
+		return;
+	}
+
+	if (_request.getState() == STATE_COMPLETE) {
+		markWriting();
+		poller.set_events(_fd, EPOLLOUT);
 	}
 }
 
-bool	Client::_validateRequest()
+bool Client::_validateRequest()
 {
-	/* allowed Methods */
-	bool	method_allowd = false;
-	const std::vector<std::string> &allowed = _config->getAllowedMethods();
-	if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end()) {
-		_status_code = 405;
-		return false;
-	}
-	/* Max Body Size */
-	if (_request.hasBody()) {
-		if (_request.getContentLength() > _config->getMaxBodySize() || _request.getBodySize() > _config->getMaxBodySize()) {
-			_status_code = 413; 
+	if (!_request.headersValidated())
+	{
+		/* Allowed Methods */
+		const std::vector<std::string> &allowed = _config->getAllowedMethods();
+		if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end())
+		{
+			_status_code = 405; // Method Not Allowed
 			return false;
 		}
+		/* Content-Length */
+		if (_request.hasBody() && _request.getContentLength() > _config->getMaxBodySize())
+		{
+			_status_code = 413; // Payload Too Large
+			return false;
+		}
+
+		/* Path Translation */
+		_response.translatePath(_request.getPath());
+		std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
+		_request.markHeadersValidated();
 	}
+
+	if (_request.hasBody() && _request.getBodySize() > _config->getMaxBodySize()) {
+		_status_code = 413;
+		return false;
+	}
+
 	return true;
 }
 

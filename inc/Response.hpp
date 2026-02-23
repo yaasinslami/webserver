@@ -8,8 +8,11 @@
 class Response
 {
 	private:
-		short& _code;
+		short&	_code;
+		int		_file_fd;
+		off_t	_file_size;
 		std::string	_resource_path;
+		std::string	_headers;
 		std::string	_body_content;
 
 		const Directives* _config;
@@ -20,8 +23,9 @@ class Response
 		~Response();
 		Response& operator=(const Response&);
 		/* Getters */
+		int			getFd() const;
 		std::string	getBuffer() const;
-		std::string	getFilePath() const;
+		std::string	getPhysicalPath() const;
 
 		void setCode(short);
 		void setConfig(const Directives*);
@@ -31,12 +35,7 @@ class Response
 		/* Response reseter */
 		void	clear();
 
-		static std::string _sanitizePath(const std::string&);
-		void _translatePath(const std::string uri);
-
-		/* utils */
-		std::string	_getMimeType(const std::string& path);
-
+		void translatePath(const std::string& uri);
 		private:
 			void	_handleGet();
 			void	_handlePost();

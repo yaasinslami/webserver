@@ -5,15 +5,7 @@
 
 void Response::generate(const Request& req)
 {
-	if (_config == NULL)
-	{
-		std::cout << RED << "_config is NULL" << RESET << std::endl;
-		return ;
-	}
-
-	_translatePath(req.getPath());
-	std::cout << "[Response] Target resource: " << _resource_path << std::endl;
-
+	/* Method Dispatch */
 	std::string method = req.getPath();
 	if (method == "GET") _handleGet();
 	// else if (method == "POST") _handlePost();
@@ -25,92 +17,87 @@ void Response::_handleGet()
 	struct stat file_info;
 	if (stat(_resource_path.c_str(), &file_info) != 0) { setCode(404); return; }
 	if (S_ISDIR(file_info.st_mode)) _handleDirectory();
-	// if (S_ISREG(file_info.st_mode)) _serveFile();
+	if (S_ISREG(file_info.st_mode)) _serveFile();
 }
 
-void	Response::_handleDirectory()
+void Response::_handleDirectory()
 {
-	const std::vector<std::string>& index_list = _config->getIndex();
+	const std::string& path = _resource_path;// we already translated the URI to a physical path
+	if (!path.empty() && path[path.length() - 1] != '/') {
+		setCode(301);
+		std::cout << "[Response] Redirecting missing trailing slash to: " << path << "/" << std::endl;
+		return; 
+	}
 
-	bool index_found = false;
+	const std::vector<std::string>& index_list = _config->getIndex();
 	for (size_t i = 0; i < index_list.size(); ++i) {
 		std::string candidate = _resource_path;
-		if (candidate[candidate.length() - 1] != '/') candidate += "/";
+		
+		// Ensure our physical path ends with a slash before appending the index name
+		if (candidate[candidate.length() - 1] != '/') {
+			candidate += "/";
+		}
 		candidate += index_list[i];
-		if (access(candidate.c_str(), F_OK) == 0) {
+
+		// Use R_OK instead of F_OK! 
+		// F_OK only checks if it exists. R_OK checks if we actually have permission to read it.
+		if (access(candidate.c_str(), R_OK) == 0) {
+			
+			// We found it! Update the resource path to the exact file.
 			_resource_path = candidate;
-			index_found = true;
-			break ;
-		}
-	}
-	if (!index_found) {// i have directory at this point
-		if (_config->getAutoIndex()) {// if auto index enbled
-			// _generateAutoIndex(); not implimentaton
-			std::cout << "auto index : On\tHandling DirectoryListing...\n";
-			return ;
-		}
-		else {// directory listening not allowed
-			setCode(403);
+			
+			// Instantly transition to serving this file just like a normal GET request
+			_serveFile(); 
 			return;
 		}
 	}
-	// stat(_resource_path.c_str(), &file_info);// refreshi tbnmha file_info struct
+
+	// 3. Fallback to Autoindex if no index files were found
+	if (_config->getAutoIndex()) {
+		std::cout << "[Response] Autoindex ON. Generating Directory Listing...\n";
+		
+		// _generateAutoIndex(); // We will write this next!
+		
+		// Note: _generateAutoIndex should setCode(200) and build the HTML string
+		return;
+	}
+
+	// 4. If no index file and no autoindex, it is strictly forbidden.
+	std::cout << "[Response] Directory access forbidden (No index, Autoindex OFF).\n";
+	setCode(403);
 }
 
-void Response::_translatePath(const std::string uri)
+void	Response::_serveFile()
+{
+	struct stat file_stat;
+	if (stat(_resource_path.c_str(), &file_stat) != 0) { setCode(404); return; }
+	_file_size = file_stat.st_size; 
+
+	_file_fd = open(_resource_path.c_str(), O_RDONLY);
+	if (_file_fd < 0) { setCode(403); return; }
+
+	_headers += "HTTP/1.1 200 OK\r\n";
+	_headers += "Content-Type: " + Utils::getMimeType(_resource_path) + "\r\n";
+	_headers += "Content-Length: " + Utils::toString(_file_size) + "\r\n";
+	_headers += "\r\n";
+
+	setCode(200);
+	std::cout << "File opened successfully. Prepared to send " << _file_size << " bytes.\n";
+}
+
+void Response::translatePath(const std::string& uri)
 {
 	// Plan A: Alias
 	std::string alias = _config->getAlias();
 	if (!alias.empty()) {
 		std::string reminder = uri.substr(_config->getPath().length());
-
-		if (!alias.empty() && alias[alias.length() - 1] != '/' && !reminder.empty() && reminder[0] != '/')
-			_resource_path = alias + "/" + reminder;
-		else _resource_path = alias + reminder;
 		_resource_path = alias + reminder;
 	}
-	else {// Plan B: Root
-		_resource_path = _config->getRoot() + uri;
-	}
-	_resource_path = _sanitizePath(_resource_path);
+	else _resource_path = _config->getRoot() + uri;
+
+	_resource_path = _sanitizePath(physical_path);
 }
 
-std::string Response::_sanitizePath(const std::string& path)
-{
-	std::string sanitized;
-	bool last_was_slash = false;
-
-	for (size_t i = 0; i < path.length(); ++i) {
-		if (path[i] == '/') {
-			if (!last_was_slash) sanitized += path[i];
-			last_was_slash = true;
-		} else {
-			sanitized += path[i];
-			last_was_slash = false;
-		}
-	}
-	return sanitized;
-}
-
-
-std::string Response::_getMimeType(const std::string& path)
-{
-	size_t dot = path.find_last_of(".");
-	if (dot == std::string::npos)
-		return "application/octet-stream";
-
-	std::string ext = path.substr(dot);
-	if (ext == ".html" || ext == ".htm") return "text/html";
-	if (ext == ".css") return "text/css";
-	if (ext == ".js") return "application/javascript";
-	if (ext == ".png") return "image/png";
-	if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
-	if (ext == ".gif") return "image/gif";
-	if (ext == ".ico") return "image/x-icon";
-	if (ext == ".txt") return "text/plain";
-	if (ext == ".pdf") return "application/pdf";
-	return "application/octet-stream";
-}
 
 void Response::setCode(short code) { _code = code; }
 void Response::setConfig(const Directives* config) { _config = config; }
@@ -125,4 +112,3 @@ Response& Response::operator=(const Response& other)
 	return *this;
 }
 Response::~Response() {}
-// void	Response::generateError(const Directives* config) {}
