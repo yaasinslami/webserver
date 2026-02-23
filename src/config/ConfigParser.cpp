@@ -175,7 +175,8 @@ bool ConfigParser::_reg_directive(const enum e_directive_type directive_type)
 		directive_type == DIR_MAX_BODY_SIZE || \
 		directive_type == DIR_ERROR_PAGES || \
 		directive_type == DIR_UPLOAD || \
-		directive_type == DIR_UPLOAD_LOC)
+		directive_type == DIR_UPLOAD_LOC || \
+		directive_type == DIR_CGI_HANDLER)
 
 		return true;
 	return false;

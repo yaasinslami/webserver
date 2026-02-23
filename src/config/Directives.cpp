@@ -68,6 +68,13 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 	else if (directve_type == DIR_UPLOAD_LOC) {
 		setUploadLoc(conf.consumeToken());
 	}
+	else if (directve_type == DIR_CGI_HANDLER) {
+		std::string extension = conf.consumeToken();
+		std::string handler_path = conf.consumeToken();
+		if (extension.empty() || handler_path.empty())
+			throw std::runtime_error("Invalid 'cgi_pass' directive. Expected: cgi_pass <extension> <handler_path>;");
+		_cgi_handlers[extension] = handler_path;
+	}
 }
 
 Directives::Directives() :
@@ -79,10 +86,6 @@ Directives::Directives() :
 	_allowed_methods.push_back("GET");
 	_allowed_methods.push_back("POST");
 	_allowed_methods.push_back("DELETE");
-
-	_cgi_handlers[".py"] = "/usr/bin/python3"; 
-    _cgi_handlers[".php"] = "/usr/bin/php-cgi"; 
-    _cgi_handlers[".pl"] = "/usr/bin/perl";
 }
 
 Directives::~Directives() {}
@@ -100,9 +103,7 @@ Directives& Directives::operator=(const Directives& dir)
 		setMaxBodySize(dir.getMaxBodySize());
 		setErrorPages(dir.getErrorPages());
 
-		_cgi_handlers[".py"] = "/usr/bin/python3"; 
-    	_cgi_handlers[".php"] = "/usr/bin/php-cgi"; 
-    	_cgi_handlers[".pl"] = "/usr/bin/perl";
+		_cgi_handlers = dir.getCgiHandlers();
 	}
 
 	return *this;
@@ -175,6 +176,7 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 		directive_map["error_page"] = DIR_ERROR_PAGES;
 		directive_map["upload"] = DIR_UPLOAD;
 		directive_map["upload_loc"] = DIR_UPLOAD_LOC;
+		directive_map["cgi_pass"] = DIR_CGI_HANDLER;
 	}
 
 	std::map<std::string, e_directive_type>::iterator it = directive_map.find(directive_str);

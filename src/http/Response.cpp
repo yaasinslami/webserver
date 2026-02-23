@@ -6,6 +6,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <stdlib.h>
 
 void Response::generate(const Request& req)
 {
@@ -14,7 +15,7 @@ void Response::generate(const Request& req)
 	if (method == "GET") _handleGet(req.getPath());
 	// else if (method == "POST") _handlePost();
 	// else if (method == "DELETE") _handleDelete();
-	
+
 	if (_code < 400)
 		_buildHeaders();
 }
@@ -191,6 +192,7 @@ void	Response::clear()
 	_body_content.clear();
 	_redirect_location.clear();
 	_is_static_file = false;
+	_config = NULL;
 }
 
 void Response::_buildHeaders()
@@ -212,10 +214,14 @@ void Response::_buildHeaders()
 }
 
 /* Getters */
+int	Response::getFd() const { return _file_fd; }
+std::string&	Response::getBuffer() { return _body_content; }
+std::string&	Response::getHeaderBuffer() { return _headers; }
 std::string	Response::getPhysicalPath() const { return _resource_path; }
-
+/* Setters */
 void Response::setCode(short code) { _code = code; }
 void Response::setConfig(const Directives* config) { _config = config; }
+void Response::setPath(std::string& path ) { _resource_path = path; }
 /* Constructors */
 Response::Response(short& code) :
 	_code(code),
@@ -233,3 +239,51 @@ Response& Response::operator=(const Response& other)
 	return *this;
 }
 Response::~Response() {}
+/* Errors */
+void Response::generateError()
+{
+	std::string error_body;
+	std::string msg =  Utils::getStatusMessage(_code);
+	bool        custom_page_loaded = false;
+
+	if (_config)
+	{
+		const std::map<int, std::string>& error_pages = _config->getErrorPages();
+		std::map<int, std::string>::const_iterator it = error_pages.find(_code);
+
+		if (it != error_pages.end())
+		{
+			std::string full_path = Utils::normalize_path(_config->getRoot() + it->second);
+			std::ifstream file(full_path.c_str());
+			if (file.is_open())
+			{
+				std::stringstream ss;
+				ss << file.rdbuf();
+				error_body = ss.str();
+				custom_page_loaded = true;
+				file.close();
+			}
+		}
+	}
+
+	if (!custom_page_loaded)
+	{
+		std::stringstream ss;
+		ss << "<html>\r\n<head><title>" << _code << " " << msg << "</title></head>\r\n";
+		ss << "<body bgcolor=\"white\">\r\n<center><h1>" << _code << " " << msg << "</h1></center>\r\n";
+		ss << "<hr><center>webserv</center>\r\n</body>\r\n</html>\r\n";
+		error_body = ss.str();
+	}
+
+	std::stringstream h_ss;
+	h_ss << "HTTP/1.1 " << _code << " " << msg << "\r\n";
+	h_ss << "Content-Type: text/html\r\n";
+	h_ss << "Content-Length: " << error_body.length() << "\r\n";
+	h_ss << "Connection: close\r\n"; 
+	h_ss << "\r\n";
+
+	_headers = h_ss.str();
+	_body_content = error_body;
+}
+
+void	Response::clearFilePath() { _resource_path.clear(); }

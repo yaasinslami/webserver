@@ -25,7 +25,6 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	env_vars.push_back("SCRIPT_FILENAME=" + script_path);
 	env_vars.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env_vars.push_back("SCRIPT_NAME=" + req.getPath());
-	env_vars.push_back("SCRIPT_FILENAME=" + script_path);
 	env_vars.push_back("REQUEST_URI=" + req.getPath());
 	env_vars.push_back("DOCUMENT_ROOT=" + config->getRoot());
 	env_vars.push_back("QUERY_STRING=" + req.getQuery());
@@ -91,6 +90,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	{
 		cerr << "Pipe error" << endl;
 		client->setStatus(500);
+		client->getResponse().generateError();
 		return;
 	}
 
@@ -102,6 +102,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 		cerr << "Fork error" << endl;
 		delete_env(envp);
 		client->setStatus(500);
+		client->getResponse().generateError();
 		close(cgi_out_pipe[READ_END]);
 		close(cgi_out_pipe[WRITE_END]);
 		return;
@@ -168,30 +169,13 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 	const Directives* config = client->getConfig();
 	Request& req = client->getRequest();
 
-	cout << YELLOW << "config->getRoot() : " << config->getRoot() << RESET << endl;
-	cout << YELLOW << "config->getPath() : " << req.getPath() << RESET << endl;
-	
 	string script_fs_path = Utils::normalize_path(config->getRoot() + req.getPath());
 	
 	cout << YELLOW << "script_fs_path : " << script_fs_path << RESET << endl;
 	if (access(script_fs_path.c_str(), F_OK) == -1)
 	{
 		client->setStatus(400);
-		std::string body = "<html>\r\n"
-						"<head><title>400 Bad Request</title></head>\r\n"
-						"<body>\r\n"
-						"<center><h1>400 Bad Request</h1></center>\r\n"
-						"<hr><center>webserv</center>\r\n"
-						"</body>\r\n"
-						"</html>\r\n";
-
-		std::string response = "HTTP/1.1 400 Bad Request\r\n"
-							"Content-Type: text/html\r\n"
-							"Content-Length: " + Utils::toString(body.length()) + "\r\n"
-							"Connection: close\r\n\r\n" + 
-							body;
-
-		client->set_write_buf(response);
+		client->getResponse().generateError();
 		return "";
 	}
 

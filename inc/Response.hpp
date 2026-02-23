@@ -26,12 +26,15 @@ class Response
 		~Response();
 		Response& operator=(const Response&);
 		/* Getters */
-		int			getFd() const;
-		std::string	getBuffer() const;
-		std::string	getPhysicalPath() const;
-
+		int				getFd() const;
+		std::string&	getBuffer();
+		std::string&	getHeaderBuffer();
+		std::string		getPhysicalPath() const;
+		/* Setters */
 		void setCode(short);
 		void setConfig(const Directives*);
+
+		void setPath(std::string&);
 
 		void generate(const Request&);
 		void	generateError();
@@ -40,6 +43,7 @@ class Response
 
 		/* Response reseter */
 		void	clear();
+		void	clearFilePath();
 
 		void translatePath(const std::string& uri);
 	private:

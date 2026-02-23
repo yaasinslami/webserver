@@ -41,13 +41,17 @@ class Client
 		/* CGI */
 		pid_t				_cgi_pid;
 		int					_cgi_pipe_read_fd;
-		std::string			_cgi_response_buf;
-		size_t				_cgi_bytes_written;
 		/* timeout */
 		time_t				_last_activity_time;
 
-		// i will remove this
-		std::string _write_buf;
+		// ifstream temp file
+		ifstream			_file_stream;
+
+		// CGI
+		std::string			_cgi_temp_path;
+		std::ofstream		_cgi_out_file;
+		size_t				_cgi_header_size;
+		std::string			_cgi_header_buf;
 
 	public:
 		/* Constructors */
@@ -63,6 +67,7 @@ class Client
 		int					getFd() const;
 		bool				isClosed() const;
 		Request&			getRequest();
+		Response&			getResponse();
 		const Directives*	getConfig() const;
 		const Server*		getServer() const;
 		ClientState			getState() const;
@@ -70,9 +75,7 @@ class Client
 		void				setStatus(int status);
 		pid_t				getCgiPid() const;
 		int					getCgiOutPipe() const;
-		std::string&		get_cgi_response_buf();
-		size_t&				get_cgi_bytes_written();
-		
+
 		/* Setters */	
 		void				setState(ClientState state);
 		void				setCgiPid(pid_t pid);
@@ -88,15 +91,17 @@ class Client
 
 		/* CGI */
 		void				parseCgiResponse();
-		void				closeCgiPipes();
+		void				openCgiTempFile();
+		void				writeToCgiTempFile(const char* buf, ssize_t size);
+		void 				closeCgiOutFile();
+		bool				isCgiFileOpen() const;
+		std::string& 		getCgiHeaderBuf();
 
 		bool				isRequestReady();
 		void				updateTime();
 		time_t				getLastActivity() const;
 
-		// i will remove this
-		const std::string&	get_write_buf() const;
-		void				set_write_buf(const std::string &s);
 	private:
 		bool				_validateRequest();
+		void				_serveLargeFile();
 };

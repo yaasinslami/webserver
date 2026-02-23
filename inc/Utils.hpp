@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Utils.hpp                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: oel-hadr <oel-hadr@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/10/05 00:07:46 by oel-hadr          #+#    #+#             */
-/*   Updated: 2026/02/20 21:07:25 by oel-hadr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #pragma once
 
 #include <iostream>
@@ -17,6 +5,7 @@
 #include <sstream>
 #include <cstring>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -31,6 +20,7 @@ class Utils
 		static std::string urlDecode(const std::string&);
 		static std::string sanitizePath(const std::string &);
 		static std::string getStatusMessage(int code);
+		static long			getFileSize(const std::string& filename);
 
 		template <typename T>
 		static std::string	toString(const T& value)
