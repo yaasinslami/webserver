@@ -83,6 +83,7 @@ void	Client::process(EpollManager &poller)
 			}
 			cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
 			CgiHandler::execute(this, script_fs_path, executable_path, poller);
+			return ;
 		}
 	}
 
@@ -171,7 +172,7 @@ void	Client::_serveLargeFile()
 		if (_request.getIsCgi())
 		{
 			_file_stream.seekg(_cgi_header_size, std::ios::beg);
-			// std::cout << RED << "Seeked to: " << _file_stream.tellg() << RESET << std::endl;
+			std::cout << RED << "Seeked to: " << _file_stream.tellg() << RESET << std::endl;
 		}
 	}
 
@@ -193,10 +194,8 @@ void	Client::_serveLargeFile()
 		_file_stream.close();
 		_file_stream.clear();
 
-		// if (!_response.getPhysicalPath().empty())
-		// 	unlink(_response.getPhysicalPath().c_str());
-		// print the path
-		std::cout << RED << "Finished sending file: " << _response.getPhysicalPath() << RESET << std::endl;
+		if (!_response.getPhysicalPath().empty() && _request.getIsCgi())
+			unlink(_response.getPhysicalPath().c_str());
 		_response.clearFilePath();
 	}
 }
@@ -216,7 +215,7 @@ void	Client::onWritable()
 
 	if (!_response.getBuffer().empty())
 	{
-		cout << RED << "[DEBUG] : send _response._body_content in case of error" << RESET << endl;
+		 cout << RED << "[DEBUG] : send body from Buffer" << RESET << endl;
 
 		std::string& b_buf = _response.getBuffer();
 		ssize_t sent = send(_fd, b_buf.c_str(), b_buf.size(), 0);
@@ -227,7 +226,7 @@ void	Client::onWritable()
 
 	if (!_response.getPhysicalPath().empty())
 	{
-		// cout << RED << "[DEBUG] : send body from File" << RESET << endl;
+		cout << RED << "[DEBUG] : send body from File" << RESET << endl;
 		_serveLargeFile();
 	}
 
@@ -247,6 +246,8 @@ void	Client::onWritable()
 
 void Client::parseCgiResponse()
 {
+	cout << BLUE << "Parsing CGI Response Headers..." << RESET << endl;
+
 	std::string& raw = _cgi_header_buf;
 	size_t split_pos = raw.find("\r\n\r\n");
 	size_t sep_len = 4;

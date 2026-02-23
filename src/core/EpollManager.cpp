@@ -27,7 +27,6 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
         {
             if (!client->isCgiFileOpen())
 			{
-				cout << GREEN << "Received first chunk of CGI output. Opening temp file for buffering..." << RESET << endl;
                 client->openCgiTempFile();
 				if (client->getStatus() == 500)
 				{
@@ -55,12 +54,8 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
             if (client->getStatus() != 500)
             {
                 client->parseCgiResponse();
-				cout << GREEN << client->getStatus() << RESET << endl;
                 if (client->getStatus() >= 400)
-				{
-					cout << RED << "call generateError() after the ParseCGI : " << client->getStatus() << RESET << endl;
                     client->getResponse().generateError();
-				}
                 client->markWriting();
                 set_events(client->getFd(), EPOLLOUT);
             }
