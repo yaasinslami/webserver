@@ -13,11 +13,19 @@ void Response::generate(const Request& req)
 	/* Method Dispatch */
 	std::string method = req.getMethod();
 	if (method == "GET") _handleGet(req.getPath());
-	// else if (method == "POST") _handlePost();
+	else if (method == "POST") _handlePost(req.getBodySize());
 	// else if (method == "DELETE") _handleDelete();
 
 	if (_code < 400)
 		_buildHeaders();
+}
+
+void Response::_handlePost(size_t body_size)
+{
+	_file_size = body_size;
+	_content_type = Utils::getMimeType(_resource_path);
+	_is_static_file = true;
+	setCode(201);
 }
 
 void Response::_handleGet(const std::string& uri)

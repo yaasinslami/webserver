@@ -4,7 +4,7 @@ import os
 cookie = os.environ.get('HTTP_COOKIE', '')
 
 # print("Status: 200 OK")
-print("Content-Type text/html")
+print("Content-Type: text/html")
 print()
 
 
