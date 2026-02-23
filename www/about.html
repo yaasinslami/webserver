@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>About Webserv</title>
+    <style>
+        body { background-color: #f8f9fa; font-family: sans-serif; padding: 50px; text-align: center; }
+        .container { background: white; max-width: 800px; margin: 0 auto; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h1 { color: #0984e3; font-size: 2.5rem; }
+        p { line-height: 1.8; color: #555; font-size: 1.1rem; }
+        .tech-stack { margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
+        .badge { background: #dfe6e9; padding: 8px 15px; border-radius: 5px; font-weight: bold; color: #2d3436; }
+        .back-btn { display: inline-block; margin-top: 40px; text-decoration: none; color: #0984e3; border: 2px solid #0984e3; padding: 10px 25px; border-radius: 25px; transition: 0.3s; }
+        .back-btn:hover { background: #0984e3; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>About This Server</h1>
+        <p>This is a custom-built HTTP server written entirely in <strong>C++ 98</strong>. It is designed to be robust, efficient, and compliant with the HTTP/1.1 standard.</p>
+        
+        <p>Unlike traditional blocking servers, this project utilizes <strong>I/O Multiplexing</strong> (poll/epoll/kqueue) to handle multiple client connections simultaneously in a single thread. This ensures high performance even under load.</p>
+
+        <div class="tech-stack">
+            <span class="badge">C++ 98</span>
+            <span class="badge">Non-Blocking I/O</span>
+            <span class="badge">HTTP/1.1</span>
+            <span class="badge">Socket Programming</span>
+        </div>
+
+        <a href="index.html" class="back-btn">← Back to Dashboard</a>
+    </div>
+
+</body>
+</html>

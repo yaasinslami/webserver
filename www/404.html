@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>404 Not Found</title>
+    <style>
+        body {
+            background-color: #ffffff;
+            color: #333333;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 50px; /* Space between text and meme */
+            max-width: 900px;
+            padding: 20px;
+        }
+        .text-content {
+            text-align: left;
+        }
+        h1 {
+            font-size: 8rem;
+            margin: 0;
+            line-height: 1;
+            color: #2d3436;
+        }
+        h2 {
+            font-size: 2rem;
+            margin: 10px 0 20px 0;
+            font-weight: 300;
+            color: #636e72;
+        }
+        p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+        .meme-container img {
+            max-width: 350px;
+            height: auto;
+            border-radius: 15px;
+            /* Optional: A subtle shadow for the image to make it pop slightly */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #0984e3; /* Nice Blue */
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 30px;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #74b9ff;
+            transform: translateY(-2px);
+        }
+
+        /* Mobile Responsive: Stack them on small screens */
+        @media (max-width: 768px) {
+            .container { flex-direction: column-reverse; text-align: center; }
+            .text-content { text-align: center; }
+            h1 { font-size: 5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-content">
+            <h1>404</h1>
+            <h2>Ooops! Page Not Found</h2>
+            <p>We couldn't find the page you were looking for.<br>Maybe it was deleted, or maybe it never existed.</p>
+            <a href="/" class="btn">Back to Home</a>
+        </div>
+
+        <div class="meme-container">
+            <img src="../images/tom.jpg" alt="404 tom">
+        </div>
+    </div>
+</body>
+</html>

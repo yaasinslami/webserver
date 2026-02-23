@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webserv Legends</title>
+    <style>
+        /* --- GLOBAL THEME --- */
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; color: #2d3436; }
+        
+        /* --- NAVBAR --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 50px; background-color: #f8f9fa; border-bottom: 2px solid #e1e4e8;
+        }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #0984e3; letter-spacing: 1px; }
+        .nav-btn {
+            text-decoration: none; color: #2d3436; font-weight: bold; padding: 10px 20px;
+            border: 2px solid #2d3436; border-radius: 30px; transition: 0.3s;
+        }
+        .nav-btn:hover { background-color: #2d3436; color: white; }
+
+        /* --- HERO SECTION --- */
+        header { text-align: center; padding: 60px 20px; }
+        h1 { font-size: 3rem; margin: 0; color: #2d3436; }
+        p.subtitle { color: #636e72; font-size: 1.2rem; margin-top: 10px; }
+
+        /* --- CARD GRID --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive! */
+            gap: 40px; padding: 0 50px 80px 50px; max-width: 1200px; margin: 0 auto;
+        }
+
+        /* --- CARD DESIGN --- */
+        .card {
+            background: white; border-radius: 15px; overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); border: 1px solid #eee;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center; display: flex; flex-direction: column;
+        }
+        .card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(9, 132, 227, 0.15); border-color: #74b9ff; }
+        
+        .card-img {
+            width: 100%; height: 250px; object-fit: cover; /* Crops image nicely */
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-content { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
+        .card h2 { margin: 0 0 10px 0; color: #0984e3; }
+        .card p { color: #636e72; line-height: 1.6; font-size: 0.95rem; margin-bottom: 20px; }
+        
+        .see-more {
+            margin-top: auto; /* Pushes button to bottom */
+            text-decoration: none; color: white; background-color: #0984e3;
+            padding: 10px 30px; border-radius: 20px; font-weight: bold; transition: 0.2s;
+        }
+        .see-more:hover { background-color: #74b9ff; }
+
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">WEBSERV L3atawiya</div>
+        <a href="about.html" class="nav-btn">About Project</a>
+    </nav>
+
+    <header>
+        <h1>Asatir lWeb</h1>
+        <!-- <p class="subtitle">The pioneers of computer science served by C++.</p> -->
+    </header>
+
+    <div class="grid-container">
+
+        <div class="card">
+            <img src="images/siraj_zit.jpg" alt="Alan Turing" class="card-img">
+            <div class="card-content">
+                <h2>Issam Siraj Eddine</h2>
+                <p>Laydwmha n3ma, L7wa o lma</p>
+                <a href="characters/sirajeddine.html" class="see-more">Read Biography</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <img src="images/hmz.webp" alt="Hamza" class="card-img">
+            <div class="card-content">
+                <h2>Hamza Abourazzouk</h2>
+                <p>Footballeur international marocain</p>
+                <a href="characters/habourazzouk.html" class="see-more">Read Biography</a>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

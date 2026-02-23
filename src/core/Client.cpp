@@ -196,6 +196,8 @@ void	Client::_serveLargeFile()
 
 		if (!_response.getPhysicalPath().empty() && _request.getIsCgi())
 			unlink(_response.getPhysicalPath().c_str());
+		// print the path
+		std::cout << RED << "Finished sending file: " << _response.getPhysicalPath() << RESET << std::endl;
 		_response.clearFilePath();
 	}
 }

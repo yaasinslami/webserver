@@ -151,15 +151,7 @@ void	Response::_serveFile()
 		return;
 	}
 
-	_file_size = file_stat.st_size;
-
-	_file_fd = open(_resource_path.c_str(), O_RDONLY);
-	if (_file_fd < 0) {
-		setCode(403);
-		return;
-	}
-
-	_file_size = file_stat.st_size;
+	_file_size = static_cast<size_t>(file_stat.st_size);
 	_content_type = Utils::getMimeType(_resource_path);
 	_is_static_file = true;
 	setCode(200);
@@ -181,10 +173,6 @@ void Response::translatePath(const std::string& uri)
 
 void	Response::clear()
 {
-	if (_is_static_file && _file_fd >= 0) {
-		close(_file_fd);
-		_file_fd = -1;
-	}
 	_file_size = 0;
 	_content_type.clear();
 	_resource_path.clear();
@@ -214,7 +202,6 @@ void Response::_buildHeaders()
 }
 
 /* Getters */
-int	Response::getFd() const { return _file_fd; }
 std::string&	Response::getBuffer() { return _body_content; }
 std::string&	Response::getHeaderBuffer() { return _headers; }
 std::string	Response::getPhysicalPath() const { return _resource_path; }
@@ -223,7 +210,7 @@ void Response::setCode(short code) { _code = code; }
 void Response::setConfig(const Directives* config) { _config = config; }
 void Response::setPath(std::string& path ) { _resource_path = path; }
 /* Constructors */
-Response::Response(short& code) : _code(code), _file_fd(-1), _file_size(0), _is_static_file(false),
+Response::Response(short& code) : _code(code), _file_size(0), _is_static_file(false),
 	_config(NULL)
 {}
 Response::Response(const Response& other) : _code(other._code) { *this = other; }
