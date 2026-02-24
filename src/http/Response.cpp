@@ -55,6 +55,7 @@ void Response::_handleDirectory(const std::string& uri)
 		setCode(301);
 		_redirect_location = path + "/";
 		std::cout << "[Response] Redirecting missing trailing slash to: " << path << "/" << std::endl;
+		clearFilePath();
 		return;
 	}
 
@@ -275,6 +276,8 @@ void Response::generateError()
 
 	_headers = h_ss.str();
 	_body_content = error_body;
+
+	clearFilePath();
 }
 
 void	Response::clearFilePath() { _resource_path.clear(); }

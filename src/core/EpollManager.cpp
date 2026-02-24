@@ -50,7 +50,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 
             remove_cgi_fds(client, false);
             client->closeCgiOutFile();
-            
+
             if (client->getStatus() != 500)
             {
                 client->parseCgiResponse();

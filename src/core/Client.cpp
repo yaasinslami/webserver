@@ -73,6 +73,7 @@ void	Client::process(EpollManager &poller)
 			}
 		}
 		else {
+			cout << BLUE << "CGI Request Detected. Executable: " << executable_path << RESET << std::endl;
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
 
 			if (script_fs_path.empty())
