@@ -51,7 +51,7 @@ class Response
 		void	_handleDirectory(const std::string&);
 		void	_serveFile();
 		 /* POST */
-		void	_handlePost(size_t);
+		void	_handlePost(const Request&);
 		 /* DELETE */
 		void	_handleDelete();
 };

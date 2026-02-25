@@ -13,18 +13,31 @@ void Response::generate(const Request& req)
 	/* Method Dispatch */
 	std::string method = req.getMethod();
 	if (method == "GET") _handleGet(req.getPath());
-	else if (method == "POST") _handlePost(req.getBodySize());
+	else if (method == "POST") _handlePost(req);
 	// else if (method == "DELETE") _handleDelete();
 
 	if (_code < 400)
 		_buildHeaders();
 }
 
-void Response::_handlePost(size_t body_size)
+void Response::_handlePost(const Request& req)
 {
-	_file_size = body_size;
+	std::string upload_dir = _config->getUploadPath();
+	if (upload_dir.empty()) {
+		std::cout << "[Response] POST forbidden: No upload directory configured.\n";
+		setCode(403);
+		return;
+	}
+
+	std::string temp_path = req.getBodyPath();
+
+	// std::string filename = req.getUploadFilename();
+	// if (filename.empty()) {
+	// 	filename = "upload_" + Utils::toString(time(NULL)) + ".bin";
+	// }
+
 	_content_type = Utils::getMimeType(_resource_path);
-	_is_static_file = true;
+	_resource_path.clear();
 	setCode(201);
 }
 
