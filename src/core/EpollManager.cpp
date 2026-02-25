@@ -254,6 +254,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			remove_cgi_fds(client, false);
 
 		remove_client(fd);
+		client->resetForNextRequest();
 		return;
 	}
 	
