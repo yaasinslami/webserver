@@ -8,10 +8,10 @@ print("Content-Type: text/html")
 print()
 
 
-# print(f"<h1>{cookie.lower()}</h1>")
+#print(f"<h1>{cookie.lower()}</h1>")
 
 
-if "user_id=oel_hadr" in cookie.lower():
+if "user_id=oel-hadr" in cookie.lower():
     print("<h1>Welcome back, oel-hadr!</h1>")
 else:
     print("<h1>Please log in first.</h1>")

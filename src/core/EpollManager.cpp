@@ -253,11 +253,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
 	{
 		cerr << "Epoll Error on fd=" << fd << endl;
-		if (client->getCgiPid() != -1)
-			remove_cgi_fds(client, false);
-
 		remove_client(fd);
-		client->resetForNextRequest();
 		return;
 	}
 	
@@ -304,8 +300,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				if (bytes == 0) 
 				{
 					std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
-					if (client->getCgiPid() != -1)
-						remove_cgi_fds(client, false);
 					remove_client(fd);
 					return;
 				}
@@ -314,9 +308,6 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		}
 		case CLOSING:
 		{
-			// Todo
-			if (client->getCgiPid() != -1)
-				remove_cgi_fds(client, false);
 			remove_client(fd);
 			return ;
 		}
