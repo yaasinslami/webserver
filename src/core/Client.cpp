@@ -48,11 +48,13 @@ static string	get_cgi_executable(string path, Client& client)
 
 void	Client::process(EpollManager &poller)
 {
+	std::cout << BLUE << "Processing Request for Path: " << _request.getPath() << RESET << std::endl;
 	if (!hasConfig()) {
 		if (_request.getState() != STATE_ERROR) _setBestConfig();
 		else _config = &_server->getDirectives();
 		_response.setConfig(_config);	
 	}
+	std::cout << BLUE << "Best Config Path: " << _config->getPath() << RESET << std::endl;
 
 	if (_request.getState() != STATE_ERROR && !_validateRequest()) {
 		std::cout << "[Client] Request rejected. Code: " << _status_code << std::endl;
@@ -156,11 +158,9 @@ void	Client::_setBestConfig()
 	for (size_t i = 0; i < locations.size(); ++i) {
 		const std::string &loc_path = locations[i].getDirectives().getPath();
 		if (path.compare(0, loc_path.length(), loc_path) == 0) {
-			if (path.length() == loc_path.length() || path[loc_path.length()] == '/') {
-				if (loc_path.length() > best_len) {
-					best_match = &locations[i];
-					best_len = loc_path.length();
-				}
+			if (loc_path.length() > best_len) {
+				best_match = &locations[i];
+				best_len = loc_path.length();
 			}
 		}
 	}
