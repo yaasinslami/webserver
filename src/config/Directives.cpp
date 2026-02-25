@@ -81,7 +81,7 @@ Directives::Directives() :
 	_root("www"),
 	_autoindex(false),
 	_client_max_body_size(30000000),
-	_upload(true)
+	_upload(false)
 {
 	_allowed_methods.push_back("GET");
 	_allowed_methods.push_back("POST");
@@ -104,6 +104,8 @@ Directives& Directives::operator=(const Directives& dir)
 		setAllowedMethods(dir.getAllowedMethods());
 		setMaxBodySize(dir.getMaxBodySize());
 		setErrorPages(dir.getErrorPages());
+		setUpload(dir.canUpload());
+		setUploadLoc(dir.getUploadPath());
 
 		_cgi_handlers = dir.getCgiHandlers();
 	}

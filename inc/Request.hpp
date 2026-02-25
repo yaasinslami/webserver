@@ -105,8 +105,8 @@ class	Request
 		const size_t&		getContentLength() const;
 		const size_t&		getBodySize() const;
 		const std::string&	getBodyPath() const;
+		std::string	getUploadFilename() const;
 		bool				getIsCgi() const;
-		bool				isChunked();
 		bool				headersValidated() const;
 		void				markHeadersValidated();
 

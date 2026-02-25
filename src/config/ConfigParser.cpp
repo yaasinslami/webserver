@@ -176,7 +176,9 @@ bool ConfigParser::_reg_directive(const enum e_directive_type directive_type)
 		directive_type == DIR_ERROR_PAGES || \
 		directive_type == DIR_UPLOAD || \
 		directive_type == DIR_UPLOAD_LOC || \
-		directive_type == DIR_CGI_HANDLER)
+		directive_type == DIR_CGI_HANDLER || \
+		directive_type == DIR_UPLOAD || \
+		directive_type == DIR_UPLOAD_LOC)
 
 		return true;
 	return false;

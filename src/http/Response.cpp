@@ -22,22 +22,82 @@ void Response::generate(const Request& req)
 
 void Response::_handlePost(const Request& req)
 {
+	std::string content_type = req.getHeader("Content-Type");
+
+	// Block HTML Form envelopes. These belong to CGI!
+	if (content_type.find("multipart/form-data") != std::string::npos ||
+		content_type.find("application/x-www-form-urlencoded") != std::string::npos) 
+	{
+		std::cout << "[Response] Form data not supported for static uploads. Use a CGI script.\n";
+		setCode(415); // 415 Unsupported Media Type
+		return;
+	}
+
+	/* now we only support raw binary uploads, which is a bit weird but simple to implement
+	static files should be served by GET, and dynamic uploads should be handled by CGI.
+	This is just a fallback for clients that want to do a raw POST to a static path. */
+
+	if (!_config->canUpload()) {
+		std::cout << "[Response] POST forbidden: Uploads are disabled (upload off).\n";
+		setCode(403); // Forbidden
+		return;
+	}
+
 	std::string upload_dir = _config->getUploadPath();
 	if (upload_dir.empty()) {
-		std::cout << "[Response] POST forbidden: No upload directory configured.\n";
-		setCode(403);
+		std::cout << "[Response] POST failed: Uploads enabled, but no upload_loc provided.\n";
+		setCode(500); // Internal Server Error (This is a server misconfiguration!)
 		return;
 	}
 
 	std::string temp_path = req.getBodyPath();
+	if (temp_path.empty()) {
+		std::cout << "[Response] POST failed: No body payload received.\n";
+		setCode(400); // Bad Request
+		return;
+	}
 
-	// std::string filename = req.getUploadFilename();
-	// if (filename.empty()) {
-	// 	filename = "upload_" + Utils::toString(time(NULL)) + ".bin";
-	// }
+	std::string filename = req.getUploadFilename();
+	if (filename.empty()) {
+		filename = "upload_" + Utils::toString(time(NULL)) + ".bin";// Fallback filename if none provided
+	}
 
-	_content_type = Utils::getMimeType(_resource_path);
-	_resource_path.clear();
+	std::string target_path = _config->getRoot() + upload_dir + "/" + filename;
+	target_path = Utils::sanitizePath(target_path);
+
+	std::cout << "[Debug] Source Temp File: " << temp_path << "\n";
+	std::cout << "[Debug] Destination File: " << target_path << "\n";
+
+	if (std::rename(temp_path.c_str(), target_path.c_str()) == 0) {
+		std::cout << "[Response] Fast-moved upload to: " << target_path << "\n";
+	}
+	else {// If rename fails, it could be due to cross-device issues (EXDEV), or other filesystem problems. We should check errno to confirm.
+		// Fallback: Manual stream copy if cross-device link fails (EXDEV error)
+
+		std::cout << "[Response] rename() failed (" << std::strerror(errno) << "). Falling back to stream copy.\n";
+		
+		std::ifstream src(temp_path.c_str(), std::ios::binary);
+		std::ofstream dst(target_path.c_str(), std::ios::binary);
+		
+		if (!src || !dst) {
+			std::cerr << "[Error] Failed to open files for POST copy.\n";
+			setCode(500); // Internal Server Error
+			return;
+		}
+
+		dst << src.rdbuf();
+		
+		src.close();
+		dst.close();
+
+		// Safely delete the temporary file
+		if (unlink(temp_path.c_str()) != 0)
+			std::cerr << "[Warning] Failed to unlink temp file: " << temp_path << "\n";
+		
+		std::cout << "[Response] Successfully copied upload to: " << target_path << "\n";
+	}
+
+	clearFilePath();
 	setCode(201);
 }
 

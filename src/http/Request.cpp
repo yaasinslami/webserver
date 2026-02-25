@@ -193,7 +193,17 @@ const std::string&	Request::getMethod() const { return _method; }
 const std::string& Request::getPath() const { return _uri_path; }
 const std::string& Request::getQuery() const { return _uri_query; }
 std::map<std::string, std::string> Request::getHeaders() const { return _headers; }
-const std::string&	Request::getHeader(const std::string& key) const { return _headers.at(key); }
+const std::string&	Request::getHeader(const std::string& key) const
+{
+	static const std::string empty_string = ""; 
+
+	std::map<std::string, std::string>::const_iterator it = _headers.find(key);
+	if (it != _headers.end()) {
+		return it->second;
+	}
+	return empty_string;
+	// return _headers.at(key);
+}
 const size_t&		Request::getBodySize() const { return _total_body_bytes; }
 const RequestState& Request::getState() const { return _state; }
 const size_t&	Request::getContentLength() const { return _content_length; }
@@ -205,6 +215,32 @@ const short& Request::getCode() const { return _code; }
 bool Request::hasBody() const { return _body_exist; }
 bool Request::headersValidated() const { return _headers_validated; }
 void Request::markHeadersValidated() { _headers_validated = true; }
+std::string Request::getUploadFilename() const
+{
+	std::string disp = getHeader("content-disposition");
+	if (!disp.empty()) {
+		size_t filename_pos = disp.find("filename=\"");
+		if (filename_pos != std::string::npos) {
+			size_t start = filename_pos + 10;
+			size_t end = disp.find("\"", start);
+			if (end != std::string::npos) {
+				return disp.substr(start, end - start);
+			}
+		}
+	}
+
+	if (!_uri_path.empty() && _uri_path[_uri_path.length() - 1] != '/') {
+		size_t last_slash = _uri_path.find_last_of('/');
+		if (last_slash != std::string::npos) {
+			std::string possible_name = _uri_path.substr(last_slash + 1);
+			if (possible_name.find('.') != std::string::npos) {
+				return possible_name;
+			}
+		}
+	}
+
+	return "";
+}
 /* Random Functions */
 void	Request::setState(RequestState state) { _state = state; }
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
@@ -329,6 +365,10 @@ void	Request::resetState()
 	if (_body_fd >= 0) {
 		close(_body_fd);
 		_body_fd = -1;
+	}
+	if (_state != STATE_COMPLETE  && !_body_file_path.empty()) {
+		unlink(_body_file_path.c_str());
+		_body_file_path.clear();
 	}
 	/* strings */
 	_method.clear();
