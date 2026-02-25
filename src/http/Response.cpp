@@ -80,6 +80,7 @@ void Response::_handleDirectory(const std::string& uri)
 	if (_config->getAutoIndex()) {
 		std::cout << "[Response] Autoindex ON. Generating Directory Listing...\n";
 		_generateAutoIndex(uri);
+		clearFilePath();
 		return;
 	}
 
