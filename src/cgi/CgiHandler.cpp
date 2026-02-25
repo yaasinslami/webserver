@@ -1,30 +1,16 @@
 #include "CgiHandler.hpp"
 #include <sys/epoll.h>
 
-static string	mytoupper(std::string str) 
-{
-	for (size_t i = 0; i < str.length(); i++)
-	{
-		if (str[i] == '-')
-			str[i] = '_';
-		else
-			str[i] = toupper(str[i]);
-	}
-	return str;
-}
-
 char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 {
 	Request& req = client.getRequest();
 	const Directives* config = client.getConfig();
-
 	std::vector<std::string> env_vars;
 
 	env_vars.push_back("REQUEST_METHOD=" + req.getMethod());
 	env_vars.push_back("SERVER_PROTOCOL=HTTP/1.1");
-	env_vars.push_back("SCRIPT_FILENAME=" + script_path);
+	env_vars.push_back("SCRIPT_FILENAME=" + Utils::resolve_path(script_path));
 	env_vars.push_back("GATEWAY_INTERFACE=CGI/1.1");
-	env_vars.push_back("SCRIPT_NAME=" + req.getPath());
 	env_vars.push_back("REQUEST_URI=" + req.getPath());
 	env_vars.push_back("DOCUMENT_ROOT=" + config->getRoot());
 	env_vars.push_back("QUERY_STRING=" + req.getQuery());
@@ -42,12 +28,14 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	}
 
 	const map<string, string> headers = req.getHeaders();
-	for (map<string, string>::const_iterator it = headers.begin();
-		 it != headers.end(); ++it)
+	for (map<string, string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
 	{
-		string env_header = "HTTP_" + it->first;
-		string envVar = env_header + "=" + it->second;
-		env_vars.push_back(mytoupper(envVar));
+		string key = it->first;
+		for (size_t i = 0; i < key.length(); ++i) {
+			if (key[i] == '-') key[i] = '_';
+			key[i] = toupper(key[i]);
+		}
+		env_vars.push_back("HTTP_" + key + "=" + it->second);
 	}
 
 	char** envp = new char*[env_vars.size() + 1];
@@ -169,7 +157,7 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 	Request& req = client->getRequest();
 
 	std::string script_fs_path = Utils::normalize_path(config->getRoot() + req.getPath());
-	
+
 	struct stat s;
 	if (stat(script_fs_path.c_str(), &s) == -1)
 		return (client->setStatus(404), "");

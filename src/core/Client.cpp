@@ -59,6 +59,7 @@ void	Client::process(EpollManager &poller)
 		_request.setState(STATE_ERROR);
 		_response.generateError();
 		markWriting();
+		poller.set_events(_fd, EPOLLOUT);
 		return;
 	}
 

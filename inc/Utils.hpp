@@ -4,6 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <cstring>
+#include <cstdlib>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -21,6 +22,7 @@ class Utils
 		static std::string sanitizePath(const std::string &);
 		static std::string getStatusMessage(int code);
 		static long			getFileSize(const std::string& filename);
+		static std::string resolve_path(const std::string& input_path);
 
 		template <typename T>
 		static std::string	toString(const T& value)

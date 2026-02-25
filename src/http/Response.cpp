@@ -35,6 +35,11 @@ void Response::_handleGet(const std::string& uri)
 		setCode(404);
 		return;
 	}
+	if (access(_resource_path.c_str(), R_OK) != 0) {
+		setCode(403);
+		return;
+	}
+
 	if (S_ISDIR(file_info.st_mode)) {
 		std::cout << "[Response] Resource is a directory. Handling directory logic...\n";
 		_handleDirectory(uri);
