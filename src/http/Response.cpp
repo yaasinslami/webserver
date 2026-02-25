@@ -48,6 +48,11 @@ void Response::_handleGet(const std::string& uri)
 		setCode(404);
 		return;
 	}
+	if (access(_resource_path.c_str(), R_OK) != 0) {
+		setCode(403);
+		return;
+	}
+
 	if (S_ISDIR(file_info.st_mode)) {
 		std::cout << "[Response] Resource is a directory. Handling directory logic...\n";
 		_handleDirectory(uri);
@@ -68,6 +73,7 @@ void Response::_handleDirectory(const std::string& uri)
 		setCode(301);
 		_redirect_location = path + "/";
 		std::cout << "[Response] Redirecting missing trailing slash to: " << path << "/" << std::endl;
+		clearFilePath();
 		return;
 	}
 
@@ -288,6 +294,8 @@ void Response::generateError()
 
 	_headers = h_ss.str();
 	_body_content = error_body;
+
+	clearFilePath();
 }
 
 void	Response::clearFilePath() { _resource_path.clear(); }

@@ -67,6 +67,25 @@ long Utils::getFileSize(const std::string& filename)
 	return -1;
 }
 
+std::string Utils::resolve_path(const std::string& input_path)
+{
+    char *pwd = getenv("PWD");
+    std::string absolute_res;
+    
+    if (!pwd) return input_path;
+
+    std::string base_path(pwd);
+    if (input_path[0] == '/')
+        absolute_res = normalize_uri(input_path);
+    else if (input_path.compare(0, 2, "./") == 0)
+        absolute_res = normalize_uri(base_path + "/" + input_path.substr(2));
+    else
+        absolute_res = normalize_uri(base_path + "/" + input_path);
+
+    return absolute_res;
+}
+
+
 std::string Utils::normalize_path(const std::string& path)
 {
 	std::vector<std::string> components;
@@ -83,9 +102,7 @@ std::string Utils::normalize_path(const std::string& path)
 				components.pop_back();
 		}
 		else
-		{
 			components.push_back(component);
-		}
 	}
 
 	std::string result = "./";
@@ -184,8 +201,13 @@ std::string Utils::getStatusMessage(int code)
 		case 403: return "Forbidden";
 		case 404: return "Not Found";
 		case 405: return "Method Not Allowed";
+		case 413: return "Payload Too Large";
+		case 414: return "URI Too Long";
+		case 431: return "Request Header Fields Too Large";
 		case 500: return "Internal Server Error";
 		case 501: return "Not Implemented";
+		case 502: return "Bad Gateway";
+		case 504: return "Gateway Timeout";
 		default: return "Unknown Status";
 	}
 }

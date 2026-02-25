@@ -50,7 +50,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 
             remove_cgi_fds(client, false);
             client->closeCgiOutFile();
-            
+
             if (client->getStatus() != 500)
             {
                 client->parseCgiResponse();
@@ -197,7 +197,10 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 		else if (result == pid)
 		{
 			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+			{
+				cout << RED << "CGI process exited with error code " << WEXITSTATUS(status) << "." << RESET << endl;
 				send_error = true;
+			}
 		}
 		
 		client->setCgiPid(-1);
@@ -394,9 +397,16 @@ void EpollManager::check_client_timeouts()
 			++next;
 
 			if (client->getCgiPid() != -1)
+			{
 				remove_cgi_fds(client, false);
 
-			remove_client(fd);
+				client->setStatus(504);
+				client->getResponse().generateError();
+				client->setState(WRITING);
+				set_events(fd, EPOLLOUT);
+			}
+			else
+				remove_client(fd);
 
 			it = next;
 		}
