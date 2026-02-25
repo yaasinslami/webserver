@@ -16,6 +16,15 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	env_vars.push_back("QUERY_STRING=" + req.getQuery());
 	env_vars.push_back("REDIRECT_STATUS=200");
 
+	cout << RED << "Method : " << req.getMethod() << RESET << endl;
+	cout << RED << "Upload Enabled: " << (config->canUpload() ? "Yes" : "No") << RESET << endl;
+
+	if (req.getMethod() == "POST" && config->canUpload())
+	{
+		cout << RED << "[CGI] Setting UPLOAD_DIR to: " << Utils::resolve_path(config->getUploadPath()) << RESET << endl;
+		env_vars.push_back("UPLOAD_DIR=" + Utils::resolve_path(config->getUploadPath()));
+	}
+
 	try
 	{
 		std::stringstream ss;

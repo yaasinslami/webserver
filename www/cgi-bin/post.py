@@ -11,9 +11,9 @@ except (ValueError, TypeError):
     body = "No body received or invalid Content-Length"
 
 # 2. Print Headers
-print("Content-Type: text/plain")
-print(f"Status: 200 OK")
-print("")
+sys.stdout.write("Content-Type: text/plain\r\n")
+sys.stdout.write("Status: 200 OK\r\n")
+sys.stdout.write("\r\n")  # End of headers
 
 # 3. Print Body for verification
 print("--- CGI POST VERIFICATION ---")
