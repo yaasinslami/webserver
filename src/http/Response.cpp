@@ -14,10 +14,57 @@ void Response::generate(const Request& req)
 	std::string method = req.getMethod();
 	if (method == "GET") _handleGet(req.getPath());
 	else if (method == "POST") _handlePost(req);
-	// else if (method == "DELETE") _handleDelete();
+	else if (method == "DELETE") _handleDelete();
 
 	if (_code < 400)
 		_buildHeaders();
+}
+
+void Response::_handleDelete()
+{
+	// we already have the translated path in _resource_path from the initial translation step in Client::_validateRequest()
+
+	std::cout << "[Response] Attempting to DELETE resource: " << _resource_path << "\n";
+
+	// Check if the path exists using stat()
+	struct stat path_stat;
+	if (stat(_resource_path.c_str(), &path_stat) != 0) {
+		std::cout << "[Response] DELETE failed: Resource not found.\n";
+		setCode(404); // Not Found
+		return;
+	}
+
+	// Security: Prevent deleting directories!
+	// Deleting directories via HTTP is highly dangerous and usually blocked.
+	if (S_ISDIR(path_stat.st_mode)) {
+		std::cout << "[Response] DELETE forbidden: Target is a directory.\n";
+		setCode(403); // Forbidden
+		return;
+	}
+
+	// Check if we have write permissions to actually delete the file
+	// (Technically, deletion requires write permissions on the *parent directory*, 
+	// but W_OK on the file is a standard proxy check for web servers).
+	if (access(_resource_path.c_str(), W_OK) != 0) {
+		std::cout << "[Response] DELETE forbidden: No write permissions.\n";
+		setCode(403); // Forbidden
+		return;
+	}
+
+	// The Execution
+	if (unlink(_resource_path.c_str()) == 0) {
+		std::cout << "[Response] Successfully deleted: " << _resource_path << "\n";
+		
+		// HTTP 204 No Content means the action was successful but there is no response body
+		setCode(204); 
+		_file_size = 0;
+		clearFilePath(); 
+	} 
+	else {
+		// If unlink fails for some weird OS reason (like file locked by another process)
+		std::cout << "[Response] DELETE failed: unlink() error.\n";
+		setCode(500); // Internal Server Error
+	}
 }
 
 void Response::_handlePost(const Request& req)
