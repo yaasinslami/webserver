@@ -16,9 +16,9 @@
     <div class="card">
         <h1>Upload an Image</h1>
         
-        <form action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" name="myFile" required>
-            <br>
+        <form action="/cgi-bin/upload.py" method="POST" enctype="multipart/form-data">
+            <input type="text" name="username" placeholder="Your Name" required>
+            <input type="file" name="file" required> <br>
             <button type="submit">Upload File</button>
         </form>
         

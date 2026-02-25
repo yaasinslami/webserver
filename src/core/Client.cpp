@@ -249,20 +249,21 @@ void	Client::onWritable()
 	}
 }
 
-void Client::parseCgiResponse()
+void	Client::parseCgiResponse()
 {
-	cout << BLUE << "Parsing CGI Response Headers..." << RESET << endl;
-
 	std::string& raw = _cgi_header_buf;
 	size_t split_pos = raw.find("\r\n\r\n");
 	size_t sep_len = 4;
 
-	if (split_pos == std::string::npos) {
+	if (split_pos == std::string::npos)
+	{
 		split_pos = raw.find("\n\n");
 		sep_len = 2;
 	}
 
-	if (split_pos == std::string::npos) {
+	if (split_pos == std::string::npos)
+	{
+		std::cerr << "502 Bad Gateway: No header-body separator" << std::endl;
 		setStatus(502);
 		return;
 	}
@@ -270,32 +271,44 @@ void Client::parseCgiResponse()
 	std::string headers_part = raw.substr(0, split_pos);
 	_cgi_header_size = split_pos + sep_len;
 
-	cout << BLUE << headers_part << RESET << endl;
-
 	std::string status_line = "HTTP/1.1 200 OK";
 	std::string final_headers = "";
-	std::stringstream ss(headers_part);
-	std::string line;
 
-	while (std::getline(ss, line))
+	std::string	line;
+	size_t		start = 0;
+	size_t		end = headers_part.find('\n');
+
+	while (start < headers_part.length())
 	{
+		if (end == std::string::npos)
+			line = headers_part.substr(start);
+		else
+			line = headers_part.substr(start, end - start);
+
 		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length() - 1);
-		if (line.empty())
-			continue;
 
-		if (line.compare(0, 7, "Status:") == 0)
+		if (!line.empty())
 		{
-			if (line.size() > 8)
-				status_line = "HTTP/1.1 " + line.substr(8);
+			if (line.compare(0, 7, "Status:") == 0)
+			{
+				if (line.size() > 8)
+				{
+					size_t val_start = (line[7] == ' ') ? 8 : 7;
+					status_line = "HTTP/1.1 " + line.substr(val_start);
+				}
+			} else if (line.find(':') == std::string::npos) {
+				std::cerr << "502 Bad Gateway: Malformed header line: " << line << std::endl;
+				setStatus(502);
+				return ;
+			} else
+				final_headers += line + "\r\n";
 		}
-		else if (line.find(':') == std::string::npos)
-		{
-			setStatus(502);
-			return;
-		}
-		else
-			final_headers += line + "\r\n";
+
+		if (end == std::string::npos)
+			break;
+		start = end + 1;
+		end = headers_part.find('\n', start);
 	}
 
 	long total_file_size = Utils::getFileSize(_cgi_temp_path);
@@ -345,12 +358,12 @@ void Client::closeCgiOutFile()
 
 bool Client::isCgiFileOpen() const 
 {
-    return const_cast<std::ofstream&>(_cgi_out_file).is_open();
+	return const_cast<std::ofstream&>(_cgi_out_file).is_open();
 }
 
 std::string& Client::getCgiHeaderBuf()
 {
-    return _cgi_header_buf;
+	return _cgi_header_buf;
 }
 
 /* Getters */
@@ -383,11 +396,11 @@ void	Client::resetForNextRequest()
 	_request.resetState();
 	_response.clear();
 	_cgi_pid = -1;
-    _cgi_header_buf.clear();
-    _cgi_header_size = 0;
+	_cgi_header_buf.clear();
+	_cgi_header_size = 0;
 	_config = NULL;
-    _status_code = 200;
-    _state = READING;
+	_status_code = 200;
+	_state = READING;
 }
 /* CGI */
 void Client::setCgiPid(pid_t pid) { _cgi_pid = pid; };
