@@ -30,7 +30,7 @@ void	Request::feed(const char* data, size_t size)
 			}
 			case STATE_URI_START:
 			{
-				if (ch == '/') { _uri_path += ch; _state = STATE_URI_PATH; }
+				if ( _is_pchar(ch) || ch == '/') { _uri_path += ch; _state = STATE_URI_PATH; }
 				else { _state = STATE_ERROR; _code = 400; }
 				break;
 			}
@@ -72,9 +72,10 @@ void	Request::feed(const char* data, size_t size)
 			case STATE_PROTOCOL_LF:
 			{
 				if (ch != '\n') { _state = STATE_ERROR; _code = 400; }
-				else { _state = STATE_FIELD_KEY; _uri_path = Utils::normalize_uri(Utils::urlDecode(_uri_path)); }
+				else { _state = STATE_FIELD_KEY; _parseUriPath(); }
 				break ;
 			}
+			// _uri_path = Utils::normalize_uri(Utils::urlDecode(_uri_path));
 			case STATE_FIELD_KEY:
 			{
 				if (_tmp_key.empty() && ch == '\r') _state = STATE_HEADERS_DONE;
@@ -242,6 +243,24 @@ std::string Request::getUploadFilename() const
 	return "";
 }
 /* Random Functions */
+void	Request::_parseUriPath()
+{
+	if (_uri_path.length() >= 7 && _uri_path.substr(0, 7) == "http://") 
+	{
+		size_t path_start = _uri_path.find('/', 7);
+		if (path_start != std::string::npos) _uri_path = _uri_path.substr(path_start);
+		else _uri_path = "/";
+	}
+	else if (_uri_path.length() >= 8 && _uri_path.substr(0, 8) == "https://") 
+	{
+		size_t path_start = _uri_path.find('/', 8);
+		if (path_start != std::string::npos) _uri_path = _uri_path.substr(path_start);
+		else _uri_path = "/";
+	}
+
+	_uri_path = Utils::normalize_uri(Utils::urlDecode(_uri_path));
+}
+
 void	Request::setState(RequestState state) { _state = state; }
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
 {

@@ -129,6 +129,7 @@ class	Request
 		static bool	_is_token(unsigned char);
 		static bool	_is_valid_value(unsigned char);
 		
+		void	_parseUriPath();
 		void _chunked_body(const char*, size_t, size_t&);
 
 		/* Headers helper methods */

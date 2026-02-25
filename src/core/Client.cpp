@@ -13,9 +13,6 @@ void Client::onReadable()
 		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 		if (bytes > 0) {
 			_request.feed(buf, bytes);
-
-			// print the uri_path
-			std::cout << "Received data on fd=" << _fd << ": " << bytes << " bytes, URI: " << _request.getPath() << std::endl;
 		}
 		else if (bytes == 0) {
 			std::cout << "Client closed fd=" << _fd << std::endl;
