@@ -56,7 +56,7 @@ void Response::_handleDelete()
 		std::cout << "[Response] Successfully deleted: " << _resource_path << "\n";
 		
 		// HTTP 204 No Content means the action was successful but there is no response body
-		setCode(204); 
+		setCode(204);
 		_file_size = 0;
 		clearFilePath(); 
 	} 
@@ -97,20 +97,33 @@ void Response::_handlePost(const Request& req)
 		return;
 	}
 
-	std::string temp_path = req.getBodyPath();
-	if (temp_path.empty()) {
-		std::cout << "[Response] POST failed: No body payload received.\n";
-		setCode(400); // Bad Request
-		return;
-	}
-
 	std::string filename = req.getUploadFilename();
 	if (filename.empty()) {
-		filename = "upload_" + Utils::toString(time(NULL)) + ".bin";// Fallback filename if none provided
+		filename = "upload_" + Utils::toString(time(NULL)) + ".bin";
 	}
 
 	std::string target_path = _config->getRoot() + upload_dir + "/" + filename;
 	target_path = Utils::sanitizePath(target_path);
+
+	std::string temp_path = req.getBodyPath();
+
+	cout << RED << "[Response] POST temp path: " << temp_path << RESET << "\n";
+	cout << RED << "[Response] body size: " << req.getBodySize() << RESET << "\n";
+
+	if (temp_path.empty() || req.getBodySize() == 0)
+	{
+		std::ofstream empty_file(target_path.c_str(), std::ios::binary);
+		if (!empty_file)
+		{
+			std::cerr << "[Error] Failed to create empty file.\n";
+			setCode(500);
+			return;
+		}
+		empty_file.close();
+		clearFilePath();
+		setCode(400);
+		return;
+	}
 
 	std::cout << "[Debug] Source Temp File: " << temp_path << "\n";
 	std::cout << "[Debug] Destination File: " << target_path << "\n";
