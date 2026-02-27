@@ -21,21 +21,21 @@ void Client::onReadable()
 		}
 }
 
-static string	get_cgi_executable(string path, Client& client)
+static std::string	get_cgi_executable(std::string path, Client& client)
 {
 	const Directives* config = client.getConfig();
-	const map<string, string>& handlers = config->getCgiHandlers();
+	const std::map<std::string, std::string>& handlers = config->getCgiHandlers();
 
 	if (handlers.empty())
 		return "";
 
 	size_t dot_pos = path.rfind('.');
-	if (dot_pos == string::npos)
+	if (dot_pos == std::string::npos)
 		return "";
 
-	string extension = path.substr(dot_pos);
+	std::string extension = path.substr(dot_pos);
 
-	map<string, string>::const_iterator it = handlers.find(extension);
+	std::map<std::string, std::string>::const_iterator it = handlers.find(extension);
 
 	if (it != handlers.end())
 	{
@@ -54,6 +54,7 @@ void	Client::process(EpollManager &poller)
 		else _config = &_server->getDirectives();
 		_response.setConfig(_config);	
 	}
+
 	std::cout << BLUE << "Best Config Path: " << _config->getPath() << RESET << std::endl;
 
 	if (_request.getState() != STATE_ERROR && !_validateRequest()) {
@@ -68,7 +69,7 @@ void	Client::process(EpollManager &poller)
 	if (_request.getState() == STATE_COMPLETE) {
 		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (!_request.getIsCgi()) {
-			cout << BLUE << "Normal Request" << RESET << std::endl;
+			std::cout << BLUE << "Normal Request" << RESET << std::endl;
 			_response.generate(_request);
 			if (_status_code >= 400) {
 				std::cout << "[Client] Error response generated. Code: " << _status_code << std::endl;
@@ -76,7 +77,7 @@ void	Client::process(EpollManager &poller)
 			}
 		}
 		else {
-			cout << BLUE << "CGI Request Detected. Executable: " << executable_path << RESET << std::endl;
+			std::cout << BLUE << "CGI Request Detected. Executable: " << executable_path << RESET << std::endl;
 			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
 
 			if (script_fs_path.empty())
@@ -86,7 +87,7 @@ void	Client::process(EpollManager &poller)
 				poller.set_events(_fd, EPOLLOUT);
 				return;
 			}
-			cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
+			std::cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
 			CgiHandler::execute(this, script_fs_path, executable_path, poller);
 			return ;
 		}
@@ -110,21 +111,19 @@ bool Client::_validateRequest()
 {
 	if (!_request.headersValidated())
 	{
-		/* Allowed Methods */
 		const std::vector<std::string> &allowed = _config->getAllowedMethods();
 		if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end())
 		{
 			_status_code = 405; // Method Not Allowed
 			return false;
 		}
-		/* Content-Length */
+
 		if (_request.hasBody() && _request.getContentLength() > _config->getMaxBodySize())
 		{
 			_status_code = 413; // Payload Too Large
 			return false;
 		}
 
-		/* Path Translation */
 		_response.translatePath(_request.getPath());
 		std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
 		_request.markHeadersValidated();
@@ -173,10 +172,7 @@ void	Client::_serveLargeFile()
 	{
 		_file_stream.open(_response.getPhysicalPath().c_str(), std::ios::binary);
 		if (_request.getIsCgi())
-		{
 			_file_stream.seekg(_cgi_header_size, std::ios::beg);
-			std::cout << RED << "Seeked to: " << _file_stream.tellg() << RESET << std::endl;
-		}
 	}
 
 	char buf[BUFFER_SIZE];
@@ -198,8 +194,8 @@ void	Client::_serveLargeFile()
 		_file_stream.clear();
 
 		if (!_response.getPhysicalPath().empty() && _request.getIsCgi())
-			unlink(_response.getPhysicalPath().c_str());
-		// print the path
+			std::remove(_response.getPhysicalPath().c_str());
+
 		std::cout << RED << "Finished sending file: " << _response.getPhysicalPath() << RESET << std::endl;
 		_response.clearFilePath();
 	}
@@ -209,7 +205,7 @@ void	Client::onWritable()
 {
 	if (!_response.getHeaderBuffer().empty())
 	{
-		cout << RED << "[DEBUG] : send Headers" << RESET << endl;
+		std::cout << RED << "[DEBUG] : send Headers" << RESET << std::endl;
 
 		std::string& h_buf = _response.getHeaderBuffer();
 		ssize_t sent = send(_fd, h_buf.c_str(), h_buf.size(), 0);
@@ -220,7 +216,7 @@ void	Client::onWritable()
 
 	if (!_response.getBuffer().empty())
 	{
-		 cout << RED << "[DEBUG] : send body from Buffer" << RESET << endl;
+		std::cout << RED << "[DEBUG] : send body from Buffer" << RESET << std::endl;
 
 		std::string& b_buf = _response.getBuffer();
 		ssize_t sent = send(_fd, b_buf.c_str(), b_buf.size(), 0);
@@ -231,7 +227,7 @@ void	Client::onWritable()
 
 	if (!_response.getPhysicalPath().empty())
 	{
-		cout << RED << "[DEBUG] : send body from File" << RESET << endl;
+		std::cout << RED << "[DEBUG] : send body from File" << RESET << std::endl;
 		_serveLargeFile();
 	}
 
@@ -239,7 +235,7 @@ void	Client::onWritable()
 		_response.getBuffer().empty() && 
 		_response.getPhysicalPath().empty())
 	{
-		cout << RED << "Sending DONE" << RESET << endl;
+		std::cout << RED << "Sending DONE" << RESET << std::endl;
 		if (!_request.shouldKeepAlive() || _status_code >= 400)
 		{
 			_state = CLOSING;

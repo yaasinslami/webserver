@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <cstdlib>
 
-/* Feed; Where the Parsing Magic comes true */
+/* Request::feed parsing state machine */
 void	Request::feed(const char* data, size_t size)
 {
 	for (size_t i = 0; i < size; ++i) {
@@ -386,7 +386,7 @@ void	Request::resetState()
 		_body_fd = -1;
 	}
 	if (_state != STATE_COMPLETE  && !_body_file_path.empty()) {
-		unlink(_body_file_path.c_str());
+		std::remove(_body_file_path.c_str());
 		_body_file_path.clear();
 	}
 	/* strings */
@@ -433,7 +433,7 @@ Request::~Request()
 {
 	close(_body_fd);
 	if (_state != STATE_COMPLETE && !_body_file_path.empty())
-		unlink(_body_file_path.c_str());
+		std::remove(_body_file_path.c_str());
 }
 Request::Request(const Request& other) : _code(other._code) { *this = other; }
 Request& Request::operator=(const Request& other)

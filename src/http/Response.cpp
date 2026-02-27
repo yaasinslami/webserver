@@ -51,18 +51,16 @@ void Response::_handleDelete()
 		return;
 	}
 
-	// The Execution
-	if (unlink(_resource_path.c_str()) == 0) {
+	if (std::remove(_resource_path.c_str()) == 0) {
 		std::cout << "[Response] Successfully deleted: " << _resource_path << "\n";
-		
+
 		// HTTP 204 No Content means the action was successful but there is no response body
 		setCode(204);
 		_file_size = 0;
 		clearFilePath(); 
 	} 
 	else {
-		// If unlink fails for some weird OS reason (like file locked by another process)
-		std::cout << "[Response] DELETE failed: unlink() error.\n";
+		std::cout << "[Response] DELETE failed: std::remove() error: " << std::strerror(errno) << "\n";
 		setCode(500); // Internal Server Error
 	}
 }
@@ -107,8 +105,8 @@ void Response::_handlePost(const Request& req)
 
 	std::string temp_path = req.getBodyPath();
 
-	cout << RED << "[Response] POST temp path: " << temp_path << RESET << "\n";
-	cout << RED << "[Response] body size: " << req.getBodySize() << RESET << "\n";
+	std::cout << RED << "[Response] POST temp path: " << temp_path << RESET << "\n";
+	std::cout << RED << "[Response] body size: " << req.getBodySize() << RESET << "\n";
 
 	if (temp_path.empty() || req.getBodySize() == 0)
 	{
@@ -150,9 +148,8 @@ void Response::_handlePost(const Request& req)
 		src.close();
 		dst.close();
 
-		// Safely delete the temporary file
-		if (unlink(temp_path.c_str()) != 0)
-			std::cerr << "[Warning] Failed to unlink temp file: " << temp_path << "\n";
+		if (std::remove(temp_path.c_str()) != 0)
+			std::cerr << "[Warning] Failed to std::remove temp file: " << temp_path << "\n";
 		
 		std::cout << "[Response] Successfully copied upload to: " << target_path << "\n";
 	}

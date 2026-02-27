@@ -10,8 +10,6 @@
 
 #define MAX_EVENTS 128
 
-using namespace std;
-
 class Client; 
 class Server;
 
@@ -22,9 +20,9 @@ class EpollManager
 		int		timeout_ms;
 		bool	running;
 
-		map<int, Client*>				clients;
-		map<int, std::vector<Server*> >	listeners;
-		map<int, Client*>				_cgi_fd_map;
+		std::map<int, Client*>				clients;
+		std::map<int, std::vector<Server*> >	listeners;
+		std::map<int, Client*>				_cgi_fd_map;
 	public:
 		/* Constructors */
 		EpollManager(std::vector<Server>&);

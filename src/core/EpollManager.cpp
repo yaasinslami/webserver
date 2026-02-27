@@ -2,7 +2,7 @@
 
 #define SIZE_8KB 8192 
 
-static string get_cgi_executable(string, Client&);
+static std::string get_cgi_executable(std::string, Client&);
 
 void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 {
@@ -30,7 +30,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
                 client->openCgiTempFile();
 				if (client->getStatus() == 500)
 				{
-					cout << RED << "Failed to open temp file for CGI output buffering." << RESET << endl;
+					std::cout << RED << "Failed to open temp file for CGI output buffering." << RESET << std::endl;
 					remove_cgi_fds(client, true);
 					client->getResponse().generateError();
 					client->setState(WRITING);
@@ -46,7 +46,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
         }
         else if (bytes == 0)
         {
-			cout << GREEN << "CGI output pipe closed by child process (EOF)" << RESET << endl;
+			std::cout << GREEN << "CGI output pipe closed by child process (EOF)" << RESET << std::endl;
 
             remove_cgi_fds(client, false);
             client->closeCgiOutFile();
@@ -188,8 +188,7 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 		int status;
 		pid_t result = waitpid(pid, &status, WNOHANG);
 
-		// Process exited naturally
-		if (result == 0)
+		if (result == 0) // Process exited naturally
 		{
 			kill(pid, SIGKILL);
 			waitpid(pid, &status, 0);
@@ -198,7 +197,7 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 		{
 			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
 			{
-				cout << RED << "CGI process exited with error code " << WEXITSTATUS(status) << "." << RESET << endl;
+				std::cout << RED << "CGI process exited with error code " << WEXITSTATUS(status) << "." << RESET << std::endl;
 				send_error = true;
 			}
 		}
@@ -252,7 +251,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 
 	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
 	{
-		cerr << "Epoll Error on fd=" << fd << endl;
+		std::cerr << "Epoll Error on fd=" << fd << std::endl;
 		remove_client(fd);
 		return;
 	}
@@ -331,7 +330,7 @@ void	EpollManager::run_loop()
 		{
 			if (errno == EINTR)
 				continue;
-			perror("epoll_wait");
+			std::cerr << "epoll_wait error: " << strerror(errno) << std::endl;
 			break;
 		}
 
@@ -341,22 +340,11 @@ void	EpollManager::run_loop()
 			uint32_t events = event_list[i].events;
 
 			if (listeners.count(fd))
-			{
-				// cout << "call handle_listener_event" << endl;
 				handle_listener_event(fd);
-			}
 			else if (clients.count(fd))
-			{
-				// cout << "call handle_client_event" << endl;
 				handle_client_event(fd, events);
-			}
 			else
-			{
-				// cout << "call handle_cgi_event" << endl;;
 				handle_cgi_event(fd, events);
-			}
-
-			// cout << "-------------------------" << endl;
 		}
 
 		check_client_timeouts();

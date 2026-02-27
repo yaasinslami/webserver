@@ -45,7 +45,7 @@ class Client
 		time_t				_last_activity_time;
 
 		// ifstream temp file
-		ifstream			_file_stream;
+		std::ifstream			_file_stream;
 
 		// CGI
 		std::string			_cgi_temp_path;

@@ -8,8 +8,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-using namespace std;
-
 class Utils
 {
 	public:

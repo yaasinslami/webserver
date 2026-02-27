@@ -15,11 +15,11 @@ class CgiHandler
 {
 	public:
 		static std::string	prepare(Client* client, EpollManager& poller, int fd);
-		static void	execute(Client* client, const string& script_path,
-				const string& interpreter, EpollManager& poller);
+		static void	execute(Client* client, const std::string& script_path,
+				const std::string& interpreter, EpollManager& poller);
 
 	private:
 		static char** create_env(Client& client, const std::string& script_path);
-		static char** create_args(const string& script, const string& interpreter);
+		static char** create_args(const std::string& script, const std::string& interpreter);
 		static void   delete_env(char **envp);
 };

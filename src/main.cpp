@@ -4,8 +4,6 @@
 #include <vector>
 #include <signal.h>
 
-using namespace std;
-
 int main(int ac, char **av) 
 {
 	signal(SIGPIPE, SIG_IGN);
@@ -17,13 +15,12 @@ int main(int ac, char **av)
 	try {
 		ConfigParser parser(ac == 2 ? av[1] : "config/default.conf");
 		parser.parse();
-		// parser.getHttp().logs();
 		EpollManager poller(parser.getHttp().getServers());
-		cout << "Starting Event Loop..." << endl;
+		std::cout << "Starting Event Loop..." << std::endl;
 		poller.run_loop();
 	}
 	catch (const std::exception& e) {
-		cerr << "Error: " << e.what() << endl;
+		std::cerr << "Error: " << e.what() << std::endl;
 		return 1;
 	}
 

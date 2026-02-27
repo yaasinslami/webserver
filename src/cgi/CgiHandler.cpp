@@ -16,14 +16,8 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	env_vars.push_back("QUERY_STRING=" + req.getQuery());
 	env_vars.push_back("REDIRECT_STATUS=200");
 
-	cout << RED << "Method : " << req.getMethod() << RESET << endl;
-	cout << RED << "Upload Enabled: " << (config->canUpload() ? "Yes" : "No") << RESET << endl;
-
 	if (req.getMethod() == "POST" && config->canUpload())
-	{
-		cout << RED << "[CGI] Setting UPLOAD_DIR to: " << Utils::resolve_path(config->getUploadPath()) << RESET << endl;
 		env_vars.push_back("UPLOAD_DIR=" + Utils::resolve_path(config->getUploadPath()));
-	}
 
 	try
 	{
@@ -32,14 +26,14 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 		env_vars.push_back("CONTENT_LENGTH=" + ss.str());
 		env_vars.push_back("CONTENT_TYPE=" + req.getHeader("content-type"));
 	}
-	catch ( const exception& e )
+	catch ( const std::exception& e )
 	{
 	}
 
-	const map<string, string> headers = req.getHeaders();
-	for (map<string, string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	const std::map<std::string, std::string> headers = req.getHeaders();
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
 	{
-		string key = it->first;
+		std::string key = it->first;
 		for (size_t i = 0; i < key.length(); ++i) {
 			if (key[i] == '-') key[i] = '_';
 			key[i] = toupper(key[i]);
@@ -51,7 +45,7 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	for (size_t i = 0; i < env_vars.size(); ++i)
 	{
 		envp[i] = new char[env_vars[i].length() + 1];
-		strcpy(envp[i], env_vars[i].c_str());
+		std::strcpy(envp[i], env_vars[i].c_str());
 	}
 
 	envp[env_vars.size()] = NULL;
@@ -70,12 +64,12 @@ void	CgiHandler::delete_env(char** envp)
 
 static void	child_exit_error(const char* msg)
 {
-	cerr << "CGI Child Error: " << msg << endl;
-	exit(1);
+	std::cerr << "CGI Child Error: " << msg << std::endl;
+	std::exit(1);
 }
 
-void CgiHandler::execute(Client* client, const string& script_path,
-		const string& interpreter, EpollManager &poller)
+void CgiHandler::execute(Client* client, const std::string& script_path,
+		const std::string& interpreter, EpollManager &poller)
 {
 	const Request&      req = client->getRequest();
 	const Directives* config = client->getConfig();
@@ -84,7 +78,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 
 	if (pipe(cgi_out_pipe) == -1)
 	{
-		cerr << "Pipe error" << endl;
+		std::cerr << "Pipe error" << std::endl;
 		client->setStatus(500);
 		client->getResponse().generateError();
 		return;
@@ -95,7 +89,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	pid_t pid = fork();
 	if (pid == -1)
 	{
-		cerr << "Fork error" << endl;
+		std::cerr << "Fork error" << std::endl;
 		delete_env(envp);
 		client->setStatus(500);
 		client->getResponse().generateError();
@@ -107,8 +101,8 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	if (pid == 0)
 	{
 		size_t last_slash = script_path.rfind('/');
-		string script_directory = (last_slash == string::npos) ? "." : script_path.substr(0, last_slash);
-		string script_filename = (last_slash == string::npos) ? script_path : script_path.substr(last_slash + 1);
+		std::string script_directory = (last_slash == std::string::npos) ? "." : script_path.substr(0, last_slash);
+		std::string script_filename = (last_slash == std::string::npos) ? script_path : script_path.substr(last_slash + 1);
 
 		close(cgi_out_pipe[READ_END]);
 
@@ -157,7 +151,7 @@ void CgiHandler::execute(Client* client, const string& script_path,
 	delete_env(envp);
 
 	if (!poller.add_cgi_fds(client))
-		cout << "[poller]: register_cgi_fds failed" << endl;
+		std::cout << "[poller]: register_cgi_fds failed" << std::endl;
 }
 
 std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
