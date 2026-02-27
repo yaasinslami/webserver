@@ -14,13 +14,10 @@ void Client::onReadable()
 	ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
 	if (bytes > 0)
 	{
-		// prit the received data in cyan color for debugging
-		// std::cout << CYAN << "[DEBUG] : Received " << bytes << " bytes:\n" << std::string(buf, bytes) << RESET << std::endl;
 		size_t total_consumed = 0;
 		while (total_consumed < (size_t)bytes && _request.getState() != STATE_COMPLETE)
 		{
 			size_t consumed = _request.feed(buf + total_consumed, bytes - total_consumed);
-			std::cout << CYAN << "[DEBUG] : Consumed " << consumed << " bytes, Total Consumed: " << total_consumed + consumed << "/" << bytes << RESET << std::endl;
 			total_consumed += consumed;
 
 			if (_request.getState() == STATE_ERROR) {
@@ -30,7 +27,6 @@ void Client::onReadable()
 				break;
 			}
 			else if (_request.getState() == STATE_HEADERS_DONE) {// one time check
-				std::cout << "[Client] Headers received. Determining best config...\n";
 				_setBestConfig();
 
 				_request.setMaxBodySize(_config->getMaxBodySize());
@@ -94,6 +90,7 @@ static string	get_cgi_executable(string path, Client& client)
 
 void	Client::process(EpollManager &poller)
 {
+	std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
 	if (_request.getState() == STATE_COMPLETE) {
 		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (!_request.getIsCgi()) {
@@ -137,24 +134,20 @@ void	Client::process(EpollManager &poller)
 
 bool Client::_validateRequest()
 {
-	std::cout << "[Client] Validating request method...\n";
 	/* Allowed Methods */
 	const std::vector<std::string> &allowed = _config->getAllowedMethods();
 	if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end()) {
 		setStatus(405); // Method Not Allowed
 		return false;
 	}
-	std::cout << "[Client] Validating request body size...\n";
 	/* Content-Length */
 	if (_request.hasBody() && _request.getContentLength() > _config->getMaxBodySize()) {
 		setStatus(413); // Payload Too Large
 		return false;
 	}
 
-	std::cout << "[Client] Translating request path...\n";
 	/* Path Translation */
 	_response.translatePath(_request.getPath());
-	std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
 
 	return true;
 }
