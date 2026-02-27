@@ -69,6 +69,7 @@ void Response::_handleDelete()
 
 void Response::_handlePost(const Request& req)
 {
+	std::cout << "[Response] Handling POST request for: " << _resource_path << "\n";
 	std::string content_type = req.getHeader("Content-Type");
 
 	// Block HTML Form envelopes. These belong to CGI!
@@ -79,6 +80,8 @@ void Response::_handlePost(const Request& req)
 		setCode(415); // 415 Unsupported Media Type
 		return;
 	}
+
+	std::cout << "[Response] Content-Type: " << content_type << "\n";
 
 	/* now we only support raw binary uploads, which is a bit weird but simple to implement
 	static files should be served by GET, and dynamic uploads should be handled by CGI.
@@ -98,6 +101,7 @@ void Response::_handlePost(const Request& req)
 	}
 
 
+	// Special case: If Content-Length is 0 and not chunked, we should still create an empty file if uploads are allowed. This is a common edge case where clients might want to create an empty resource.
 	if (req.getContentLength() == 0 && !req.isChunked())
 	{
 		std::string filename = req.getUploadFilename();
@@ -141,7 +145,7 @@ void Response::_handlePost(const Request& req)
 	if (std::rename(temp_path.c_str(), target_path.c_str()) == 0) {
 		std::cout << "[Response] Fast-moved upload to: " << target_path << "\n";
 	}
-	else {// If rename fails, it could be due to cross-device issues (EXDEV), or other filesystem problems. We should check errno to confirm.
+	else {// If rename fails, it could be due to cross-device issues (EXDEV)
 		// Fallback: Manual stream copy if cross-device link fails (EXDEV error)
 
 		std::cout << "[Response] rename() failed (" << std::strerror(errno) << "). Falling back to stream copy.\n";

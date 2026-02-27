@@ -34,26 +34,7 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 		}
 	}
 	else if (directve_type == DIR_MAX_BODY_SIZE) {
-		std::string token = conf.consumeToken();
-		const char* str = token.c_str();
-		char *endptr;
-		errno = 0;
-
-		unsigned long len = std::strtoul(str, &endptr, 10);
-
-		if (errno == ERANGE || endptr == str || *endptr != '\0') {
-			throw std::runtime_error("Config Error: Invalid client_max_body_size value: " + token);
-		}
-		
-		size_t parsed_size = static_cast<size_t>(len);
-		
-		if (parsed_size > ABSOLUTE_MAX_BODY_SIZE) {
-			std::cerr << "[WARNING] Config max_body_size (" << parsed_size 
-					<< " bytes) exceeds safe limit! Capping at 100MB.\n";
-			setMaxBodySize(ABSOLUTE_MAX_BODY_SIZE);
-		} else {
-			setMaxBodySize(parsed_size);
-		}
+		setMaxBodySize( Directives::parseSizeString(conf.consumeToken()));
 	}
 	else if (directve_type == DIR_ERROR_PAGES) {
 		std::vector<int> codes;
@@ -96,10 +77,45 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 	}
 }
 
+size_t	Directives::parseSizeString(const std::string& size_str)
+{
+	const char* str = size_str.c_str();
+	char *endptr;
+	errno = 0;
+
+	unsigned long len = std::strtoul(str, &endptr, 10);
+
+	if (errno == ERANGE || endptr == str) {
+		throw std::runtime_error("Config Error: Invalid size value: " + size_str);
+	}
+
+	size_t multiplier = 1;
+
+	if (*endptr != '\0') {
+		if (std::strlen(endptr) > 1) throw std::runtime_error("Config Error: Invalid suffix in size value: " + size_str);
+		
+		char suffix = std::toupper(*endptr);
+		if (suffix == 'K') multiplier = 1024;
+		else if (suffix == 'M') multiplier = 1024 * 1024;
+		else if (suffix == 'G') multiplier = 1024 * 1024 * 1024;
+		else throw std::runtime_error("Config Error: Unknown suffix in size value: " + size_str);
+	}
+	
+	size_t parsed_size;
+	if (len > ABSOLUTE_MAX_BODY_SIZE / multiplier) {
+		std::cerr << "[WARNING] Config size (" << size_str 
+				<< ") exceeds safe limit! Capping at absolute max.\n";
+		parsed_size = ABSOLUTE_MAX_BODY_SIZE;
+	}
+	else parsed_size = static_cast<size_t>(len) * multiplier;
+
+	return parsed_size;
+}
+
 Directives::Directives() :
 	_root("www"),
 	_autoindex(false),
-	_client_max_body_size(30000000),
+	_client_max_body_size(parseSizeString("100M")),
 	_upload(false)
 {
 	_allowed_methods.push_back("GET");

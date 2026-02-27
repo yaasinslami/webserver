@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-#define ABSOLUTE_MAX_BODY_SIZE 104857600 // 100 MB
+#define ABSOLUTE_MAX_BODY_SIZE (104 * 1024 * 1024) // 100 MB
 
 class	ConfigParser;
 
@@ -29,6 +29,8 @@ enum e_directive_type
 
 struct	Directives
 {
+	private:
+		size_t	parseSizeString(const std::string&);
 	public:
 		Directives();
 		Directives(const Directives& dir);
