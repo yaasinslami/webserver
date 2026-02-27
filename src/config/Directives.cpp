@@ -34,7 +34,26 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 		}
 	}
 	else if (directve_type == DIR_MAX_BODY_SIZE) {
-		setMaxBodySize(std::atol(conf.consumeToken().c_str()));
+		std::string token = conf.consumeToken();
+		const char* str = token.c_str();
+		char *endptr;
+		errno = 0;
+
+		unsigned long len = std::strtoul(str, &endptr, 10);
+
+		if (errno == ERANGE || endptr == str || *endptr != '\0') {
+			throw std::runtime_error("Config Error: Invalid client_max_body_size value: " + token);
+		}
+		
+		size_t parsed_size = static_cast<size_t>(len);
+		
+		if (parsed_size > ABSOLUTE_MAX_BODY_SIZE) {
+			std::cerr << "[WARNING] Config max_body_size (" << parsed_size 
+					<< " bytes) exceeds safe limit! Capping at 100MB.\n";
+			setMaxBodySize(ABSOLUTE_MAX_BODY_SIZE);
+		} else {
+			setMaxBodySize(parsed_size);
+		}
 	}
 	else if (directve_type == DIR_ERROR_PAGES) {
 		std::vector<int> codes;
@@ -121,7 +140,7 @@ const bool&	Directives::getAutoIndex() const { return this->_autoindex; }
 
 const std::vector<std::string>&	Directives::getAllowedMethods() const { return this->_allowed_methods; }
 
-const unsigned long&	Directives::getMaxBodySize() const { return this->_client_max_body_size; }
+const size_t&	Directives::getMaxBodySize() const { return this->_client_max_body_size; }
 
 const std::map<int, std::string>&	Directives::getErrorPages() const { return this->_error_pages; }
 
@@ -145,7 +164,10 @@ void	Directives::setAllowedMethods(const std::vector<std::string>& allowed_metho
 
 void	Directives::addMethod(const std::string& method) { this->_allowed_methods.push_back(method); }
 
-void	Directives::setMaxBodySize(const unsigned long& client_max_body_size) { this->_client_max_body_size = client_max_body_size; }
+void	Directives::setMaxBodySize(const size_t& client_max_body_size)
+{
+	_client_max_body_size = client_max_body_size;
+}
 
 void	Directives::setErrorPages(const std::map<int, std::string>& error_pages) { this->_error_pages = error_pages; }
 
