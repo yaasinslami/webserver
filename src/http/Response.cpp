@@ -97,6 +97,29 @@ void Response::_handlePost(const Request& req)
 		return;
 	}
 
+
+	if (req.getContentLength() == 0 && !req.isChunked())
+	{
+		std::string filename = req.getUploadFilename();
+		if (filename.empty())
+			filename = "empty_upload_" + Utils::toString(time(NULL)) + ".bin";
+
+		std::string target_path = Utils::sanitizePath(_config->getRoot() + upload_dir + "/" + filename);
+
+		int fd = open(target_path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
+		if (fd >= 0) {
+			close(fd);
+			std::cout << "[Response] Created empty file: " << target_path << "\n";
+			clearFilePath();
+			setCode(204); // 204 No Content (or 201 Created)
+		}
+		else {
+			std::cout << "[Response] Failed to create empty file (" << std::strerror(errno) << ").\n";
+			setCode(500);
+		}
+		return;
+	}
+
 	std::string temp_path = req.getBodyPath();
 	if (temp_path.empty()) {
 		std::cout << "[Response] POST failed: No body payload received.\n";
