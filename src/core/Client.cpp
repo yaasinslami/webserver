@@ -285,6 +285,8 @@ void	Client::parseCgiResponse()
 
 	std::string status_line = "HTTP/1.1 200 OK";
 	std::string final_headers = "";
+	bool		has_status = false;
+	bool		has_location = false;
 
 	std::string	line;
 	size_t		start = 0;
@@ -308,7 +310,11 @@ void	Client::parseCgiResponse()
 				{
 					size_t val_start = (line[7] == ' ') ? 8 : 7;
 					status_line = "HTTP/1.1 " + line.substr(val_start);
+					has_status = true;
 				}
+			} else if (line.compare(0, 9, "Location:") == 0) {
+				has_location = true;
+				final_headers += line + "\r\n";
 			} else if (line.find(':') == std::string::npos) {
 				std::cerr << "502 Bad Gateway: Malformed header line: " << line << std::endl;
 				setStatus(502);
@@ -322,6 +328,9 @@ void	Client::parseCgiResponse()
 		start = end + 1;
 		end = headers_part.find('\n', start);
 	}
+
+	if (has_location && !has_status)
+		status_line = "HTTP/1.1 302 Found";
 
 	long total_file_size = Utils::getFileSize(_cgi_temp_path);
 	long body_size = total_file_size - _cgi_header_size;
