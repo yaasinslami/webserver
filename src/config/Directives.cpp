@@ -7,6 +7,8 @@ void	Directives::setDirective(const enum e_directive_type directve_type, ConfigP
 {
 	if (directve_type == DIR_ROOT) {
 		setRoot(conf.consumeToken());
+		if (getRoot()[getRoot().length() - 1] != '/')
+			setRoot(getRoot() + "/");
 	}
 	else if (directve_type == DIR_INDEX) {
 		while (conf.peekToken() != ";") {

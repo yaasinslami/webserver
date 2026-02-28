@@ -78,82 +78,65 @@ long Utils::getFileSize(const std::string& filename)
 
 std::string Utils::resolve_path(const std::string& input_path)
 {
-    char *pwd = getenv("PWD");
-    std::string absolute_res;
-    
-    if (!pwd) return input_path;
+	char *pwd = getenv("PWD");
+	std::string	absolute_res;
 
-    std::string base_path(pwd);
-    if (input_path[0] == '/')
-        absolute_res = normalize_uri(input_path);
-    else if (input_path.compare(0, 2, "./") == 0)
-        absolute_res = normalize_uri(base_path + "/" + input_path.substr(2));
-    else
-        absolute_res = normalize_uri(base_path + "/" + input_path);
+	if (!pwd) return input_path;
 
-    return absolute_res;
+	std::string base_path(pwd);
+	if (input_path[0] == '/')
+		absolute_res = normalize_uri(input_path);
+	else if (input_path.compare(0, 2, "./") == 0)
+		absolute_res = normalize_uri(base_path + "/" + input_path.substr(2));
+	else
+		absolute_res = normalize_uri(base_path + "/" + input_path);
+
+	return absolute_res;
 }
 
-
-std::string Utils::normalize_path(const std::string& path)
+static std::vector<std::string>	resolve_components(const std::string& input)
 {
 	std::vector<std::string> components;
-	std::stringstream ss(path);
-	std::string component;
+	std::stringstream ss(input);
+	std::string comp;
 
-	while (std::getline(ss, component, '/'))
-	{
-		if (component == "" || component == ".")
-			continue;
-		if (component == "..")
-		{
-			if (!components.empty())
-				components.pop_back();
-		}
-		else
-			components.push_back(component);
-	}
-
-	std::string result = "./";
-	for (size_t i = 0; i < components.size(); ++i)
-	{
-		result += components[i];
-		if (i < components.size() - 1)
-			result += "/";
-	}
-
-	// Handle the edge case where the path was just "/" or empty
-	if (components.empty())
-		return "./";
-
-	return result;
-}
-
-std::string Utils::normalize_uri(const std::string& uri)
-{
-	std::vector<std::string> components;
-	std::stringstream ss(uri);
-	std::string component;
-
-	while (std::getline(ss, component, '/'))
-	{
-		if (component.empty() || component == ".") continue;
-
-		if (component == "..") {
+	while (std::getline(ss, comp, '/')) {
+		if (comp.empty() || comp == ".") continue;
+		if (comp == "..") {
 			if (!components.empty()) components.pop_back();
+		} else {
+			components.push_back(comp);
 		}
-		else components.push_back(component);
+	}
+	return components;
+}
+
+std::string	Utils::normalize_path(const std::string& path)
+{
+	std::vector<std::string> comps = resolve_components(path);
+	if (comps.empty()) return "./";
+
+	std::string res = "./";
+	for (size_t i = 0; i < comps.size(); ++i) {
+		res += comps[i] + (i == comps.size() - 1 ? "" : "/");
+	}
+	return res;
+}
+
+std::string	Utils::normalize_uri(const std::string& uri)
+{
+	std::vector<std::string> comps = resolve_components(uri);
+	if (comps.empty()) return "/";
+
+	std::string res = "";
+	for (size_t i = 0; i < comps.size(); ++i) {
+		res += "/" + comps[i];
 	}
 
-	std::string result = "";
-	for (size_t i = 0; i < components.size(); ++i)
-		result += "/" + components[i];
-
-	if (result.empty()) return "/";
-
-	if (uri[uri.length() - 1] == '/' && result != "/") result += "/";
-
-	return result;
+	if (!uri.empty() && uri[uri.length() - 1] == '/' && res != "/") {
+		res += "/";
+	}
+	return res;
 }
 
 std::string Utils::sanitizePath(const std::string &path)
@@ -219,4 +202,53 @@ std::string Utils::getStatusMessage(int code)
 		case 504: return "Gateway Timeout";
 		default: return "Unknown Status";
 	}
+}
+
+bool	Utils::Myaccess(const std::string& path, short& status_code, int mode,
+			bool isFile)
+{
+	struct stat st;
+	if (stat(path.c_str(), &st) != 0) {
+		status_code = 404;
+		return false;
+	}
+
+	if (S_ISDIR(st.st_mode) && isFile) {
+		status_code = 403;
+		return false;
+	}
+
+	if (access(path.c_str(), mode) != 0) {
+		if (errno == EACCES)
+			status_code = 403;
+		else
+			status_code = 404;
+		return false;
+	}
+
+	if (mode & R_OK) {
+		if (!(st.st_mode & S_IRUSR) && !(st.st_mode & S_IRGRP)
+			&& !(st.st_mode & S_IROTH)) {
+			status_code = 403;
+			return false;
+		}
+	}
+
+	if (mode & W_OK) {
+		if (!(st.st_mode & S_IWUSR) && !(st.st_mode & S_IWGRP)
+			&& !(st.st_mode & S_IWOTH)) {
+			status_code = 403;
+			return false;
+		}
+	}
+
+	if (mode & X_OK) {
+		if (!(st.st_mode & S_IXUSR) && !(st.st_mode & S_IXGRP)
+			&& !(st.st_mode & S_IXOTH)) {
+			status_code = 403;
+			return false;
+		}
+	}
+
+	return true;
 }

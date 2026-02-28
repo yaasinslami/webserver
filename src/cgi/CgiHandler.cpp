@@ -17,7 +17,7 @@ char	**CgiHandler::create_env( Client& client, const std::string& script_path)
 	env_vars.push_back("REDIRECT_STATUS=200");
 
 	if (req.getMethod() == "POST" && config->canUpload())
-		env_vars.push_back("UPLOAD_DIR=" + Utils::resolve_path(config->getUploadPath()));
+		env_vars.push_back("UPLOAD_DIR=" + Utils::resolve_path(Utils::normalize_path(config->getRoot() + config->getUploadPath())));
 
 	try
 	{
@@ -160,24 +160,9 @@ std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
 	Request& req = client->getRequest();
 
 	std::string script_fs_path = Utils::normalize_path(config->getRoot() + req.getPath());
-
-	struct stat s;
-	if (stat(script_fs_path.c_str(), &s) == -1)
-		return (client->setStatus(404), "");
-
-	if (S_ISDIR(s.st_mode))
-		return (client->setStatus(403), "");
-
-	if (access(script_fs_path.c_str(), R_OK | X_OK) == -1)
-		return (client->setStatus(403), "");
-
-	if (!(s.st_mode & S_IXUSR) && !(s.st_mode & S_IXGRP)
-		&& !(s.st_mode & S_IXOTH))
-		return (client->setStatus(403), "");
-
-	if (!(s.st_mode & S_IRUSR) && !(s.st_mode & S_IRGRP)
-		&& !(s.st_mode & S_IROTH))
-		return (client->setStatus(403), "");
+	
+	if (!Utils::Myaccess(script_fs_path, client->getStatus(), R_OK | X_OK, true))
+		return "";
 
 	return script_fs_path;
 }
