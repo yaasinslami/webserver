@@ -8,7 +8,7 @@
 #include <sstream>
 #include <stdlib.h>
 
-void Response::generate(const Request& req)
+void	Response::generate(const Request& req)
 {
 	/* Method Dispatch */
 	std::string method = req.getMethod();
@@ -20,34 +20,14 @@ void Response::generate(const Request& req)
 		_buildHeaders();
 }
 
-void Response::_handleDelete()
+void	Response::_handleDelete()
 {
 	// we already have the translated path in _resource_path from the initial translation step in Client::_validateRequest()
 
 	std::cout << "[Response] Attempting to DELETE resource: " << _resource_path << "\n";
 
-	// Check if the path exists using stat()
-	struct stat path_stat;
-	if (stat(_resource_path.c_str(), &path_stat) != 0) {
-		std::cout << "[Response] DELETE failed: Resource not found.\n";
-		setCode(404); // Not Found
-		return;
-	}
-
-	// Security: Prevent deleting directories!
-	// Deleting directories via HTTP is highly dangerous and usually blocked.
-	if (S_ISDIR(path_stat.st_mode)) {
-		std::cout << "[Response] DELETE forbidden: Target is a directory.\n";
-		setCode(403); // Forbidden
-		return;
-	}
-
-	// Check if we have write permissions to actually delete the file
-	// (Technically, deletion requires write permissions on the *parent directory*, 
-	// but W_OK on the file is a standard proxy check for web servers).
-	if (access(_resource_path.c_str(), W_OK) != 0) {
-		std::cout << "[Response] DELETE forbidden: No write permissions.\n";
-		setCode(403); // Forbidden
+	if (!Utils::Myaccess(_resource_path, _code, W_OK, true)) {
+		std::cout << "[Response] DELETE forbidden: No write permission for " << _resource_path << "\n";
 		return;
 	}
 
@@ -65,7 +45,7 @@ void Response::_handleDelete()
 	}
 }
 
-void Response::_handlePost(const Request& req)
+void	Response::_handlePost(const Request& req)
 {
 	std::string content_type = req.getHeader("Content-Type");
 
@@ -119,7 +99,7 @@ void Response::_handlePost(const Request& req)
 		}
 		empty_file.close();
 		clearFilePath();
-		setCode(400);
+		setCode(204);
 		return;
 	}
 
@@ -133,7 +113,7 @@ void Response::_handlePost(const Request& req)
 		// Fallback: Manual stream copy if cross-device link fails (EXDEV error)
 
 		std::cout << "[Response] rename() failed (" << std::strerror(errno) << "). Falling back to stream copy.\n";
-		
+
 		std::ifstream src(temp_path.c_str(), std::ios::binary);
 		std::ofstream dst(target_path.c_str(), std::ios::binary);
 		
@@ -158,17 +138,16 @@ void Response::_handlePost(const Request& req)
 	setCode(201);
 }
 
-void Response::_handleGet(const std::string& uri)
+void	Response::_handleGet(const std::string& uri)
 {
 	struct stat file_info;
-	if (stat(_resource_path.c_str(), &file_info) != 0) {
-		setCode(404);
+	
+	if (!Utils::Myaccess(_resource_path, _code, R_OK, false)) {
+		std::cout << "[Response] GET forbidden: No read permission for " << _resource_path << "\n";
 		return;
 	}
-	if (access(_resource_path.c_str(), R_OK) != 0) {
-		setCode(403);
-		return;
-	}
+
+	stat(_resource_path.c_str(), &file_info);
 
 	if (S_ISDIR(file_info.st_mode)) {
 		std::cout << "[Response] Resource is a directory. Handling directory logic...\n";
@@ -183,7 +162,7 @@ void Response::_handleGet(const std::string& uri)
 	}
 }
 
-void Response::_handleDirectory(const std::string& uri)
+void	Response::_handleDirectory(const std::string& uri)
 {
 	const std::string& path = uri;
 	if (!path.empty() && path[path.length() - 1] != '/') {
@@ -201,7 +180,8 @@ void Response::_handleDirectory(const std::string& uri)
 			candidate += "/";
 		}
 		candidate += index_list[i];
-		if (access(candidate.c_str(), R_OK) == 0) {
+
+		if (Utils::Myaccess(candidate, _code, R_OK, true)) {
 			_resource_path = candidate;
 			_serveFile();
 			return;
@@ -304,7 +284,7 @@ void	Response::_serveFile()
 	std::cout << "File opened successfully. Prepared to send " << _file_size << " bytes.\n";
 }
 
-void Response::translatePath(const std::string& uri)
+void	Response::translatePath(const std::string& uri)
 {
 	std::string alias = _config->getAlias();
 	if (!alias.empty()) {
@@ -328,7 +308,7 @@ void	Response::clear()
 	_config = NULL;
 }
 
-void Response::_buildHeaders()
+void	Response::_buildHeaders()
 {
 	_headers = "HTTP/1.1 " + Utils::toString(_code) + " " +  Utils::getStatusMessage(_code) + "\r\n";
 	if (!_redirect_location.empty())
@@ -349,17 +329,17 @@ void Response::_buildHeaders()
 /* Getters */
 std::string&	Response::getBuffer() { return _body_content; }
 std::string&	Response::getHeaderBuffer() { return _headers; }
-std::string	Response::getPhysicalPath() const { return _resource_path; }
+std::string		Response::getPhysicalPath() const { return _resource_path; }
 /* Setters */
-void Response::setCode(short code) { _code = code; }
-void Response::setConfig(const Directives* config) { _config = config; }
-void Response::setPath(std::string& path ) { _resource_path = path; }
+void	Response::setCode(short code) { _code = code; }
+void	Response::setConfig(const Directives* config) { _config = config; }
+void	Response::setPath(std::string& path ) { _resource_path = path; }
 /* Constructors */
 Response::Response(short& code) : _code(code), _file_size(0), _is_static_file(false),
 	_config(NULL)
 {}
 Response::Response(const Response& other) : _code(other._code) { *this = other; }
-Response& Response::operator=(const Response& other)
+Response&	Response::operator=(const Response& other)
 {
 	if (this != &other) {
 		_code = other._code;
@@ -368,7 +348,7 @@ Response& Response::operator=(const Response& other)
 }
 Response::~Response() {}
 /* Errors */
-void Response::generateError()
+void	Response::generateError()
 {
 	std::string error_body;
 	std::string msg =  Utils::getStatusMessage(_code);

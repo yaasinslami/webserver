@@ -6,8 +6,8 @@ static std::string get_cgi_executable(std::string, Client&);
 
 void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 {
-    Client* client = _cgi_fd_map[fd];
-    if (!client) return;
+	Client* client = _cgi_fd_map[fd];
+	if (!client) return;
 
 	client->updateTime();
 
@@ -18,16 +18,16 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 		return;
 	}
 
-    if (fd == client->getCgiOutPipe() && (events & (EPOLLIN | EPOLLHUP)))
-    {
-        char buf[BUFFER_SIZE];
-        ssize_t bytes = read(fd, buf, sizeof(buf));
+	if (fd == client->getCgiOutPipe() && (events & (EPOLLIN | EPOLLHUP)))
+	{
+		char buf[BUFFER_SIZE];
+		ssize_t bytes = read(fd, buf, sizeof(buf));
 
-        if (bytes > 0)
-        {
-            if (!client->isCgiFileOpen())
+		if (bytes > 0)
+		{
+			if (!client->isCgiFileOpen())
 			{
-                client->openCgiTempFile();
+				client->openCgiTempFile();
 				if (client->getStatus() == 500)
 				{
 					std::cout << RED << "Failed to open temp file for CGI output buffering." << RESET << std::endl;
@@ -37,30 +37,29 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 					return;
 				}
 			}
-            // 2. Write to disk
-            client->writeToCgiTempFile(buf, bytes);
-            
 
-            if (client->getCgiHeaderBuf().size() < SIZE_8KB)
-                client->getCgiHeaderBuf().append(buf, bytes);
-        }
-        else if (bytes == 0)
-        {
+			client->writeToCgiTempFile(buf, bytes);
+
+			if (client->getCgiHeaderBuf().size() < SIZE_8KB)
+				client->getCgiHeaderBuf().append(buf, bytes);
+		}
+		else if (bytes == 0)
+		{
 			std::cout << GREEN << "CGI output pipe closed by child process (EOF)" << RESET << std::endl;
 
-            remove_cgi_fds(client, false);
-            client->closeCgiOutFile();
+			remove_cgi_fds(client, false);
+			client->closeCgiOutFile();
 
-            if (client->getStatus() != 500)
-            {
-                client->parseCgiResponse();
-                if (client->getStatus() >= 400)
-                    client->getResponse().generateError();
-                client->markWriting();
-                set_events(client->getFd(), EPOLLOUT);
-            }
-        }
-    }
+			if (client->getStatus() != 500)
+			{
+				client->parseCgiResponse();
+				if (client->getStatus() >= 400)
+					client->getResponse().generateError();
+				client->markWriting();
+				set_events(client->getFd(), EPOLLOUT);
+			}
+		}
+	}
 }
 
 bool	EpollManager::add_listener(Server *srv)

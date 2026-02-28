@@ -72,6 +72,7 @@ class Client
 		const Server*		getServer() const;
 		ClientState			getState() const;
 		const short&		getStatus() const;
+		short&				getStatus();
 		void				setStatus(int status);
 		pid_t				getCgiPid() const;
 		int					getCgiOutPipe() const;

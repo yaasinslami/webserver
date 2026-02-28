@@ -210,7 +210,6 @@ void	Client::onWritable()
 		std::string& h_buf = _response.getHeaderBuffer();
 		ssize_t sent = send(_fd, h_buf.c_str(), h_buf.size(), 0);
 		if (sent > 0) h_buf.erase(0, sent);
-		
 		if (!h_buf.empty()) return;
 	}
 
@@ -371,6 +370,7 @@ Response& Client::getResponse() { return _response; }
 const Directives* Client::getConfig() const { return _config; }
 const Server* Client::getServer() const { return _server; }
 const short& Client::getStatus() const { return _status_code; }
+short& Client::getStatus() { return _status_code; }
 void Client::setStatus(int status) { _status_code = status; }
 void Client::setState( ClientState state ) { _state = state; }
 bool	Client::isRequestReady() { return _request.requestCompleted(); }
