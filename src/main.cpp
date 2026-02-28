@@ -4,9 +4,19 @@
 #include <vector>
 #include <signal.h>
 
+volatile sig_atomic_t g_running = 1;
+
+void handle_signal(int signum) {
+	(void)signum;
+	g_running = 0;
+}
+
 int main(int ac, char **av) 
 {
-	signal(SIGPIPE, SIG_IGN);
+	// signal(SIGPIPE, SIG_IGN);
+
+	signal(SIGINT, handle_signal);
+	signal(SIGTERM, handle_signal);
 
 	if (ac > 2) {
 		std::cerr << "Usage: ./webserver [path/to/configuration_file.conf]\n";

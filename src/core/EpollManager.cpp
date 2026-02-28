@@ -1,6 +1,6 @@
 #include "EpollManager.hpp"
 
-#define SIZE_8KB 8192 
+extern volatile sig_atomic_t g_running;
 
 static std::string get_cgi_executable(std::string, Client&);
 
@@ -319,9 +319,7 @@ void	EpollManager::run_loop()
 {
 	struct epoll_event event_list[MAX_EVENTS];
 
-	running = true;
-
-	while (running)
+	while (g_running)
 	{
 		int n = epoll_wait(epfd, event_list, MAX_EVENTS, timeout_ms);
 
@@ -348,11 +346,6 @@ void	EpollManager::run_loop()
 
 		check_client_timeouts();
 	}
-}
-
-void EpollManager::stop()
-{
-	running = false;
 }
 
 void EpollManager::check_client_timeouts()
@@ -396,8 +389,7 @@ void EpollManager::check_client_timeouts()
 /* Constructor */
 EpollManager::EpollManager(std::vector<Server>& servers) :
 	epfd(-1),
-	timeout_ms(1000),
-	running(false)
+	timeout_ms(1000)
 {
 	if ((epfd = epoll_create1(0)) == -1) throw std::runtime_error("Failed to create epoll instance");
 
