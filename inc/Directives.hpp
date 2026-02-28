@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 
+#define ABSOLUTE_MAX_BODY_SIZE (104 * 1024 * 1024) // 100 MB
+
 class	ConfigParser;
 
 enum e_directive_type
@@ -27,6 +29,8 @@ enum e_directive_type
 
 struct	Directives
 {
+	private:
+		size_t	parseSizeString(const std::string&);
 	public:
 		Directives();
 		Directives(const Directives& dir);
@@ -39,7 +43,7 @@ struct	Directives
 		const std::vector<std::string>&		getIndex() const;
 		const bool&							getAutoIndex() const;
 		const std::vector<std::string>&		getAllowedMethods() const;
-		const unsigned long&				getMaxBodySize() const;
+		const size_t&						getMaxBodySize() const;
 		const std::map<int, std::string>&	getErrorPages() const;
 		bool								canUpload() const;
 		std::string							getUploadPath() const;
@@ -53,7 +57,7 @@ struct	Directives
 		void	setAutoIndex(const bool& autoindex);
 		void	setAllowedMethods(const std::vector<std::string>& allowed_methods);
 		void	addMethod(const std::string& method);
-		void	setMaxBodySize(const unsigned long& client_max_body_size);
+		void	setMaxBodySize(const size_t&);
 		void	setErrorPages(const std::map<int, std::string>& error_pages);
 		void	setUpload(bool);
 		void	setUploadLoc(const std::string&);
@@ -72,7 +76,7 @@ struct	Directives
 		std::vector<std::string>	_index;
 		bool						_autoindex;
 		std::vector<std::string>	_allowed_methods;
-		unsigned long				_client_max_body_size;
+		size_t						_client_max_body_size;
 		std::map<int, std::string>	_error_pages;
 		bool						_upload;
 		std::string					_upload_loc;

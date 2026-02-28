@@ -2,7 +2,6 @@
 #include "Utils.hpp"
 #include <sstream>
 #include <iostream>
-#include <ctime>
 #include <limits>
 #include <cerrno>
 #include <cstring>
@@ -10,8 +9,8 @@
 #include <unistd.h>
 #include <cstdlib>
 
-/* Request::feed parsing state machine */
-void	Request::feed(const char* data, size_t size)
+/* Feed; Where the Parsing Magic comes true */
+size_t	Request::feed(const char* data, size_t size)
 {
 	for (size_t i = 0; i < size; ++i) {
 		unsigned char ch = data[i];
@@ -75,7 +74,6 @@ void	Request::feed(const char* data, size_t size)
 				else { _state = STATE_FIELD_KEY; _parseUriPath(); }
 				break ;
 			}
-			// _uri_path = Utils::normalize_uri(Utils::urlDecode(_uri_path));
 			case STATE_FIELD_KEY:
 			{
 				if (_tmp_key.empty() && ch == '\r') _state = STATE_HEADERS_DONE;
@@ -103,20 +101,10 @@ void	Request::feed(const char* data, size_t size)
 			case STATE_HEADERS_DONE:
 			{
 				if (ch != '\n') { _state = STATE_ERROR;  _code = 400; break; }
-				_validate_headers();
-				if (_state == STATE_ERROR) break;
-				if (_body_exist) {
-					_body_file_path = "/tmp/webserv_req_" + _generate_random_id();
-					_body_fd = open(_body_file_path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
-					if (_body_fd < 0) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break; }
-					_state = (_chunked_transfer) ? STATE_CHUNKED : STATE_BODY;
-				}
-				else _state = STATE_COMPLETE;
-				break ;
+				return i + 1;
 			}
 			case STATE_BODY:
 			{
-				if (_body_fd < 0) { _state = STATE_ERROR; _code = 500; _sys_error_msg = "File descriptor closed unexpectedly"; break; }
 				size_t available = size - i;
 				size_t needed = _content_length - _total_body_bytes;
 				size_t to_write = std::min(available, needed);
@@ -126,29 +114,22 @@ void	Request::feed(const char* data, size_t size)
 					_total_body_bytes += bytes_written;
 					i += bytes_written - 1;
 				}
-				if (_total_body_bytes >= _content_length) { close(_body_fd); _state = STATE_COMPLETE; }
+				if (_total_body_bytes >= _content_length) { close(_body_fd); _state = STATE_COMPLETE; return i + 1; }
 				break;
 			}
 			case STATE_CHUNKED:
 			{
 				_chunked_body(data, size, i);
+				if (_state == STATE_ERROR || _state == STATE_COMPLETE) return i + 1;
 				break ;
 			}
 			case STATE_COMPLETE:
-			{
-				return ;
-			}
+			{}
 			case STATE_ERROR:
-			{
-				if (_code >= 500) {
-					std::cerr << RED << "[Fatal] Internal Server Error: "
-							  << _sys_error_msg << RESET << std::endl;
-				}
-				else std::cerr << YELLOW << "[Warn] Bad Request (" << _code << ")" << RESET << std::endl;
-				return;
-			}
+			{}
 		}
 	}
+	return size;
 }
 /* Headers stuff */
 void	Request::_add_header()
@@ -157,7 +138,7 @@ void	Request::_add_header()
 	if (end != std::string::npos) _tmp_value = _tmp_value.substr(0, end + 1);
 	if (_headers.size() >= MAX_HEADERS_COUNT) { _state = STATE_ERROR; _code = 431; return; }
 	if (_headers.count(_tmp_key)) {
-		if (_tmp_key == "host" || _tmp_key == "content-length" || _tmp_key == "transfer-encoding") { _state = STATE_ERROR; _code = 400;return; }
+		if (_tmp_key == "host" || _tmp_key == "content-length") { _state = STATE_ERROR; _code = 400;return; }
 		size_t new_len = _headers[_tmp_key].length() + 2 + _tmp_value.length();
 		if (new_len > MAX_HEADER_VALUE_LEN) { _state = STATE_ERROR; _code = 431; return; }
 		_headers[_tmp_key] += ", " + _tmp_value;
@@ -166,31 +147,43 @@ void	Request::_add_header()
 	_tmp_key.clear(); _tmp_value.clear();
 	_state = STATE_FIELD_LF;
 }
-void	Request::_validate_headers()
+bool	Request::validateHeaders()
 {
-	if (_headers.find("host") == _headers.end()) { _state = STATE_ERROR; _code = 400; return ;}
+	if (_headers.find("host") == _headers.end()) { _code = 400; return false;}
+
 	if (_headers.count("content-length")) {
 		char	*endptr;
 		const char* str = _headers["content-length"].c_str();
 		errno = 0;
 		unsigned long len = std::strtoul(str, &endptr, 10);
-		if (errno == ERANGE || endptr == str || *endptr != '\0') { _state = STATE_ERROR; _code = 400; return; }
+		if (errno == ERANGE || endptr == str || *endptr != '\0') { _code = 400; return false; }
 		_content_length = (size_t)len;
-		_body_exist = _content_length == 0 ? false : true;
+		_body_exist = (_content_length > 0);
+		_has_content_length = true;
 	}
+
 	if (_headers.count("transfer-encoding")) {
-		// if (_body_exist) {_state = STATE_ERROR; _code = 400;return; }// Transfer-Encoding overrides Content-Length
-		if (_headers["transfer-encoding"].find("chunked") != std::string::npos) {
+		if (_has_content_length) { _code = 400; return false; }
+		if (_headers["transfer-encoding"] == "chunked") {
 			_chunked_transfer = true;
 			_body_exist = true;
 			std::cout << "DEBUG: Chunked transfer detected!" << std::endl;
 		}
-		else { _state = STATE_ERROR; _code = 501; return; }// 501 Not Implemented
+		else { _code = 501; return false; }// 501 Not Implemented
 	}
+
+	if (_method == "POST" && !_has_content_length && !_chunked_transfer) {
+		_code = 411; // Length Required
+		return false;
+	}
+
 	if (_headers.count("connection") && _headers["connection"].find("close") != std::string::npos) _keep_alive = false;
+	
+	return true;
 }
 /* Getters */
 const std::string&	Request::getMethod() const { return _method; }
+bool	Request::isBodyMethod(const std::string& method) const { return (method == "POST" ); }
 const std::string& Request::getPath() const { return _uri_path; }
 const std::string& Request::getQuery() const { return _uri_query; }
 std::map<std::string, std::string> Request::getHeaders() const { return _headers; }
@@ -203,19 +196,18 @@ const std::string&	Request::getHeader(const std::string& key) const
 		return it->second;
 	}
 	return empty_string;
-	// return _headers.at(key);
 }
 const size_t&		Request::getBodySize() const { return _total_body_bytes; }
 const RequestState& Request::getState() const { return _state; }
 const size_t&	Request::getContentLength() const { return _content_length; }
 const std::string& Request::getBodyPath() const { return _body_file_path; }
+const std::string& Request::getSysErrorMsg() const { return _sys_error_msg; }
 bool	Request::shouldKeepAlive() const { return _keep_alive == true; }
 bool		Request::getIsCgi() const { return _is_cgi; }
 void		Request::setIsCgi(bool state) { _is_cgi = state; }
 const short& Request::getCode() const { return _code; }
 bool Request::hasBody() const { return _body_exist; }
-bool Request::headersValidated() const { return _headers_validated; }
-void Request::markHeadersValidated() { _headers_validated = true; }
+bool Request::isChunked() const { return _chunked_transfer; }
 std::string Request::getUploadFilename() const
 {
 	std::string disp = getHeader("content-disposition");
@@ -260,8 +252,22 @@ void	Request::_parseUriPath()
 
 	_uri_path = Utils::normalize_uri(Utils::urlDecode(_uri_path));
 }
+bool	Request::openBodyFile()
+{
+	_body_file_path = "/tmp/webserv_req_" + Utils::generateRandomId();
+	_body_fd = open(_body_file_path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
+	if (_body_fd < 0) {
+		_state = STATE_ERROR;
+		_code = 500;
+		_sys_error_msg = std::strerror(errno);
+		return false;
+	}
+	return true;
+}
 
 void	Request::setState(RequestState state) { _state = state; }
+void	Request::setCode(short code) { _code = code; }
+void Request::setMaxBodySize(size_t max_size) { _max_body_size = max_size; }
 void Request::_chunked_body(const char* data, size_t size, size_t& i)
 {
 	unsigned char ch = data[i];
@@ -287,7 +293,17 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 		{
 			if (ch == '\n') {
 				if (_chunk_length == 0) { close(_body_fd); _chunk_state = PAYLOAD_BODY_CR; }
-				else { _chunk_state = PAYLOAD_BODY; _chunk_bytes_read = 0; }
+				else
+				{
+					if ((_total_body_bytes + _chunk_length) > _max_body_size) {
+						std::cout << "[Security] Blocked chunk! Exceeds max_body_size.\n";
+						_state = STATE_ERROR;
+						_code = 413; // 413 Payload Too Large
+						break; 
+					}
+
+					_chunk_state = PAYLOAD_BODY;
+					_chunk_bytes_read = 0; }
 			}
 			else { _state = STATE_ERROR; _code = 400; }
 			break ;
@@ -324,13 +340,6 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 	}
 }
 bool	Request::requestCompleted() { return _state == STATE_COMPLETE; }
-std::string Request::_generate_random_id()
-{
-	std::stringstream ss;
-	static int counter = 0;
-	ss << std::time(NULL) << "_" << counter++;
-	return ss.str();
-}
 /* RFC validation */
 bool Request::_is_unreserved(unsigned char c) { return (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~'); }
 bool Request::_is_sub_delim(unsigned char c)
@@ -410,18 +419,20 @@ void	Request::resetState()
 	_body_exist = false;
 	_chunked_transfer = false;
 	_keep_alive = true;
-	_headers_validated = false;
 	_is_cgi = false;
+	_has_content_length = 0;
+	_max_body_size = 0;
 }
 /* Constructors */
 Request::Request(short& code) :
 	_state(STATE_METHOD),
 	_code(code),
 	_body_fd(-1),
+	_has_content_length(false),
 	_body_exist(false),
 	_chunked_transfer(false),
 	_keep_alive(true),
-	_headers_validated(false),
+	_max_body_size(0),
 	_content_length(0),
 	_total_body_bytes(0),
 	_chunk_length(0),
@@ -456,7 +467,8 @@ Request& Request::operator=(const Request& other)
 		_chunk_state = other._chunk_state;
 		_keep_alive = other._keep_alive;
 		_is_cgi = other._is_cgi;
-		_headers_validated = other._headers_validated;
+		_has_content_length = other._has_content_length;
+		_max_body_size = other._max_body_size;
 	}
 	return (*this);
 }

@@ -67,6 +67,7 @@ void Response::_handleDelete()
 
 void Response::_handlePost(const Request& req)
 {
+	std::cout << "[Response] Handling POST request for: " << _resource_path << "\n";
 	std::string content_type = req.getHeader("Content-Type");
 
 	// Block HTML Form envelopes. These belong to CGI!
@@ -100,36 +101,42 @@ void Response::_handlePost(const Request& req)
 		filename = "upload_" + Utils::toString(time(NULL)) + ".bin";
 	}
 
-	std::string target_path = _config->getRoot() + upload_dir + "/" + filename;
-	target_path = Utils::sanitizePath(target_path);
+	std::string target_path = Utils::sanitizePath(_config->getRoot() + upload_dir + "/" + filename);
 
-	std::string temp_path = req.getBodyPath();
-
-	std::cout << RED << "[Response] POST temp path: " << temp_path << RESET << "\n";
-	std::cout << RED << "[Response] body size: " << req.getBodySize() << RESET << "\n";
-
-	if (temp_path.empty() || req.getBodySize() == 0)
+	_redirect_location = upload_dir + "/" + filename;// we do not expose the full filesystem path in the Location header, just the URI path relative to the server root
+	// Special case: If Content-Length is 0 and not chunked, we should still create an empty file if uploads are allowed.
+	if (req.getContentLength() == 0 && !req.isChunked())
 	{
-		std::ofstream empty_file(target_path.c_str(), std::ios::binary);
-		if (!empty_file)
-		{
-			std::cerr << "[Error] Failed to create empty file.\n";
-			setCode(500);
-			return;
+		std::ofstream empty_file(target_path.c_str(), std::ios::binary | std::ios::trunc);
+		if (empty_file.is_open()) {
+			empty_file.close();
+			std::cout << "[Response] Created empty file: " << target_path << "\n";
+			clearFilePath();
+			setCode(201); // 201 Created is more accurate since a file was made
 		}
-		empty_file.close();
-		clearFilePath();
-		setCode(400);
+		else {
+			std::cerr << "[Response] Failed to create empty file (" << std::strerror(errno) << ").\n";
+			setCode(500);
+		}
 		return;
 	}
 
+	std::string temp_path = req.getBodyPath();
+	if (temp_path.empty()) {
+		std::cout << "[Response] POST failed: No body payload received.\n";
+		setCode(400); // Bad Request
+		return;
+	}
+
+	/* To be removed after testing: */
+	std::cout << RED << "[Debug] body size: " << req.getBodySize() << RESET << "\n";
 	std::cout << "[Debug] Source Temp File: " << temp_path << "\n";
 	std::cout << "[Debug] Destination File: " << target_path << "\n";
 
 	if (std::rename(temp_path.c_str(), target_path.c_str()) == 0) {
 		std::cout << "[Response] Fast-moved upload to: " << target_path << "\n";
 	}
-	else {// If rename fails, it could be due to cross-device issues (EXDEV), or other filesystem problems. We should check errno to confirm.
+	else {// If rename fails, it could be due to cross-device issues (EXDEV)
 		// Fallback: Manual stream copy if cross-device link fails (EXDEV error)
 
 		std::cout << "[Response] rename() failed (" << std::strerror(errno) << "). Falling back to stream copy.\n";
@@ -331,6 +338,8 @@ void	Response::clear()
 void Response::_buildHeaders()
 {
 	_headers = "HTTP/1.1 " + Utils::toString(_code) + " " +  Utils::getStatusMessage(_code) + "\r\n";
+	
+	// Location header for redirection in case of 301 or 302
 	if (!_redirect_location.empty())
 		_headers += "Location: " + _redirect_location + "\r\n";
 	

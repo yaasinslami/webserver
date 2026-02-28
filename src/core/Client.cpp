@@ -6,19 +6,61 @@
 #include <sstream>
 #include <algorithm>
 
+/* the magic happens here */
 void Client::onReadable()
 {
 	char buf[BUFFER_SIZE];
 
-		ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
-		if (bytes > 0) {
-			_request.feed(buf, bytes);
+	ssize_t bytes = recv(_fd, buf, sizeof(buf), 0);
+	if (bytes > 0)
+	{
+		size_t total_consumed = 0;
+		while (total_consumed < (size_t)bytes && _request.getState() != STATE_COMPLETE)
+		{
+			size_t consumed = _request.feed(buf + total_consumed, bytes - total_consumed);
+			total_consumed += consumed;
+
+			if (_request.getState() == STATE_ERROR) {
+				if (_status_code >= 500) std::cout << "[Client] System error message: " << _request.getSysErrorMsg() << std::endl;
+				else std::cout << "[Client] Bad request! Code: " << _status_code << std::endl;
+				_setBestConfig();
+				break;
+			}
+			else if (_request.getState() == STATE_HEADERS_DONE) {// one time check
+				_setBestConfig();
+
+				_request.setMaxBodySize(_config->getMaxBodySize());
+
+				if (!_request.validateHeaders()) {
+					_request.setState(STATE_ERROR);
+					std::cout << "[Client] Blocked request! Invalid headers.\n";
+					break;
+				}
+
+				if (!_validateRequest()) {// translate path happens in validation
+					std::cout << "[Client] Blocked request! Method/Size invalid.\n";
+					_request.setState(STATE_ERROR);
+					break;
+				}
+
+				if (_request.isBodyMethod(_request.getMethod()) && _request.hasBody()) {
+					if (!_request.openBodyFile()) {
+						std::cout << "[Client] Failed to open body file! Code: " << _status_code << ", Error: " << _request.getSysErrorMsg() << std::endl;
+						break;
+					}
+					_request.setState(_request.isChunked() ? STATE_CHUNKED : STATE_BODY);
+				}
+				else _request.setState(STATE_COMPLETE);
+			}
 		}
-		else if (bytes == 0) {
-			std::cout << "Client closed fd=" << _fd << std::endl;
-			_closed = true;
-			setState(CLOSING);
-		}
+	}
+	else if (bytes == 0) {// client closed connection
+		std::cout << "Client closed fd=" << _fd << std::endl;
+		_closed = true;
+		setState(CLOSING);
+	}
+
+	std::cout << CYAN << "[DEBUG] : Finished onReadable. State: " << _state << ", Closed: " << _closed << RESET << std::endl;
 }
 
 static std::string	get_cgi_executable(std::string path, Client& client)
@@ -48,24 +90,7 @@ static std::string	get_cgi_executable(std::string path, Client& client)
 
 void	Client::process(EpollManager &poller)
 {
-	std::cout << BLUE << "Processing Request for Path: " << _request.getPath() << RESET << std::endl;
-	if (!hasConfig()) {
-		if (_request.getState() != STATE_ERROR) _setBestConfig();
-		else _config = &_server->getDirectives();
-		_response.setConfig(_config);	
-	}
-
-	std::cout << BLUE << "Best Config Path: " << _config->getPath() << RESET << std::endl;
-
-	if (_request.getState() != STATE_ERROR && !_validateRequest()) {
-		std::cout << "[Client] Request rejected. Code: " << _status_code << std::endl;
-		_request.setState(STATE_ERROR);
-		_response.generateError();
-		markWriting();
-		poller.set_events(_fd, EPOLLOUT);
-		return;
-	}
-
+	std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
 	if (_request.getState() == STATE_COMPLETE) {
 		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (!_request.getIsCgi()) {
@@ -109,36 +134,27 @@ void	Client::process(EpollManager &poller)
 
 bool Client::_validateRequest()
 {
-	if (!_request.headersValidated())
-	{
-		const std::vector<std::string> &allowed = _config->getAllowedMethods();
-		if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end())
-		{
-			_status_code = 405; // Method Not Allowed
-			return false;
-		}
-
-		if (_request.hasBody() && _request.getContentLength() > _config->getMaxBodySize())
-		{
-			_status_code = 413; // Payload Too Large
-			return false;
-		}
-
-		_response.translatePath(_request.getPath());
-		std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
-		_request.markHeadersValidated();
-	}
-
-	if (_request.hasBody() && _request.getBodySize() > _config->getMaxBodySize()) {
-		_status_code = 413;
+	/* Allowed Methods */
+	const std::vector<std::string> &allowed = _config->getAllowedMethods();
+	if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end()) {
+		setStatus(405); // Method Not Allowed
 		return false;
 	}
+	/* Content-Length */
+	if (_request.hasBody() && _request.getContentLength() > _config->getMaxBodySize()) {
+		setStatus(413); // Payload Too Large
+		return false;
+	}
+
+		/* Path Translation */
+		_response.translatePath(_request.getPath());
 
 	return true;
 }
 
 void	Client::_setBestConfig()
 {
+	if (_request.getState() == STATE_ERROR) { _config = &_server->getDirectives(); return; }
 	/* Server */
 	std::string host = _request.getHeader("host");
 	size_t colon_pos = host.find(':');
@@ -164,6 +180,7 @@ void	Client::_setBestConfig()
 		}
 	}
 	_config = (best_match) ? &best_match->getDirectives() : &_server->getDirectives();
+	_response.setConfig(_config);
 }
 
 void	Client::_serveLargeFile()
@@ -322,7 +339,7 @@ void	Client::parseCgiResponse()
 
 void Client::openCgiTempFile()
 {
-	std::string filename = "/tmp/webserv_cgi_" + Request::_generate_random_id();
+	std::string filename = "/tmp/webserv_cgi_" + Utils::generateRandomId();
 
 	int fd = open(filename.c_str(), O_CREAT | O_RDWR | O_EXCL, 0644);
 	if (fd == -1)

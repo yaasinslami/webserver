@@ -1,4 +1,5 @@
 #include "Utils.hpp"
+#include <ctime>
 
 bool	Utils::set_nonblocking(int socket)
 {
@@ -29,6 +30,14 @@ void*	Utils::memset(void *p, int c, size_t n)
 	}
 
 	return (ptr);
+}
+
+std::string Utils::generateRandomId()
+{
+	std::stringstream ss;
+	static int counter = 0;
+	ss << std::time(NULL) << "_" << counter++;
+	return ss.str();
 }
 
 std::string Utils::urlDecode(const std::string& str) 

@@ -21,6 +21,7 @@ class Utils
 		static std::string getStatusMessage(int code);
 		static long			getFileSize(const std::string& filename);
 		static std::string resolve_path(const std::string& input_path);
+		static std::string generateRandomId();
 
 		template <typename T>
 		static std::string	toString(const T& value)

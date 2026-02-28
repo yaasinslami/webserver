@@ -61,12 +61,13 @@ class	Request
 		int				_body_fd;
 
 		// Body Flags & connection
+		bool	_has_content_length;
 		bool	_body_exist;
 		bool	_chunked_transfer;
 		bool	_keep_alive;
-		bool	_headers_validated;
 
 		// Body Counters
+		size_t		_max_body_size;
 		size_t		_content_length;
 		size_t		_total_body_bytes;
 		// Chunk parsing
@@ -96,29 +97,36 @@ class	Request
 		/* Getters */
 		const RequestState&	getState() const;
 		const short&		getCode() const;
-		bool				hasBody() const;
 		const std::string&	getMethod() const;
-        const std::string&	getPath() const;
-        const std::string&	getQuery() const;
+		const std::string&	getPath() const;
+		const std::string&	getQuery() const;
 		std::map<std::string, std::string> getHeaders() const;
-        const std::string&	getHeader(const std::string& key) const;
+		const std::string&	getHeader(const std::string& key) const;
 		const size_t&		getContentLength() const;
 		const size_t&		getBodySize() const;
 		const std::string&	getBodyPath() const;
-		std::string	getUploadFilename() const;
+		std::string			getUploadFilename() const;
+		const std::string&	getSysErrorMsg() const;
 		bool				getIsCgi() const;
-		bool				headersValidated() const;
-		void				markHeadersValidated();
+		bool				hasBody() const;
+		bool				isChunked() const;
+		bool				isBodyMethod(const std::string& method) const;
 
+		bool	openBodyFile();
+		bool	validateHeaders();
+
+		 /* Setters */
 		void		setIsCgi(bool state);
 		void		setState(RequestState);
+		void		setCode(short);
 		bool		requestCompleted();
 		bool		shouldKeepAlive() const;
 		void		resetState();
-		static std::string	_generate_random_id();
+		void		setMaxBodySize(size_t);
 
-		void	feed(const char*,size_t);
+		size_t	feed(const char*,size_t);
 		void	log() const;
+
 
 	private:
 		/* RFC validation */
@@ -134,7 +142,6 @@ class	Request
 
 		/* Headers helper methods */
 		void	_add_header();
-		void	_validate_headers();
 
 };
 
