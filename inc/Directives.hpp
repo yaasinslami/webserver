@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stdint.h>
 
 #define ABSOLUTE_MAX_BODY_SIZE (104 * 1024 * 1024) // 100 MB
 
@@ -27,6 +28,13 @@ enum e_directive_type
 	DIR_UNKNOWN
 };
 
+enum Method {
+	M_NONE   = 0,
+	M_GET    = 1 << 0,
+	M_POST   = 1 << 1,
+	M_DELETE = 1 << 2
+};
+
 struct	Directives
 {
 	private:
@@ -42,20 +50,19 @@ struct	Directives
 		const std::string&					getRoot() const;
 		const std::vector<std::string>&		getIndex() const;
 		const bool&							getAutoIndex() const;
-		const std::vector<std::string>&		getAllowedMethods() const;
 		const size_t&						getMaxBodySize() const;
 		const std::map<int, std::string>&	getErrorPages() const;
 		bool								canUpload() const;
 		std::string							getUploadPath() const;
 		std::string							getPath() const;
 		std::string							getAlias() const;
+		Method								getMethodMask() const;
 
 		/* Setters */
 		void	setRoot(const std::string& root);
 		void	setIndex(const std::vector<std::string>& );
 		void	addIndex(const std::string&);
 		void	setAutoIndex(const bool& autoindex);
-		void	setAllowedMethods(const std::vector<std::string>& allowed_methods);
 		void	addMethod(const std::string& method);
 		void	setMaxBodySize(const size_t&);
 		void	setErrorPages(const std::map<int, std::string>& error_pages);
@@ -66,16 +73,19 @@ struct	Directives
 
 		void	setDirective(const enum e_directive_type directve_type, ConfigParser& conf);
 
-		bool						isMethodAllowed(const std::string&) const;
+		bool						isMethodAllowed(Method m) const;
 		void	logs() const;
 
 		const std::map<std::string, std::string>&   getCgiHandlers() const;
+
+		static Method stringToMethod(const std::string&);
 
 	private:
 		std::string					_root;
 		std::vector<std::string>	_index;
 		bool						_autoindex;
-		std::vector<std::string>	_allowed_methods;
+		uint8_t						_method_mask;
+		bool						_methods_explicitly_set;
 		size_t						_client_max_body_size;
 		std::map<int, std::string>	_error_pages;
 		bool						_upload;

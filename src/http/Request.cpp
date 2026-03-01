@@ -340,21 +340,62 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 	}
 }
 bool	Request::requestCompleted() { return _state == STATE_COMPLETE; }
+
 /* RFC validation */
-bool Request::_is_unreserved(unsigned char c) { return (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~'); }
+
+/* * RFC 3986, Section 2.3: Unreserved Characters
+ * unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+ */
+bool Request::_is_unreserved(unsigned char c)
+{
+	return (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~');
+}
+
+/* * RFC 3986, Section 2.2: Reserved Characters (Sub-delims)
+ * sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+ */
 bool Request::_is_sub_delim(unsigned char c)
 {
 	std::string sub_delims = "!$&'()*+,;=";
 	return (sub_delims.find(c) != std::string::npos);
 }
-bool Request::_is_pchar(unsigned char c) { return (_is_unreserved(c) || _is_sub_delim(c) || c == ':' || c == '@' || c == '%'); }
-bool Request::_is_query_char(unsigned char c) { return (_is_pchar(c) || c == '/' || c == '?'); }
+
+/* * RFC 3986, Section 3.3: Path
+ * pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
+ */
+bool Request::_is_pchar(unsigned char c)
+{
+	return (_is_unreserved(c) || _is_sub_delim(c) || c == ':' || c == '@' || c == '%');
+}
+
+/* * RFC 3986, Section 3.4: Query
+ * query = *( pchar / "/" / "?" )
+ * Note: The query component is indicated by the first question 
+ * mark ("?") character and terminated by a number sign ("#") character.
+ */
+bool Request::_is_query_char(unsigned char c)
+{
+	return (_is_pchar(c) || c == '/' || c == '?');
+}
+
+/* * RFC 7230, Section 3.2.6: Field Value Components (Token)
+ * token = 1*tchar
+ * tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." / 
+ * "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+ */
 bool Request::_is_token(unsigned char c)
 {
 	if (isalnum(c)) return true;
 	std::string symbols = "!#$%&'*+-.^_`|~";
 	return (symbols.find(c) != std::string::npos);
 }
+
+/* * RFC 7230, Section 3.2.6: Field Value Components
+ * field-vchar = VCHAR / obs-text
+ * VCHAR = %x21-7E (Visible ASCII)
+ * obs-text = %x80-FF (Extended ASCII/Latins)
+ * White space (SP / HTAB) is allowed between tokens.
+ */
 bool Request::_is_valid_value(unsigned char c)
 {
 	if ((c >= 0x20 && c <= 0x7E) || c == 0x9 || c >= 0x80) return true;
@@ -445,6 +486,7 @@ Request::~Request()
 	close(_body_fd);
 	if (_state != STATE_COMPLETE && !_body_file_path.empty())
 		std::remove(_body_file_path.c_str());
+	std::cout << RED << "Request Destructor called. Cleaning up resources." << RESET << std::endl;
 }
 Request::Request(const Request& other) : _code(other._code) { *this = other; }
 Request& Request::operator=(const Request& other)

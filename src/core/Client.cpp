@@ -17,6 +17,7 @@ void Client::onReadable()
 		size_t total_consumed = 0;
 		while (total_consumed < (size_t)bytes && _request.getState() != STATE_COMPLETE)
 		{
+			std::cout << CYAN << "[DEBUG] : Feeding request with " << (bytes - total_consumed) << " bytes" << RESET << std::endl;
 			size_t consumed = _request.feed(buf + total_consumed, bytes - total_consumed);
 			total_consumed += consumed;
 
@@ -97,6 +98,7 @@ void	Client::process(EpollManager &poller)
 {
 	std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
 	if (_request.getState() == STATE_COMPLETE) {
+		_request.log();
 		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (!_request.getIsCgi()) {
 			std::cout << BLUE << "Normal Request" << RESET << std::endl;
@@ -140,8 +142,7 @@ void	Client::process(EpollManager &poller)
 bool Client::_validateRequest()
 {
 	/* Allowed Methods */
-	const std::vector<std::string> &allowed = _config->getAllowedMethods();
-	if (std::find(allowed.begin(), allowed.end(), _request.getMethod()) == allowed.end()) {
+	if (!_config->isMethodAllowed(Directives::stringToMethod(_request.getMethod()))) {
 		setStatus(405); // Method Not Allowed
 		return false;
 	}
@@ -482,7 +483,7 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 }
 Client::~Client()
 {
-	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
+	std::cout << "🔴 Cleaning up Client fd=" << _fd << std::endl;
 	if (_file_stream.is_open())
 		_file_stream.close();
 
