@@ -54,11 +54,16 @@ void Client::onReadable()
 			}
 		}
 	}
-	else if (bytes == 0) {// client closed connection
+	else if (bytes == 0) {
 		std::cout << "Client closed fd=" << _fd << std::endl;
 		_closed = true;
 		setState(CLOSING);
 	}
+	else {
+		std::cout << RED << "Read error on fd=" << _fd << ": " << strerror(errno) << RESET << std::endl;
+		_closed = true;
+		setState(CLOSING);
+	} 
 
 	std::cout << CYAN << "[DEBUG] : Finished onReadable. State: " << _state << ", Closed: " << _closed << RESET << std::endl;
 }
@@ -198,9 +203,17 @@ void	Client::_serveLargeFile()
 
 	if (bytes_read > 0) {
 		ssize_t sent = send(_fd, buf, bytes_read, 0);
+
+		if (sent <= 0)
+		{
+			_closed = true;
+			_state = CLOSING;
+			return ;
+		}
+
 		if (sent < bytes_read)
 		{
-			long unsent = bytes_read - (sent > 0 ? sent : 0);
+			long unsent = bytes_read - sent;
 			_file_stream.seekg((long)_file_stream.tellg() - unsent);
 		}
 	}
@@ -226,8 +239,14 @@ void	Client::onWritable()
 
 		std::string& h_buf = _response.getHeaderBuffer();
 		ssize_t sent = send(_fd, h_buf.c_str(), h_buf.size(), 0);
-		if (sent > 0) h_buf.erase(0, sent);
-		if (!h_buf.empty()) return;
+		if (sent <= 0)
+		{
+			_closed = true;
+			_state = CLOSING;
+			return ;
+		}
+		h_buf.erase(0, sent);
+		return ;
 	}
 
 	if (!_response.getBuffer().empty())
@@ -236,15 +255,21 @@ void	Client::onWritable()
 
 		std::string& b_buf = _response.getBuffer();
 		ssize_t sent = send(_fd, b_buf.c_str(), b_buf.size(), 0);
-		if (sent > 0) b_buf.erase(0, sent);
-
-		if (!b_buf.empty()) return;
+		if (sent <= 0)
+		{
+			_closed = true;
+			_state = CLOSING;
+			return ;
+		}
+		b_buf.erase(0, sent);
+		return ;
 	}
 
 	if (!_response.getPhysicalPath().empty())
 	{
 		std::cout << RED << "[DEBUG] : send body from File" << RESET << std::endl;
 		_serveLargeFile();
+		return ;
 	}
 
 	if (_response.getHeaderBuffer().empty() && 
