@@ -445,6 +445,7 @@ Request::~Request()
 	close(_body_fd);
 	if (_state != STATE_COMPLETE && !_body_file_path.empty())
 		std::remove(_body_file_path.c_str());
+	std::cout << RED << "Request Destructor called. Cleaning up resources." << RESET << std::endl;
 }
 Request::Request(const Request& other) : _code(other._code) { *this = other; }
 Request& Request::operator=(const Request& other)

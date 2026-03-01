@@ -355,7 +355,10 @@ Response&	Response::operator=(const Response& other)
 	}
 	return *this;
 }
-Response::~Response() {}
+Response::~Response()
+{
+	std::cout << RED << "Response Destructor called. Cleaning up resources." << RESET << std::endl;
+}
 /* Errors */
 void	Response::generateError()
 {

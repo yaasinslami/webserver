@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 
 #define MAX_EVENTS 128
+#define SIZE_8KB 8192 
 
 class Client; 
 class Server;
@@ -18,7 +19,6 @@ class EpollManager
 	private:
 		int		epfd;
 		int		timeout_ms;
-		bool	running;
 
 		std::map<int, Client*>				clients;
 		std::map<int, std::vector<Server*> >	listeners;
