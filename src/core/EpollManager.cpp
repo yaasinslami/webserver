@@ -263,7 +263,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			if (events & EPOLLIN)
 			{
 				client->onReadable();
-				if (client->getRequest().getState() >= STATE_HEADERS_DONE)
+				if (client->isRequestReady() || client->getRequest().getState() == STATE_ERROR)
 					client->setState(PROCESSING);
 				else
 					break ;

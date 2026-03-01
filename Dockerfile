@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     valgrind \
     gdb \
     curl \
+	netcat-openbsd \
     wget \
     net-tools \
     iputils-ping \

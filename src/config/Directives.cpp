@@ -117,13 +117,11 @@ size_t	Directives::parseSizeString(const std::string& size_str)
 Directives::Directives() :
 	_root("www"),
 	_autoindex(false),
+	_method_mask(M_GET | M_POST | M_DELETE),
+	_methods_explicitly_set(false),
 	_client_max_body_size(parseSizeString("100M")),
 	_upload(false)
-{
-	_allowed_methods.push_back("GET");
-	_allowed_methods.push_back("POST");
-	_allowed_methods.push_back("DELETE");
-}
+{}
 
 Directives::~Directives() {}
 
@@ -138,7 +136,8 @@ Directives& Directives::operator=(const Directives& dir)
 		setPath(dir.getPath());
 		setIndex(dir.getIndex());
 		setAutoIndex(dir.getAutoIndex());
-		setAllowedMethods(dir.getAllowedMethods());
+		_method_mask = dir._method_mask;
+		_methods_explicitly_set = dir._methods_explicitly_set;
 		setMaxBodySize(dir.getMaxBodySize());
 		setErrorPages(dir.getErrorPages());
 		setUpload(dir.canUpload());
@@ -155,8 +154,6 @@ const std::string&	Directives::getRoot() const { return this->_root; }
 const std::vector<std::string>&	Directives::getIndex() const { return this->_index; }
 
 const bool&	Directives::getAutoIndex() const { return this->_autoindex; }
-
-const std::vector<std::string>&	Directives::getAllowedMethods() const { return this->_allowed_methods; }
 
 const size_t&	Directives::getMaxBodySize() const { return this->_client_max_body_size; }
 
@@ -178,9 +175,17 @@ void	Directives::addIndex(const std::string& value) { _index.push_back(value); }
 
 void	Directives::setAutoIndex(const bool& autoindex) { this->_autoindex = autoindex; }
 
-void	Directives::setAllowedMethods(const std::vector<std::string>& allowed_methods) { this->_allowed_methods = allowed_methods; }
+void	Directives::addMethod(const std::string& method)
+{
+	if (!_methods_explicitly_set) {
+		_method_mask = M_NONE;
+		_methods_explicitly_set = true;
+	}
 
-void	Directives::addMethod(const std::string& method) { this->_allowed_methods.push_back(method); }
+	if (method == "GET")         _method_mask |= M_GET;
+	else if (method == "POST")   _method_mask |= M_POST;
+	else if (method == "DELETE") _method_mask |= M_DELETE;
+}
 
 void	Directives::setMaxBodySize(const size_t& client_max_body_size)
 {
@@ -193,7 +198,7 @@ void	Directives::setUpload(bool accept_upload) { _upload = accept_upload; }
 
 void	Directives::setUploadLoc(const std::string& upload_loc) { _upload_loc = upload_loc; }
 
-bool	Directives::isMethodAllowed(const std::string& method) const { return (std::find(_allowed_methods.begin(), _allowed_methods.end(), method) != _allowed_methods.end()); }
+bool	Directives::isMethodAllowed(Method m) const { return (_method_mask & m); }
 
 void	Directives::setPath(const std::string& path) { _path = path; }
 
@@ -231,6 +236,14 @@ e_directive_type	getDirectiveType(const std::string &directive_str)
 	return DIR_UNKNOWN;
 }
 
+Method Directives::stringToMethod(const std::string& method_str)
+{
+	if (method_str == "GET") return M_GET;
+	if (method_str == "POST") return M_POST;
+	if (method_str == "DELETE") return M_DELETE;
+	return M_NONE;
+}
+
 void	Directives::logs() const
 {
 	std::cout << "==== Directives ====\n";
@@ -248,8 +261,14 @@ void	Directives::logs() const
 
 
 	std::cout << "allowed_methods: ";
-	for (std::vector<std::string>::const_iterator it = _allowed_methods.begin(); it != _allowed_methods.end(); std::advance(it, 1)) {
-		std::cout << "\"" << *it << "\" ";
+	if (_methods_explicitly_set) {
+		std::cout << "\"";
+		if (isMethodAllowed(M_GET)) std::cout << "GET ";
+		if (isMethodAllowed(M_POST)) std::cout << "POST ";
+		if (isMethodAllowed(M_DELETE)) std::cout << "DELETE ";
+		std::cout << "\"\n";
+	} else {
+		std::cout << "(default: GET POST DELETE)\n";
 	}
 	std::cout << std::endl;
 
