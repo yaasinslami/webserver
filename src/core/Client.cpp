@@ -448,7 +448,7 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 }
 Client::~Client()
 {
-	std::cout << "🔴 Closing Client fd=" << _fd << std::endl;
+	std::cout << "🔴 Cleaning up Client fd=" << _fd << std::endl;
 	if (_file_stream.is_open())
 		_file_stream.close();
 

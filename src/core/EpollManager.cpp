@@ -399,9 +399,14 @@ EpollManager::~EpollManager()
 {
 	for (std::map<int, Client*>::iterator it = clients.begin();
 			it != clients.end(); ++it)
+	{
+		std::cout << "Cleaning up client fd=" << it->first << std::endl;
 		delete it->second;
+	}
 
 	close(epfd);
+
+	std::cout << "EpollManager destroyed, all resources cleaned up." << std::endl;
 }
 
 bool	EpollManager::_setup_servers(std::vector<Server>& servers)
