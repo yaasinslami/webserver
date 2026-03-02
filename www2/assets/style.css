@@ -1,0 +1,355 @@
+:root {
+    --bg: #0f172a;
+    --sidebar: #1e293b;
+    --card: rgba(255, 255, 255, 0.03);
+    --card-hover: rgba(255, 255, 255, 0.07);
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --danger: #ef4444;
+    --text-main: #f8fafc;
+    --text-dim: #94a3b8;
+    --border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar Navigation */
+nav {
+    width: 280px;
+    background-color: var(--sidebar);
+    border-right: 1px solid var(--border);
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.025em;
+    margin-bottom: 3rem;
+    padding-left: 0.5rem;
+}
+
+.nav-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.nav-item:hover {
+    background-color: var(--card-hover);
+    color: var(--text-main);
+}
+
+.nav-item.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* Main Content Area */
+main {
+    flex: 1;
+    padding: 3rem;
+    overflow-y: auto;
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+}
+
+h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+}
+
+.btn-new {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.6rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-new:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Grid & Email Cards */
+.grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0; /* Rows touch each other like Gmail */
+    border-top: 1px solid var(--border);
+}
+
+.email-card {
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    position: relative;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.email-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary);
+    background: var(--card-hover);
+}
+
+.subject {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
+}
+
+.meta {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+}
+
+.btn-del {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-del:hover {
+    background-color: var(--danger);
+    color: white;
+}
+
+/* Toast Notification Container */
+.toast-container {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.toast {
+    min-width: 280px;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    border-left: 4px solid #10b981; /* Green */
+}
+
+.toast-error {
+    border-left: 4px solid #ef4444; /* Red */
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 10000;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Modal Content Box */
+.modal-content {
+    background: #1e293b;
+    padding: 2.5rem;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+.modal-icon { font-size: 3rem; margin-bottom: 1rem; }
+.modal-content h2 { margin-bottom: 1rem; font-size: 1.5rem; }
+.modal-content p { color: var(--text-dim); margin-bottom: 2rem; line-height: 1.5; }
+
+/* Modal Buttons */
+.modal-actions { display: flex; gap: 1rem; justify-content: center; }
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 1px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-danger:hover { background: #dc2626; }
+
+.modal-input, .modal-area {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: white;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    font-family: inherit;
+}
+.modal-area { height: 150px; resize: none; }
+.btn-primary-action {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.email-row {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    transition: all 0.1s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.email-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.email-main-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.email-sender {
+    width: 200px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.email-subject {
+    font-weight: 600;
+    margin-right: 10px;
+    color: var(--text-main);
+}
+
+.email-snippet {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Row Delete Button */
+.btn-row-del {
+    background: transparent;
+    border: none;
+    font-size: 1.1rem;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    padding: 5px;
+}
+
+.email-row:hover .btn-row-del {
+    opacity: 1;
+}
+
+.btn-row-del:hover {
+    transform: scale(1.2);
+}
+

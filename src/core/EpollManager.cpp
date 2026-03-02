@@ -59,6 +59,15 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 				set_events(client->getFd(), EPOLLOUT);
 			}
 		}
+		else
+		{
+			std::cerr << RED << "Error reading from CGI pipe: " << strerror(errno) << RESET << std::endl;
+			client->setStatus(500);
+			client->getResponse().generateError();
+			remove_cgi_fds(client, true);
+			client->setState(WRITING);
+			return;
+		}
 	}
 }
 
@@ -254,7 +263,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 		remove_client(fd);
 		return;
 	}
-	
+
 	client->updateTime();
 
 	switch (client->getState())
@@ -295,7 +304,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				char buffer[1];
 				ssize_t bytes = recv(fd, buffer, 1, MSG_PEEK);
 
-				if (bytes == 0) 
+				if (bytes <= 0)
 				{
 					std::cerr << "Client disconnected during CGI processing (EOF)" << std::endl;
 					remove_client(fd);

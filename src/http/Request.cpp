@@ -110,7 +110,7 @@ size_t	Request::feed(const char* data, size_t size)
 				size_t to_write = std::min(available, needed);
 				if (to_write > 0) {
 					ssize_t bytes_written = write(_body_fd, data + i, to_write);
-					if (bytes_written < 0) { _state =  STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break; }
+					if (bytes_written <= 0) { _state =  STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break; }
 					_total_body_bytes += bytes_written;
 					i += bytes_written - 1;
 				}
@@ -316,7 +316,7 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 			size_t to_write = std::min(needed, available);
 			if (to_write > 0) {
 				ssize_t bytes_written = write(_body_fd, data + i, to_write);
-				if (bytes_written < 0) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break; }
+				if (bytes_written <= 0) { _state = STATE_ERROR; _code = 500; _sys_error_msg = std::strerror(errno); break; }
 				_chunk_bytes_read += bytes_written;
 				_total_body_bytes += bytes_written;
 				i += bytes_written - 1;
