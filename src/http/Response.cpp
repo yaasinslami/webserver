@@ -48,11 +48,13 @@ void	Response::_handleDelete()
 void	Response::_handlePost(const Request& req)
 {
 	std::cout << "[Response] Handling POST request for: " << _resource_path << "\n";
-	std::string content_type = req.getHeader("Content-Type");
+	std::string content_type = req.getHeader("content-type");
+
+	std::cout << "[Response] Content-Type: " << content_type << "\n";
 
 	// Block HTML Form envelopes. These belong to CGI!
 	if (content_type.find("multipart/form-data") != std::string::npos ||
-		content_type.find("application/x-www-form-urlencoded") != std::string::npos) 
+		content_type.find("application/x-www-form-urlencoded") != std::string::npos)
 	{
 		std::cout << "[Response] Form data not supported for static uploads. Use a CGI script.\n";
 		setCode(415); // 415 Unsupported Media Type
@@ -85,14 +87,14 @@ void	Response::_handlePost(const Request& req)
 
 	_redirect_location = upload_dir + "/" + filename;// we do not expose the full filesystem path in the Location header, just the URI path relative to the server root
 	// Special case: If Content-Length is 0 and not chunked, we should still create an empty file if uploads are allowed.
-	if (req.getContentLength() == 0 && !req.isChunked())
+	if (req.getBodySize() == 0 )
 	{
 		std::ofstream empty_file(target_path.c_str(), std::ios::binary | std::ios::trunc);
 		if (empty_file.is_open()) {
 			empty_file.close();
 			std::cout << "[Response] Created empty file: " << target_path << "\n";
 			clearFilePath();
-			setCode(201); // 201 Created is more accurate since a file was made
+			setCode(204); // 201 Created is more accurate since a file was made
 		}
 		else {
 			std::cerr << "[Response] Failed to create empty file (" << std::strerror(errno) << ").\n";

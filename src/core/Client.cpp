@@ -17,7 +17,6 @@ void Client::onReadable()
 		size_t total_consumed = 0;
 		while (total_consumed < (size_t)bytes && _request.getState() != STATE_COMPLETE)
 		{
-			std::cout << CYAN << "[DEBUG] : Feeding request with " << (bytes - total_consumed) << " bytes" << RESET << std::endl;
 			size_t consumed = _request.feed(buf + total_consumed, bytes - total_consumed);
 			total_consumed += consumed;
 

@@ -223,10 +223,7 @@ int Server::accept_client(void)
 	addrSize = sizeof(clientAddr);
 
 	clientFd = accept(_listen_fd, (struct sockaddr*)&clientAddr, &addrSize);
-	if (clientFd == -1)
-	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return (-1);
+	if (clientFd == -1) {
 		std::cerr << "accept(): " << strerror(errno) << std::endl;
 		return (-1);
 	}
