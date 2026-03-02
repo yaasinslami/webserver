@@ -72,7 +72,6 @@ void CgiHandler::execute(Client* client, const std::string& script_path,
 		const std::string& interpreter, EpollManager &poller)
 {
 	const Request&      req = client->getRequest();
-	const Directives* config = client->getConfig();
 
 	int cgi_out_pipe[2] = {-1, -1};
 
@@ -129,7 +128,6 @@ void CgiHandler::execute(Client* client, const std::string& script_path,
 		if (chdir(script_directory.c_str()) == -1)
 			child_exit_error("chdir failed");
 
-		const char* script_path_arg = script_path.c_str();
 		char* argv[] = {
 			const_cast<char*>(interpreter.c_str()),
 			const_cast<char*>(script_filename.c_str()),
@@ -154,7 +152,7 @@ void CgiHandler::execute(Client* client, const std::string& script_path,
 		std::cout << "[poller]: register_cgi_fds failed" << std::endl;
 }
 
-std::string	CgiHandler::prepare(Client *client, EpollManager& poller, int fd)
+std::string	CgiHandler::prepare(Client *client)
 {
 	const Directives* config = client->getConfig();
 	Request& req = client->getRequest();

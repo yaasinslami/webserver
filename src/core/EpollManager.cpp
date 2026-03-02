@@ -2,8 +2,6 @@
 
 extern volatile sig_atomic_t g_running;
 
-static std::string get_cgi_executable(std::string, Client&);
-
 void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 {
 	Client* client = _cgi_fd_map[fd];
@@ -272,21 +270,12 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			if (events & EPOLLIN)
 			{
 				client->onReadable();
-				if (client->isRequestReady() || client->getRequest().getState() == STATE_ERROR)
-					client->setState(PROCESSING);
-				else
-					break ;
+				if (client->isRequestReady() || client->getRequest().getState() == STATE_ERROR) {
+					std::cout << "Processing Request..." << std::endl;
+					client->process(*this);
+				}
 			}
-			else break;
-		case PROCESSING:
-		{
-			std::cout << "Processing Request..." << std::endl;
-			client->process(*this);
-
-			if (client->getState() == PROCESSING)
-				client->setState(READING);
-			break ;
-		}
+			break;
 		case WRITING:
 			if (events & EPOLLOUT)
 			{

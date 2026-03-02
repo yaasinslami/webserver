@@ -14,7 +14,7 @@ class EpollManager;
 class CgiHandler
 {
 	public:
-		static std::string	prepare(Client* client, EpollManager& poller, int fd);
+		static std::string	prepare(Client* client);
 		static void	execute(Client* client, const std::string& script_path,
 				const std::string& interpreter, EpollManager& poller);
 

@@ -17,7 +17,6 @@ class EpollManager;
 enum ClientState
 {
 	READING,
-	PROCESSING,
 	WRITING,
 	HANDLING_CGI,
 	CLOSING

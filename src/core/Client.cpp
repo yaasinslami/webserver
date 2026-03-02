@@ -109,18 +109,15 @@ void	Client::process(EpollManager &poller)
 		}
 		else {
 			std::cout << BLUE << "CGI Request Detected. Executable: " << executable_path << RESET << std::endl;
-			std::string script_fs_path = CgiHandler::prepare(this, poller, _fd);
+			std::string script_fs_path = CgiHandler::prepare(this);
 
-			if (script_fs_path.empty())
+			if (!script_fs_path.empty())
 			{
-				_response.generateError();
-				markWriting();
-				poller.set_events(_fd, EPOLLOUT);
-				return;
+				std::cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
+				CgiHandler::execute(this, script_fs_path, executable_path, poller);
+				return ;
 			}
-			std::cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
-			CgiHandler::execute(this, script_fs_path, executable_path, poller);
-			return ;
+			else _request.setState(STATE_ERROR);
 		}
 	}
 
@@ -457,7 +454,6 @@ int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
 /* timeout */
 void	Client::updateTime() { _last_activity_time = time(NULL); }
 /* State methods */
-void Client::markProcessing() { _state = PROCESSING; }
 void Client::markWriting() { _state = WRITING; }
 void Client::scheduleClose() { _closed = true; }
 /* Constructors */
