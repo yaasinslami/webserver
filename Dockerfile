@@ -1,25 +1,26 @@
-FROM ubuntu:latest
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    valgrind \
-    gdb \
-    curl \
+	build-essential \
+	git \
+	valgrind \
+	gdb \
+	curl \
 	netcat-openbsd \
-    wget \
-    net-tools \
-    iputils-ping \
-    tcpdump \
-    vim \
-    zsh \
-    python3 \
-    python3-pip \
-    php-cgi \
-    sudo \
-    && rm -rf /var/lib/apt/lists/*
+	wget \
+	net-tools \
+	iputils-ping \
+	tcpdump \
+	vim \
+	zsh \
+	python3 \
+	python3-pip \
+	php-cgi \
+	sudo \
+	nginx \
+	&& rm -rf /var/lib/apt/lists/*
 
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
