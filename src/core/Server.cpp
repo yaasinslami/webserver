@@ -1,11 +1,13 @@
 #include "Server.hpp"
 #include <iostream>
 #include <algorithm>
+#include "Logger.hpp"
 
 Server::Server(const Directives& g_directives) :
 	_directives(g_directives),
 	_interface("localhost"),
-	_port("4242")
+	_port("4242"),
+	_listen_fd(-1)
 {
 	_server_table[INTERFACE];
 	_server_table[PORT];
@@ -13,7 +15,14 @@ Server::Server(const Directives& g_directives) :
 	_server_table[LOCATION];	
 }
 
-Server::~Server() {}
+Server::~Server()
+{
+	if (_listen_fd != -1)
+	{
+		close(_listen_fd);
+		_listen_fd = -1;
+	}
+}
 
 Server& Server::operator=(const Server& other)
 {
@@ -22,45 +31,26 @@ Server& Server::operator=(const Server& other)
 		setInterface(other.getInterfaceStr());
 		setPort(other.getPortStr());
 		setServerName(other.getServerNames());
-		setLocations(other.getLocation());
+		setLocations(other.getLocations());
 	}
 	return *this;
 }
 
-const Directives&	Server::getDirectives() const
-{
-	return this->_directives;
-}
+const Directives&	Server::getDirectives() const { return this->_directives; }
 
-Directives&	Server::getDirectives()
-{
-	return this->_directives;
-}
+Directives&	Server::getDirectives() { return this->_directives; }
 
-const std::string&	Server::getInterfaceStr() const
-{
-	return this->_interface;
-}
+const std::string&	Server::getInterfaceStr() const { return this->_interface; }
 
-const std::string&	Server::getPortStr() const
-{
-	return this->_port;
-}
+const std::string&	Server::getPortStr() const { return this->_port; }
 
-const std::vector<std::string>&	Server::getServerNames() const
-{
-	return this->_server_name;
-}
+const std::vector<std::string>&	Server::getServerNames() const { return this->_server_name; }
 
-const std::vector<Location>&		Server::getLocation() const
-{
-	return this->_locations;
-}
+const std::vector<Location>&	Server::getLocations() const { return this->_locations; }
 
-int	Server::get_fd( void )
-{
-	return this->_listen_fd;
-}
+std::vector<Location>&	Server::getLocations() { return this->_locations; }
+
+int	Server::get_fd( void ) { return this->_listen_fd; }
 
 void Server::setInterface(const std::string &interface)
 {
@@ -131,11 +121,7 @@ void	Server::set_fd(int fd)
 void	Server::logs() const
 {
 
-	std::cout << "------------- Server --------------\n";
 	getDirectives().logs();
-	std::cout << "interface: \"" << getInterfaceStr() << "\"\n";
-	std::cout << "port: \"" << getPortStr() << "\"\n";
-
 	for (std::vector<Location>::const_iterator it = _locations.begin(); it != _locations.end(); std::advance(it, 1)) {
 		it->logs();
 	}
@@ -157,7 +143,7 @@ bool Server::init(void)
 	int status = getaddrinfo(_interface.c_str(), _port.c_str(), &hints, &res);
 	if (status != 0)
 	{
-		std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
+		Logger::log(ERROR, "Failed to resolve address for " + _interface + ":" + _port + ": " + gai_strerror(status));
 		return false;
 	}
 
@@ -166,13 +152,13 @@ bool Server::init(void)
 		fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if (fd == -1)
 		{
-			std::cerr << "socket(): " << strerror(errno) << std::endl;
+			Logger::log(ERROR, "Failed to create socket for " + _interface + ":" + _port + ": " + strerror(errno));
 			continue;
 		}
 
 		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 		{
-			std::cerr << "setsockopt(SO_REUSEADDR): " << strerror(errno) << std::endl;
+			Logger::log(ERROR, "Failed to set SO_REUSEADDR on fd=" + Utils::toString(fd) + ": " + strerror(errno));
 			close(fd);
 			fd = -1;
 			continue;
@@ -180,7 +166,6 @@ bool Server::init(void)
 
 		if (bind(fd, p->ai_addr, p->ai_addrlen) == 0)
 		{
-			std::cout << "Socket " << fd << " bound to " << _interface << ":" << _port << std::endl;
 			break;
 		}
 
@@ -192,13 +177,13 @@ bool Server::init(void)
 
 	if (fd == -1)
 	{
-		std::cerr << "Failed to bind any address on port " << _port << std::endl;
+		Logger::log(ERROR, "Failed to bind any address on port " + _port);
 		return false;
 	}
 
 	if (!Utils::set_nonblocking(fd))
 	{
-		std::cerr << "Failed to set socket to non-blocking" << std::endl;
+		Logger::log(ERROR, "Failed to set socket to non-blocking on fd=" + Utils::toString(fd));
 		close(fd);
 		return false;
 	}
@@ -224,18 +209,18 @@ int Server::accept_client(void)
 
 	clientFd = accept(_listen_fd, (struct sockaddr*)&clientAddr, &addrSize);
 	if (clientFd == -1) {
-		std::cerr << "accept(): " << strerror(errno) << std::endl;
+		Logger::log(ERROR, "Failed to accept client connection on fd=" + Utils::toString(_listen_fd) + ": " + strerror(errno));
 		return (-1);
 	}
 
 	if (!Utils::set_nonblocking(clientFd))
 	{
-		std::cerr << "Failed to set client socket to non-blocking" << std::endl;
+		Logger::log(ERROR, "Failed to set client socket to non-blocking on fd=" + Utils::toString(clientFd));
 		close(clientFd);
 		return (-1);
 	}
 
-	std::cout << "New client accepted: fd=" << clientFd << std::endl;
+	Logger::log(INFO, "New client accepted on fd=" + Utils::toString(clientFd));
 	return (clientFd);
 }
 

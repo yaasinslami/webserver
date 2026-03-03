@@ -20,9 +20,9 @@ class EpollManager
 		int		epfd;
 		int		timeout_ms;
 
-		std::map<int, Client*>				clients;
+		std::map<int, Client*>					clients;
 		std::map<int, std::vector<Server*> >	listeners;
-		std::map<int, Client*>				_cgi_fd_map;
+		std::map<int, Client*>					_cgi_fd_map;
 	public:
 		/* Constructors */
 		EpollManager(std::vector<Server>&);

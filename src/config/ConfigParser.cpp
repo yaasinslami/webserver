@@ -4,6 +4,7 @@
 #include "Http.hpp"
 #include "Directives.hpp"
 #include <stdexcept>
+#include <algorithm>
 
 /* Parsers */
 void	ConfigParser::tokenize(std::string& content)
@@ -54,6 +55,7 @@ void	ConfigParser::parse( void )
 	}
 	if (getHttp().getServers().empty())
 		throw std::runtime_error("Configuration error: No 'server' blocks defined.");
+	
 }
 void	ConfigParser::parseServerBlock( void )
 {
@@ -119,8 +121,8 @@ void	ConfigParser::parseServerBlock( void )
 	}
 
 	server.validate();
-
-	consumeToken();
+	std::sort(server.getLocations().begin(), server.getLocations().end(), Location::compareLocations);
+	consumeToken();// consume the closing "}"
 	getHttp().addServer(server);
 }
 Location	ConfigParser::parseLocationBlock(const Directives& s_directives)

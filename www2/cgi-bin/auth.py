@@ -34,13 +34,13 @@ if found:
     # Calculate Expiry (5 minutes)
     expire_time = (datetime.utcnow() + timedelta(minutes=5)).strftime("%a, %d %b %Y %H:%M:%S GMT")
     
-    # SUCCESS: 302 Redirect + Set-Cookie [cite: 124, 201]
+    # SUCCESS: 302 Redirect + Set-Cookie
     print("Status: 302 Found")
     print(f"Location: /inbox/view.py?user={user}")
     print(f"Set-Cookie: session_id={session_token}; Expires={expire_time}; Path=/; HttpOnly")
     print("\r\n") # End of Headers
 else:
-    # FAIL: 401 Unauthorized with Modern UI [cite: 124]
+    # FAIL: 401 Unauthorized with Modern
     print("Status: 401 Unauthorized")
     print("Content-Type: text/html\r\n\r\n")
     print(f"""

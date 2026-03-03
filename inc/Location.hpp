@@ -17,6 +17,8 @@ class	Location
 		void						setAlias(const std::string& alias);
 		void						logs() const;
 
+		static bool						compareLocations(const Location& a, const Location& b);
+
 	private:
 		Directives					_directives;
 };

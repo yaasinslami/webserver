@@ -1,4 +1,5 @@
 #include "EpollManager.hpp"
+#include "Logger.hpp"
 
 extern volatile sig_atomic_t g_running;
 
@@ -11,7 +12,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 
 	if (events & EPOLLERR)
 	{
-		std::cerr << "⚠️ CGI Pipe Error on fd=" << fd << std::endl;
+		Logger::log(ERROR, "CGI Pipe Error on fd=" + Utils::toString(fd) + ": " + strerror(errno));
 		remove_cgi_fds(client, true);
 		return;
 	}
@@ -28,7 +29,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 				client->openCgiTempFile();
 				if (client->getStatus() == 500)
 				{
-					std::cout << RED << "Failed to open temp file for CGI output buffering." << RESET << std::endl;
+					Logger::log(ERROR, "Failed to open temp file for CGI output buffering.");
 					remove_cgi_fds(client, true);
 					client->getResponse().generateError();
 					client->setState(WRITING);
@@ -43,7 +44,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 		}
 		else if (bytes == 0)
 		{
-			std::cout << GREEN << "CGI output pipe closed by child process (EOF)" << RESET << std::endl;
+			Logger::log(INFO, "CGI process finished output (EOF)");
 
 			remove_cgi_fds(client, false);
 			client->closeCgiOutFile();
@@ -59,7 +60,7 @@ void	EpollManager::handle_cgi_event(int fd, uint32_t events)
 		}
 		else
 		{
-			std::cerr << RED << "Error reading from CGI pipe: " << strerror(errno) << RESET << std::endl;
+			Logger::log(ERROR, "Error reading from CGI pipe on fd=" + Utils::toString(fd) + ": " + strerror(errno));
 			client->setStatus(500);
 			client->getResponse().generateError();
 			remove_cgi_fds(client, true);
@@ -83,19 +84,18 @@ bool	EpollManager::add_listener(Server *srv)
 		if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
 			return false;
 		}
-		std::cout << "[Epoll] Listening on new fd=" << fd << std::endl;
+		Logger::log(DEBUG, "Listening on " + srv->getInterfaceStr() + ":" + srv->getPortStr() + " (fd=" + Utils::toString(fd) + ")");
 	}
 	else
 	{
 		std::vector<Server *> &existing_servers = listeners[fd];
 		for (size_t i = 0; i < existing_servers.size(); ++i) {
-			if (srv->hasIdenticalNames(existing_servers[i])) {// tkhwira
-				std::cerr << "⚠️  WARNING: Conflicting server_name on port [" << srv->getPortStr()
-						<< "] (ignored)." << std::endl;
+			if (srv->hasIdenticalNames(existing_servers[i])) {
+				Logger::log(WARNING, "Duplicate server_name on port " + srv->getPortStr() + ": " + srv->getInterfaceStr() + " (ignored)");
 				return false;
 			}
 		}
-		std::cout << "[Epoll] Adding virtual host to existing fd=" << fd << std::endl;
+		Logger::log(WARNING, "Multiple virtual hosts on port " + srv->getPortStr() + ": " + srv->getInterfaceStr());
 	}
 	listeners[fd].push_back(srv);
 	return true;
@@ -136,8 +136,6 @@ bool	EpollManager::add_client(Client* conn)
 	}
 
 	clients[fd] = conn;
-
-	std::cout << "[Epoll] New client fd=" << fd << std::endl;
 	return (true);
 }
 
@@ -184,6 +182,7 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 	{
 		epoll_ctl(epfd, EPOLL_CTL_DEL, read_fd, NULL);
 		close(read_fd);
+		read_fd = -1;
 		_cgi_fd_map.erase(read_fd);
 	}
 
@@ -203,7 +202,7 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 		{
 			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
 			{
-				std::cout << RED << "CGI process exited with error code " << WEXITSTATUS(status) << "." << RESET << std::endl;
+				Logger::log(ERROR, "CGI process exited with error code " + Utils::toString(WEXITSTATUS(status)));
 				send_error = true;
 			}
 		}
@@ -213,7 +212,7 @@ void EpollManager::remove_cgi_fds(Client *client, bool send_error)
 
 	if (send_error)
 	{
-		std::cerr << "Sending 500 Error to Client " << client->getFd() << std::endl;
+		Logger::log(ERROR, "CGI process error for client fd=" + Utils::toString(client->getFd()) + ". Sending 500 response.");
 		client->setStatus(500);
 		client->getResponse().generateError();
 		client->setState(WRITING);
@@ -235,17 +234,13 @@ void	EpollManager::handle_listener_event(int fd)
 	std::vector<Server*>& server_candidates = listeners[fd];
 
 	Server* primary_server = server_candidates[0];
-	while (true)
-	{
-		int client_fd = primary_server->accept_client();
-		if (client_fd == -1)
-			break;
+	int client_fd = primary_server->accept_client();
+	if (client_fd == -1) return ;
 
-		Client* conn = new Client(client_fd, server_candidates);
-		if (!add_client(conn)) {
-			close(client_fd);
-			delete conn;
-		}
+	Client* conn = new Client(client_fd, server_candidates);
+	if (!add_client(conn)) {
+		close(client_fd);
+		delete conn;
 	}
 }
 
@@ -257,7 +252,7 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 
 	if ((events & EPOLLHUP) || (events & EPOLLRDHUP) || (events & EPOLLERR))
 	{
-		std::cerr << "Epoll Error on fd=" << fd << std::endl;
+		Logger::log(ERROR, "Client disconnected or error on fd=" + Utils::toString(fd) + ": " + strerror(errno));
 		remove_client(fd);
 		return;
 	}
@@ -271,8 +266,8 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 			{
 				client->onReadable();
 				if (client->isRequestReady() || client->getRequest().getState() == STATE_ERROR) {
-					std::cout << "Processing Request..." << std::endl;
 					client->process(*this);
+					client->logRequest();
 				}
 			}
 			break;
@@ -283,7 +278,10 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 				if (client->getState() == READING)
 					set_events(fd, EPOLLIN);
 				else if (client->getState() == CLOSING)
+				{
 					remove_client(fd);
+					return ;
+				}
 			}
 			break;
 		case HANDLING_CGI:
@@ -310,7 +308,10 @@ void	EpollManager::handle_client_event(int fd, uint32_t events)
 	}
 
 	if (client->isClosed())
+	{
 		remove_client(fd);
+		return ;
+	}
 }
 
 void	EpollManager::run_loop()
@@ -325,7 +326,7 @@ void	EpollManager::run_loop()
 		{
 			if (errno == EINTR)
 				continue;
-			std::cerr << "epoll_wait error: " << strerror(errno) << std::endl;
+			Logger::log(ERROR, "epoll_wait error: " + std::string(strerror(errno)));
 			break;
 		}
 
@@ -360,7 +361,7 @@ void EpollManager::check_client_timeouts()
 
 		if (difftime(current_time, client->getLastActivity()) > TIMEOUT_LIMIT)
 		{
-			std::cout << "Timeout: Client " << fd << " idle for " << TIMEOUT_LIMIT << "s. Closing." << std::endl;
+			Logger::log(INFO, "Client fd=" + Utils::toString(fd) + " idle for " + Utils::toString(TIMEOUT_LIMIT) + "s. Closing connection.");
 
 			std::map<int, Client*>::iterator next = it;
 			++next;
@@ -389,20 +390,24 @@ EpollManager::EpollManager(std::vector<Server>& servers) :
 	epfd(-1),
 	timeout_ms(1000)
 {
-	if ((epfd = epoll_create1(0)) == -1) throw std::runtime_error("Failed to create epoll instance");
+	if ((epfd = epoll_create1(EPOLL_CLOEXEC)) == -1) throw std::runtime_error("Failed to create epoll instance");
 
 	if (!_setup_servers(servers)) throw std::runtime_error("No servers could be started!");
 }
+
 EpollManager::~EpollManager()
 {
 	for (std::map<int, Client*>::iterator it = clients.begin();
 			it != clients.end(); ++it)
 	{
-		std::cout << "Cleaning up client fd=" << it->first << std::endl;
 		delete it->second;
 	}
 
-	close(epfd);
+	if (epfd != -1)
+	{
+		close(epfd);
+		epfd = -1;
+	}
 
 	std::cout << "EpollManager destroyed, all resources cleaned up." << std::endl;
 }
@@ -410,10 +415,13 @@ EpollManager::~EpollManager()
 bool	EpollManager::_setup_servers(std::vector<Server>& servers)
 {
 	int success_count = 0;
+
 	std::map<std::string, int> active_ports;
+
 	for (size_t i = 0; i < servers.size(); ++i)
 	{
 		std::string port = servers[i].getPortStr();
+	
 		if (active_ports.find(port) != active_ports.end()) {
 			int shared_fd = active_ports[port];
 			servers[i].set_fd(shared_fd);

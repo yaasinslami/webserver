@@ -101,6 +101,8 @@ class Client
 		void				updateTime();
 		time_t				getLastActivity() const;
 
+		void				logRequest() const;
+
 	private:
 		bool				_validateRequest();
 		void				_serveLargeFile();

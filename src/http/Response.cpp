@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <sstream>
 #include <stdlib.h>
+#include "Logger.hpp"
 
 void	Response::generate(const Request& req)
 {
@@ -22,25 +23,18 @@ void	Response::generate(const Request& req)
 
 void	Response::_handleDelete()
 {
-	// we already have the translated path in _resource_path from the initial translation step in Client::_validateRequest()
-
-	std::cout << "[Response] Attempting to DELETE resource: " << _resource_path << "\n";
-
 	if (!Utils::Myaccess(_resource_path, _code, W_OK, true)) {
-		std::cout << "[Response] DELETE forbidden: No write permission for " << _resource_path << "\n";
+		Logger::log(ERROR, "DELETE forbidden: No write permission for " + _resource_path);
 		return;
 	}
 
 	if (std::remove(_resource_path.c_str()) == 0) {
-		std::cout << "[Response] Successfully deleted: " << _resource_path << "\n";
-
-		// HTTP 204 No Content means the action was successful but there is no response body
 		setCode(204);
 		_file_size = 0;
 		clearFilePath(); 
 	} 
 	else {
-		std::cout << "[Response] DELETE failed: std::remove() error: " << std::strerror(errno) << "\n";
+		Logger::log(ERROR, "DELETE failed for " + _resource_path + ": " + std::strerror(errno));
 		setCode(500); // Internal Server Error
 	}
 }
@@ -56,24 +50,19 @@ void	Response::_handlePost(const Request& req)
 	if (content_type.find("multipart/form-data") != std::string::npos ||
 		content_type.find("application/x-www-form-urlencoded") != std::string::npos)
 	{
-		std::cout << "[Response] Form data not supported for static uploads. Use a CGI script.\n";
+		Logger::log(ERROR, "POST forbidden: Content-Type " + content_type + " is not supported for raw POST. This should be handled by CGI.");
 		setCode(415); // 415 Unsupported Media Type
 		return;
 	}
 
-	/* now we only support raw binary uploads, which is a bit weird but simple to implement
-	static files should be served by GET, and dynamic uploads should be handled by CGI.
-	This is just a fallback for clients that want to do a raw POST to a static path. */
-
 	if (!_config->canUpload()) {
-		std::cout << "[Response] POST forbidden: Uploads are disabled (upload off).\n";
+		Logger::log(ERROR, "POST forbidden: Uploads are disabled (upload off).");
 		setCode(403); // Forbidden
 		return;
 	}
 
 	std::string upload_dir = _config->getUploadPath();
 	if (upload_dir.empty()) {
-		std::cout << "[Response] POST failed: Uploads enabled, but no upload_loc provided.\n";
 		setCode(500); // Internal Server Error (This is a server misconfiguration!)
 		return;
 	}
@@ -92,12 +81,11 @@ void	Response::_handlePost(const Request& req)
 		std::ofstream empty_file(target_path.c_str(), std::ios::binary | std::ios::trunc);
 		if (empty_file.is_open()) {
 			empty_file.close();
-			std::cout << "[Response] Created empty file: " << target_path << "\n";
 			clearFilePath();
-			setCode(204); // 201 Created is more accurate since a file was made
+			setCode(204);
 		}
 		else {
-			std::cerr << "[Response] Failed to create empty file (" << std::strerror(errno) << ").\n";
+			Logger::log(ERROR, "Failed to create empty file for zero-length POST upload: " + target_path + ": " + std::strerror(errno));
 			setCode(500);
 		}
 		return;
@@ -105,29 +93,20 @@ void	Response::_handlePost(const Request& req)
 
 	std::string temp_path = req.getBodyPath();
 	if (temp_path.empty()) {
-		std::cout << "[Response] POST failed: No body payload received.\n";
+		Logger::log(ERROR, "POST failed: No body file path available for request.");
 		setCode(400); // Bad Request
 		return;
 	}
 
-	/* To be removed after testing: */
-	std::cout << RED << "[Debug] body size: " << req.getBodySize() << RESET << "\n";
-	std::cout << "[Debug] Source Temp File: " << temp_path << "\n";
-	std::cout << "[Debug] Destination File: " << target_path << "\n";
-
-	if (std::rename(temp_path.c_str(), target_path.c_str()) == 0) {
-		std::cout << "[Response] Fast-moved upload to: " << target_path << "\n";
-	}
+	if (std::rename(temp_path.c_str(), target_path.c_str()) == 0) {}
 	else {// If rename fails, it could be due to cross-device issues (EXDEV)
 		// Fallback: Manual stream copy if cross-device link fails (EXDEV error)
-
-		std::cout << "[Response] rename() failed (" << std::strerror(errno) << "). Falling back to stream copy.\n";
 
 		std::ifstream src(temp_path.c_str(), std::ios::binary);
 		std::ofstream dst(target_path.c_str(), std::ios::binary);
 		
 		if (!src || !dst) {
-			std::cerr << "[Error] Failed to open files for POST copy.\n";
+			Logger::log(ERROR, "Failed to open files for POST copy. Source: " + temp_path + ", Destination: " + target_path);
 			setCode(500); // Internal Server Error
 			return;
 		}
@@ -138,11 +117,10 @@ void	Response::_handlePost(const Request& req)
 		dst.close();
 
 		if (std::remove(temp_path.c_str()) != 0)
-			std::cerr << "[Warning] Failed to std::remove temp file: " << temp_path << "\n";
-		
-		std::cout << "[Response] Successfully copied upload to: " << target_path << "\n";
+			Logger::log(WARNING, "Failed to remove temp file after POST copy: " + temp_path + ": " + std::strerror(errno));
 	}
 
+	if (!req.getBodyPath().empty()) std::remove(req.getBodyPath().c_str());
 	clearFilePath();
 	setCode(201);
 }
@@ -152,21 +130,20 @@ void	Response::_handleGet(const std::string& uri)
 	struct stat file_info;
 	
 	if (!Utils::Myaccess(_resource_path, _code, R_OK, false)) {
-		std::cout << "[Response] GET forbidden: No read permission for " << _resource_path << "\n";
+		Logger::log(ERROR, "GET forbidden: No read permission for " + _resource_path);
 		return;
 	}
 
 	stat(_resource_path.c_str(), &file_info);
 
 	if (S_ISDIR(file_info.st_mode)) {
-		std::cout << "[Response] Resource is a directory. Handling directory logic...\n";
 		_handleDirectory(uri);
 	}
 	else if (S_ISREG(file_info.st_mode)) {
 		_serveFile();
 	}
 	else {
-		std::cout << "[Response] Resource is neither a file nor a directory. Forbidden.\n";
+		Logger::log(ERROR, "GET forbidden: Resource is neither a regular file nor a directory: " + _resource_path);
 		setCode(403);
 	}
 }
@@ -177,7 +154,6 @@ void	Response::_handleDirectory(const std::string& uri)
 	if (!path.empty() && path[path.length() - 1] != '/') {
 		setCode(301);
 		_redirect_location = path + "/";
-		std::cout << "[Response] Redirecting missing trailing slash to: " << path << "/" << std::endl;
 		clearFilePath();
 		return;
 	}
@@ -197,13 +173,10 @@ void	Response::_handleDirectory(const std::string& uri)
 		}
 	}
 	if (_config->getAutoIndex()) {
-		std::cout << "[Response] Autoindex ON. Generating Directory Listing...\n";
 		_generateAutoIndex(uri);
 		clearFilePath();
 		return;
 	}
-
-	std::cout << "[Response] Directory access forbidden (No index, Autoindex OFF).\n";
 	setCode(403);
 }
 
@@ -212,7 +185,7 @@ void	Response::_generateAutoIndex(const std::string& uri)
 	
 	DIR* dir = opendir(_resource_path.c_str());
 	if (!dir) {
-		std::cerr << "[Error] Failed to open directory for autoindex: " << _resource_path << std::endl;
+		Logger::log(ERROR, "Failed to open directory for autoindex: " + _resource_path + ": " + std::strerror(errno));
 		setCode(403);
 		return;
 	}
@@ -233,7 +206,7 @@ void	Response::_generateAutoIndex(const std::string& uri)
 
 		struct stat entry_stat;
 		if (stat(full_path.c_str(), &entry_stat) != 0) {
-			std::cerr << "[Error] Failed to stat entry for autoindex: " << full_path << std::endl;
+			Logger::log(ERROR, "Failed to stat entry for autoindex: " + full_path + ": " + std::strerror(errno));
 			continue;
 		}
 
@@ -271,14 +244,10 @@ void	Response::_generateAutoIndex(const std::string& uri)
 	_is_static_file = false;
 
 	setCode(200);
-
-	std::cout << "[Response] Generated Autoindex for " << uri << " (" << _file_size << " bytes)\n";
 }
 
 void	Response::_serveFile()
 {
-	std::cout << "[Response] Serving file: " << _resource_path << std::endl;
-
 	struct stat file_stat;
 	if (stat(_resource_path.c_str(), &file_stat) != 0) {
 		setCode(404);
@@ -289,8 +258,6 @@ void	Response::_serveFile()
 	_content_type = Utils::getMimeType(_resource_path);
 	_is_static_file = true;
 	setCode(200);
-
-	std::cout << "File opened successfully. Prepared to send " << _file_size << " bytes.\n";
 }
 
 void	Response::translatePath(const std::string& uri)
@@ -333,6 +300,8 @@ void	Response::_buildHeaders()
 		_headers += "Content-Type: " + _content_type + "\r\n";
 		_headers += "Content-Length: " + Utils::toString(_body_content.length()) + "\r\n";
 	}
+	else
+		_headers += "Content-Length: 0\r\n";
 
 	_headers += "\r\n";
 }
@@ -358,9 +327,7 @@ Response&	Response::operator=(const Response& other)
 	return *this;
 }
 Response::~Response()
-{
-	std::cout << RED << "Response Destructor called. Cleaning up resources." << RESET << std::endl;
-}
+{}
 /* Errors */
 void	Response::generateError()
 {

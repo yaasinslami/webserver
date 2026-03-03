@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstdlib>
+#include "Logger.hpp"
 
 /* Feed; Where the Parsing Magic comes true */
 size_t	Request::feed(const char* data, size_t size)
@@ -167,7 +168,6 @@ bool	Request::validateHeaders()
 		if (_headers["transfer-encoding"] == "chunked") {
 			_chunked_transfer = true;
 			_body_exist = true;
-			std::cout << "DEBUG: Chunked transfer detected!" << std::endl;
 		}
 		else { _code = 501; return false; }// 501 Not Implemented
 	}
@@ -249,9 +249,15 @@ void	Request::_parseUriPath()
 		if (path_start != std::string::npos) _uri_path = _uri_path.substr(path_start);
 		else _uri_path = "/";
 	}
+	else if (_uri_path.empty() || _uri_path[0] != '/') {
+		_state = STATE_ERROR;
+		_code = 400;
+		return;
+	}
 
 	_uri_path = Utils::normalize_uri(Utils::urlDecode(_uri_path));
 }
+
 bool	Request::openBodyFile()
 {
 	_body_file_path = "/tmp/webserv_req_" + Utils::generateRandomId();
@@ -296,7 +302,7 @@ void Request::_chunked_body(const char* data, size_t size, size_t& i)
 				else
 				{
 					if ((_total_body_bytes + _chunk_length) > _max_body_size) {
-						std::cout << "[Security] Blocked chunk! Exceeds max_body_size.\n";
+						Logger::log(ERROR, "Request body exceeds maximum allowed size. Max: " + Utils::toString(_max_body_size) + ", Received: " + Utils::toString(_total_body_bytes + _chunk_length));
 						_state = STATE_ERROR;
 						_code = 413; // 413 Payload Too Large
 						break; 
@@ -431,11 +437,11 @@ void Request::log() const
 /* Request Reseter */
 void	Request::resetState()
 {
-	if (_body_fd >= 0) {
+	if (_body_fd > 0) {
 		close(_body_fd);
 		_body_fd = -1;
 	}
-	if (_state != STATE_COMPLETE  && !_body_file_path.empty()) {
+	if (!_body_file_path.empty()) {
 		std::remove(_body_file_path.c_str());
 		_body_file_path.clear();
 	}
@@ -483,10 +489,12 @@ Request::Request(short& code) :
 {}
 Request::~Request()
 {
-	close(_body_fd);
-	if (_state != STATE_COMPLETE && !_body_file_path.empty())
-		std::remove(_body_file_path.c_str());
-	std::cout << RED << "Request Destructor called. Cleaning up resources." << RESET << std::endl;
+	if (_body_fd > 0)
+	{
+		close(_body_fd);
+		_body_fd = -1;
+	}
+	if (!_body_file_path.empty()) std::remove(_body_file_path.c_str());
 }
 Request::Request(const Request& other) : _code(other._code) { *this = other; }
 Request& Request::operator=(const Request& other)

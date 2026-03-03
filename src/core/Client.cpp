@@ -5,6 +5,7 @@
 #include <cstring>
 #include <sstream>
 #include <algorithm>
+#include "Logger.hpp"
 
 /* the magic happens here */
 void Client::onReadable()
@@ -21,8 +22,8 @@ void Client::onReadable()
 			total_consumed += consumed;
 
 			if (_request.getState() == STATE_ERROR) {
-				if (_status_code >= 500) std::cout << "[Client] System error message: " << _request.getSysErrorMsg() << std::endl;
-				else std::cout << "[Client] Bad request! Code: " << _status_code << std::endl;
+				// if (_status_code >= 500) std::cout << "[Client] System error message: " << _request.getSysErrorMsg() << std::endl;
+				// else std::cout << "[Client] Bad request! Code: " << _status_code << std::endl;
 				_setBestConfig();
 				break;
 			}
@@ -33,19 +34,17 @@ void Client::onReadable()
 
 				if (!_request.validateHeaders()) {
 					_request.setState(STATE_ERROR);
-					std::cout << "[Client] Blocked request! Invalid headers.\n";
 					break;
 				}
 
 				if (!_validateRequest()) {// translate path happens in validation
-					std::cout << "[Client] Blocked request! Method/Size invalid.\n";
 					_request.setState(STATE_ERROR);
 					break;
 				}
 
 				if (_request.isBodyMethod(_request.getMethod()) && _request.hasBody()) {
 					if (!_request.openBodyFile()) {
-						std::cout << "[Client] Failed to open body file! Code: " << _status_code << ", Error: " << _request.getSysErrorMsg() << std::endl;
+						Logger::log(ERROR, "Failed to open body file for request, Error: " + _request.getSysErrorMsg());
 						break;
 					}
 					_request.setState(_request.isChunked() ? STATE_CHUNKED : STATE_BODY);
@@ -55,17 +54,15 @@ void Client::onReadable()
 		}
 	}
 	else if (bytes == 0) {
-		std::cout << "Client closed fd=" << _fd << std::endl;
+		Logger::log(INFO, "Client disconnected (EOF) on fd=" + Utils::toString(_fd));
 		_closed = true;
 		setState(CLOSING);
 	}
 	else {
-		std::cout << RED << "Read error on fd=" << _fd << ": " << strerror(errno) << RESET << std::endl;
+		Logger::log(ERROR, "Error reading from client fd=" + Utils::toString(_fd) + ": " + strerror(errno));
 		_closed = true;
 		setState(CLOSING);
 	} 
-
-	std::cout << CYAN << "[DEBUG] : Finished onReadable. State: " << _state << ", Closed: " << _closed << RESET << std::endl;
 }
 
 static std::string	get_cgi_executable(std::string path, Client& client)
@@ -95,25 +92,20 @@ static std::string	get_cgi_executable(std::string path, Client& client)
 
 void	Client::process(EpollManager &poller)
 {
-	std::cout << "[Response] Target resource: " << _response.getPhysicalPath() << std::endl;
 	if (_request.getState() == STATE_COMPLETE) {
-		_request.log();
 		std::string executable_path = get_cgi_executable(_request.getPath(), *this);
 		if (!_request.getIsCgi()) {
-			std::cout << BLUE << "Normal Request" << RESET << std::endl;
 			_response.generate(_request);
 			if (_status_code >= 400) {
-				std::cout << "[Client] Error response generated. Code: " << _status_code << std::endl;
 				_request.setState(STATE_ERROR);
 			}
 		}
 		else {
-			std::cout << BLUE << "CGI Request Detected. Executable: " << executable_path << RESET << std::endl;
 			std::string script_fs_path = CgiHandler::prepare(this);
 
 			if (!script_fs_path.empty())
 			{
-				std::cout << BLUE << "CGI Request. Executable: " << executable_path << ", Script: " << script_fs_path << RESET << std::endl;
+				// Logger::log(INFO, "CGI Request. Executable: " + executable_path + ", Script: " + script_fs_path);
 				CgiHandler::execute(this, script_fs_path, executable_path, poller);
 				return ;
 			}
@@ -122,7 +114,6 @@ void	Client::process(EpollManager &poller)
 	}
 
 	if (_request.getState() == STATE_ERROR) {
-		std::cout << "[Client] Generating Error Page for Code: " << _status_code << std::endl;
 		_response.generateError();
 		markWriting();
 		poller.set_events(_fd, EPOLLOUT);
@@ -168,7 +159,7 @@ void	Client::_setBestConfig()
 	}
 
 	/* Location */
-	const std::vector<Location>& locations = _server->getLocation();
+	const std::vector<Location>& locations = _server->getLocations();
 	const Location *best_match = NULL;
 	std::string path = _request.getPath();
 	size_t best_len = 0;
@@ -223,7 +214,6 @@ void	Client::_serveLargeFile()
 		if (!_response.getPhysicalPath().empty() && _request.getIsCgi())
 			std::remove(_response.getPhysicalPath().c_str());
 
-		std::cout << RED << "Finished sending file: " << _response.getPhysicalPath() << RESET << std::endl;
 		_response.clearFilePath();
 	}
 }
@@ -232,8 +222,6 @@ void	Client::onWritable()
 {
 	if (!_response.getHeaderBuffer().empty())
 	{
-		std::cout << RED << "[DEBUG] : send Headers" << RESET << std::endl;
-
 		std::string& h_buf = _response.getHeaderBuffer();
 		ssize_t sent = send(_fd, h_buf.c_str(), h_buf.size(), 0);
 		if (sent <= 0)
@@ -248,8 +236,6 @@ void	Client::onWritable()
 
 	if (!_response.getBuffer().empty())
 	{
-		std::cout << RED << "[DEBUG] : send body from Buffer" << RESET << std::endl;
-
 		std::string& b_buf = _response.getBuffer();
 		ssize_t sent = send(_fd, b_buf.c_str(), b_buf.size(), 0);
 		if (sent <= 0)
@@ -264,7 +250,6 @@ void	Client::onWritable()
 
 	if (!_response.getPhysicalPath().empty())
 	{
-		std::cout << RED << "[DEBUG] : send body from File" << RESET << std::endl;
 		_serveLargeFile();
 		return ;
 	}
@@ -273,7 +258,7 @@ void	Client::onWritable()
 		_response.getBuffer().empty() && 
 		_response.getPhysicalPath().empty())
 	{
-		std::cout << RED << "Sending DONE" << RESET << std::endl;
+		Logger::log(INFO, "Finished sending response to client fd=" + Utils::toString(_fd) + ": " + _request.getMethod() + " " + _request.getPath() + " => " + Utils::toString(_status_code));
 		if (!_request.shouldKeepAlive() || _status_code >= 400)
 		{
 			_state = CLOSING;
@@ -297,7 +282,7 @@ void	Client::parseCgiResponse()
 
 	if (split_pos == std::string::npos)
 	{
-		std::cerr << "502 Bad Gateway: No header-body separator" << std::endl;
+		Logger::log(ERROR, "502 Bad Gateway: No header-body separator in CGI response");
 		setStatus(502);
 		return;
 	}
@@ -338,7 +323,7 @@ void	Client::parseCgiResponse()
 				has_location = true;
 				final_headers += line + "\r\n";
 			} else if (line.find(':') == std::string::npos) {
-				std::cerr << "502 Bad Gateway: Malformed header line: " << line << std::endl;
+				Logger::log(ERROR, "502 Bad Gateway: Malformed header line in CGI response: " + line);
 				setStatus(502);
 				return ;
 			} else
@@ -409,6 +394,18 @@ std::string& Client::getCgiHeaderBuf()
 	return _cgi_header_buf;
 }
 
+void Client::logRequest() const
+{
+	std::string logMsg = _request.getMethod() + " " + _request.getPath();
+
+	if (_request.isBodyMethod(_request.getMethod()) && _request.hasBody())
+		logMsg += " (Body: " + Utils::toString(_request.getBodySize()) + " bytes)";
+	
+	logMsg += " => " + Utils::toString(_status_code);
+
+	Logger::log(INFO, logMsg);
+}
+
 /* Getters */
 ClientState Client::getState() const { return _state; }
 int Client::getFd() const { return _fd; }
@@ -474,14 +471,17 @@ Client::Client(int fd, const std::vector<Server*>& server_candidates) :
 	_cgi_out_file(),
 	_cgi_header_size(0)
 {
-	std::cout << "🟢 New Client fd=" << _fd << std::endl;
+	Logger::log(INFO, "New client connected on fd=" + Utils::toString(_fd));
 }
 Client::~Client()
 {
-	std::cout << "🔴 Cleaning up Client fd=" << _fd << std::endl;
+	Logger::log(INFO, "Cleaning up client on fd=" + Utils::toString(_fd));
 	if (_file_stream.is_open())
 		_file_stream.close();
 
 	if (_fd != -1)
+	{
 		close(_fd);
+		_fd = -1;
+	}
 }

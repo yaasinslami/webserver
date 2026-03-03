@@ -6,34 +6,34 @@ INCLUDES    :=  -Iinc
 SRC_DIR     :=  src
 OBJ_DIR     :=  build
 
-# Headers for dependency tracking
-HEADERS     :=  inc/Server.hpp \
-                inc/Request.hpp \
-                inc/Response.hpp \
-                inc/ConfigParser.hpp \
-                inc/Directives.hpp \
-                inc/Http.hpp \
-                inc/Location.hpp \
-                inc/CgiHandler.hpp \
-                inc/Client.hpp \
-                inc/EpollManager.hpp \
-                inc/Utils.hpp
+HEADERS     :=	inc/Server.hpp \
+				inc/Request.hpp \
+				inc/Response.hpp \
+				inc/ConfigParser.hpp \
+				inc/Directives.hpp \
+				inc/Http.hpp \
+				inc/Location.hpp \
+				inc/CgiHandler.hpp \
+				inc/Client.hpp \
+				inc/EpollManager.hpp \
+				inc/Utils.hpp \
+				inc/Logger.hpp
 
-# Updated to reflect the logical file structure
-SRC_FILES   :=  src/main.cpp \
-                src/cgi/CgiHandler.cpp \
-                src/config/ConfigParser.cpp \
-                src/config/Directives.cpp \
-                src/config/Location.cpp \
-                src/core/Server.cpp \
-                src/core/Client.cpp \
-                src/core/EpollManager.cpp \
-                src/config/Http.cpp \
-                src/http/Request.cpp \
-                src/http/Response.cpp \
-                src/utils/Utils.cpp
+SRC_FILES   :=	src/main.cpp \
+				src/cgi/CgiHandler.cpp \
+				src/config/ConfigParser.cpp \
+				src/config/Directives.cpp \
+				src/config/Location.cpp \
+				src/core/Server.cpp \
+				src/core/Client.cpp \
+				src/core/EpollManager.cpp \
+				src/config/Http.cpp \
+				src/http/Request.cpp \
+				src/http/Response.cpp \
+				src/utils/Utils.cpp \
+				src/utils/Logger.cpp
 
-# Pattern substitution to place .o files in the build/ directory
+
 OBJ_FILES   :=  $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
 
 all: $(NAME)
@@ -43,7 +43,6 @@ $(NAME): $(OBJ_FILES)
 	@$(CC) $(CFLAGS) $(OBJ_FILES) -o $@
 	@echo "✅ Built $@"
 
-# This rule creates the necessary subdirectories in build/ automatically
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
 	@mkdir -p $(dir $@)
 	@echo "🧩 Compiling $<"

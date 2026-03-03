@@ -18,14 +18,23 @@ void Location::setPath(const std::string &path)
 	_directives.setPath(path);
 }
 
-void Location::setAlias(const std::string &alias)
-{
-	_directives.setAlias(alias);
-}
+void Location::setAlias(const std::string &alias) { _directives.setAlias(alias); }
 
 void	Location::logs() const
 {
 	std::cout << "Location [" << _directives.getPath() << "]\n";
 	getDirectives().logs();
 	std::cout << "\n";
+}
+
+
+bool Location::compareLocations(const Location& a, const Location& b)
+{
+	std::string path_a = a.getDirectives().getPath();
+	std::string path_b = b.getDirectives().getPath();
+
+	if (path_a.length() != path_b.length())
+		return path_a.length() > path_b.length();// longest path first
+
+	return path_a < path_b;// alphabetical order if same length
 }

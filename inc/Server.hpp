@@ -39,7 +39,8 @@ class	Server
 		const std::string&				getInterfaceStr() const;
 		const std::string&				getPortStr() const;
 		const std::vector<std::string>&	getServerNames() const;
-		const std::vector<Location>&	getLocation() const;
+		const std::vector<Location>&	getLocations() const;
+		std::vector<Location>&			getLocations();
 		int								get_fd( void );
 
 		/* Setters */
