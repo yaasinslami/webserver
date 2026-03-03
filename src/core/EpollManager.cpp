@@ -350,7 +350,8 @@ void	EpollManager::run_loop()
 void EpollManager::check_client_timeouts()
 {
 	time_t current_time = time(NULL);
-	const double TIMEOUT_LIMIT = 60.0; 
+	const double IDLE_LIMIT = 60.0;
+	const double CGI_LIMIT = 20.0;
 
 	std::map<int, Client*>::iterator it = clients.begin();
 	
@@ -358,30 +359,45 @@ void EpollManager::check_client_timeouts()
 	{
 		int fd = it->first;
 		Client* client = it->second;
+		bool handled = false;
 
-		if (difftime(current_time, client->getLastActivity()) > TIMEOUT_LIMIT)
+		if (client->getCgiPid() != -1)
 		{
-			Logger::log(INFO, "Client fd=" + Utils::toString(fd) + " idle for " + Utils::toString(TIMEOUT_LIMIT) + "s. Closing connection.");
-
-			std::map<int, Client*>::iterator next = it;
-			++next;
-
-			if (client->getCgiPid() != -1)
+			if (difftime(current_time, client->getCgiStartTime()) > CGI_LIMIT)
 			{
+				Logger::log(WARNING, "CGI [PID " + Utils::toString(client->getCgiPid()) + "] timed out. Killing process.");
+
+				kill(client->getCgiPid(), SIGKILL);
+				waitpid(client->getCgiPid(), NULL, WNOHANG); 
 				remove_cgi_fds(client, false);
 
 				client->setStatus(504);
 				client->getResponse().generateError();
 				client->setState(WRITING);
 				set_events(fd, EPOLLOUT);
-			}
-			else
-				remove_client(fd);
 
-			it = next;
+				client->updateTime(); 
+				handled = true;
+			}
 		}
-		else
+
+		if (!handled && difftime(current_time, client->getLastActivity()) > IDLE_LIMIT)
+		{
+			Logger::log(INFO, "Client fd=" + Utils::toString(fd) + " timed out. Closing.");
+
+			if (client->getCgiPid() != -1) {
+				kill(client->getCgiPid(), SIGKILL);
+				waitpid(client->getCgiPid(), NULL, WNOHANG);
+				remove_cgi_fds(client, false);
+			}
+
+			std::map<int, Client*>::iterator to_delete = it;
 			++it;
+			remove_client(to_delete->first);
+			continue; 
+		}
+
+		++it;
 	}
 }
 
@@ -425,8 +441,7 @@ bool	EpollManager::_setup_servers(std::vector<Server>& servers)
 		if (active_ports.find(port) != active_ports.end()) {
 			int shared_fd = active_ports[port];
 			servers[i].set_fd(shared_fd);
-			std::cout << "Virtual Host: Server " << servers[i].getInterfaceStr()
-					  << " reusing port " << port << " (FD " << shared_fd << ")" << std::endl;
+			Logger::log(WARNING, "Multiple virtual hosts on port " + port + ": " + servers[i].getInterfaceStr());
 		}
 		else {
 			if (!servers[i].init()) {

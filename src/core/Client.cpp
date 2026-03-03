@@ -450,6 +450,8 @@ void Client::setCgiOutPipe(int fd) { _cgi_pipe_read_fd = fd; }
 int Client::getCgiOutPipe() const { return _cgi_pipe_read_fd; }
 /* timeout */
 void	Client::updateTime() { _last_activity_time = time(NULL); }
+time_t	Client::getCgiStartTime() const { return _cgi_start_time; }
+void	Client::setCgiStartTime(time_t t) { _cgi_start_time = t; }
 /* State methods */
 void Client::markWriting() { _state = WRITING; }
 void Client::scheduleClose() { _closed = true; }

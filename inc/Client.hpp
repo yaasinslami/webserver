@@ -51,6 +51,7 @@ class Client
 		std::ofstream		_cgi_out_file;
 		size_t				_cgi_header_size;
 		std::string			_cgi_header_buf;
+		time_t				_cgi_start_time;
 
 	public:
 		/* Constructors */
@@ -98,8 +99,12 @@ class Client
 		std::string& 		getCgiHeaderBuf();
 
 		bool				isRequestReady();
+
+		/* Timeout handling */
 		void				updateTime();
 		time_t				getLastActivity() const;
+		time_t				getCgiStartTime() const;
+		void				setCgiStartTime(time_t t);
 
 		void				logRequest() const;
 

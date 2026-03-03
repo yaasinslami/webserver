@@ -17,7 +17,7 @@ void Logger::log(LogLevel level, const std::string& message, bool useTimestamp) 
 			break;
 		case WARNING:
 			color = YELLOW;
-			levelName = "[WARN ]";
+			levelName = "[WARN]";
 			output = &std::cerr;
 			break;
 		case DEBUG:
@@ -26,7 +26,7 @@ void Logger::log(LogLevel level, const std::string& message, bool useTimestamp) 
 			break;
 		case INFO:
 			color = GREEN;
-			levelName = "[INFO ]";
+			levelName = "[INFO]";
 			break;
 	}
 

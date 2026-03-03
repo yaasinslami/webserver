@@ -144,6 +144,7 @@ void CgiHandler::execute(Client* client, const std::string& script_path,
 
 	client->setCgiPid(pid);
 	client->setCgiOutPipe(cgi_out_pipe[READ_END]);
+	client->setCgiStartTime(time(NULL));
 
 	client->setState(HANDLING_CGI);
 	delete_env(envp);
