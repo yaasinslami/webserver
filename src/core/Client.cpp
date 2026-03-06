@@ -22,8 +22,6 @@ void Client::onReadable()
 			total_consumed += consumed;
 
 			if (_request.getState() == STATE_ERROR) {
-				// if (_status_code >= 500) std::cout << "[Client] System error message: " << _request.getSysErrorMsg() << std::endl;
-				// else std::cout << "[Client] Bad request! Code: " << _status_code << std::endl;
 				_setBestConfig();
 				break;
 			}

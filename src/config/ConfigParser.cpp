@@ -196,6 +196,11 @@ void	ConfigParser::setTokensIndex(const size_t& tokens_size) {this->_token_index
 ConfigParser::ConfigParser(const std::string& filename) :
 	_token_index(0)
 {
+
+	struct stat file_stat;
+	if (stat(filename.c_str(), &file_stat) != 0) throw std::runtime_error("Config file does not exist: " + filename);
+	if (!S_ISREG(file_stat.st_mode)) throw std::runtime_error("Config path is not a regular file: " + filename);
+
 	std::ifstream file;
 	file.open(filename.c_str());
 	if (!file.is_open()) throw std::runtime_error("Could not open config file: " + filename);

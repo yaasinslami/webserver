@@ -84,18 +84,18 @@ bool	EpollManager::add_listener(Server *srv)
 		if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
 			return false;
 		}
-		Logger::log(DEBUG, "Listening on " + srv->getInterfaceStr() + ":" + srv->getPortStr() + " (fd=" + Utils::toString(fd) + ")");
+		Logger::log(DEBUG, "Listening on " + srv->getInterfaceStr() + ":" + srv->getPortStr() + " (fd=" + Utils::toString(fd) + ")", false);
 	}
 	else
 	{
 		std::vector<Server *> &existing_servers = listeners[fd];
 		for (size_t i = 0; i < existing_servers.size(); ++i) {
 			if (srv->hasIdenticalNames(existing_servers[i])) {
-				Logger::log(WARNING, "Duplicate server_name on port " + srv->getPortStr() + ": " + srv->getInterfaceStr() + " (ignored)");
+				Logger::log(WARNING, "Duplicate server_name on port " + srv->getPortStr() + ": " + srv->getInterfaceStr() + " (ignored)", false);
 				return false;
 			}
 		}
-		Logger::log(WARNING, "Multiple virtual hosts on port " + srv->getPortStr() + ": " + srv->getInterfaceStr());
+		Logger::log(WARNING, "Multiple virtual hosts on port " + srv->getPortStr() + ": " + srv->getInterfaceStr(), false);
 	}
 	listeners[fd].push_back(srv);
 	return true;
@@ -441,7 +441,7 @@ bool	EpollManager::_setup_servers(std::vector<Server>& servers)
 		if (active_ports.find(port) != active_ports.end()) {
 			int shared_fd = active_ports[port];
 			servers[i].set_fd(shared_fd);
-			Logger::log(WARNING, "Multiple virtual hosts on port " + port + ": " + servers[i].getInterfaceStr());
+			Logger::log(WARNING, "Multiple virtual hosts on port " + port + ": " + servers[i].getInterfaceStr(), false);
 		}
 		else {
 			if (!servers[i].init()) {
